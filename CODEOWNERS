@@ -1,0 +1,15 @@
+*			@sigstore/tsa-codeowners
+
+/.github/ 		@cpanato
+/release/ 		@cpanato
+
+asraa
+haydentherapper
+
+# The CODEOWNERS are managed via a GitHub team, but the current list is (in alphabetical order):
+
+# asraa
+# bobcallaway
+# dlorenc
+# haydentherapper
+# lukehinds
