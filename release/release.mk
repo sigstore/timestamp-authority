@@ -17,7 +17,7 @@ snapshot:
 ###########################
 
 .PHONY: sign-container-release
-sign-container-release: ko ko-trillian
+sign-container-release: ko
 	GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	./release/ko-sign-release-images.sh
 
@@ -33,16 +33,8 @@ copy-timestamp-server-signed-release-to-ghcr:
 copy-timestamp-cli-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/timestamp-cli:$(GIT_VERSION) $(GHCR_PREFIX)/timestamp-cli:$(GIT_VERSION)
 
-.PHONY: copy-trillian-log-server-signed-release-to-ghcr
-copy-trillian-log-server-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/trillian_log_server:$(GIT_VERSION) $(GHCR_PREFIX)/trillian_log_server:$(GIT_VERSION)
-
-.PHONY: copy-trillian-log-signer-signed-release-to-ghcr
-copy-trillian-log-signer-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/trillian_log_signer:$(GIT_VERSION) $(GHCR_PREFIX)/trillian_log_signer:$(GIT_VERSION)
-
 .PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr: copy-timestamp-server-signed-release-to-ghcr copy-timestamp-cli-signed-release-to-ghcr copy-trillian-log-signer-signed-release-to-ghcr copy-trillian-log-server-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-timestamp-server-signed-release-to-ghcr copy-timestamp-cli-signed-release-to-ghcr 
 
 ## --------------------------------------
 ## Dist / maybe we can deprecate

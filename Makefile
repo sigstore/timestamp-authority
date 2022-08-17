@@ -94,7 +94,6 @@ clean:
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf timestamp-cli timestamp-server
-	rm -f *fuzz.zip
 
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
@@ -102,10 +101,6 @@ clean-gen: clean
 up:
 	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
 	docker-compose -f docker-compose.yml up
-
-debug:
-	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)" timestamp-server-debug
-	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up timestamp-server-debug
 
 ko:
 	# timestamp-server
@@ -143,23 +138,6 @@ ko-local:
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/timestamp-authority/cmd/timestamp-cli
-
-# This builds the trillian containers we rely on using ko for cross platform support
-.PHONY: ko-trillian
-ko-trillian:
-	cd hack/tools \
-	&& ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs trillianSignerImagerefs github.com/google/trillian/cmd/trillian_log_signer \
-	&& mv trillianSignerImagerefs ../.. \
-	&& cd -
-
-	cd hack/tools && \
-	ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs trillianServerImagerefs github.com/google/trillian/cmd/trillian_log_server \
-	&& mv trillianServerImagerefs ../.. \
-	&& cd -
 
 ## --------------------------------------
 ## Tooling Binaries

@@ -1,4 +1,3 @@
-#
 # Copyright 2022 The Sigstore Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,16 +31,16 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.7.2@sha256:ad2985a87622d5934a4bc06a61faadff772e377937e42519af4f506e1b019d1e'
+- name: 'gcr.io/projectsigstore/cosign:v1.10.1@sha256:9377edd13ae515dcb97c15052e577a2cbce098f36b0361bdb2348e3bdd8fe536'
   dir: "go/src/sigstore/timestamp-authority"
   env:
   - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.9-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418'
+  - 'ghcr.io/gythialy/golang-cross:v1.18.5-0@sha256:126d3f66ba180363ea97eac070a7e6f51b4ba5b6172eb50afd79f9ad92874e72'
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.9-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418
+- name: ghcr.io/gythialy/golang-cross:v1.18.5-0@sha256:126d3f66ba180363ea97eac070a7e6f51b4ba5b6172eb50afd79f9ad92874e72 
   entrypoint: /bin/sh
   dir: "go/src/sigstore/timestamp-authority"
   env:
@@ -64,7 +63,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.9-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418
+- name: ghcr.io/gythialy/golang-cross:v1.18.5-0@sha256:126d3f66ba180363ea97eac070a7e6f51b4ba5b6172eb50afd79f9ad92874e72  
   entrypoint: 'bash'
   dir: "go/src/sigstore/timestamp-authority"
   env:

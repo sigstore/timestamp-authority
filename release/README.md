@@ -1,6 +1,6 @@
 # Release
 
-This directory contain the files and scripts to run a cosign release.
+This directory contain the files and scripts to run a timestamp release.
 
 # Cutting a timestamp Release
 
