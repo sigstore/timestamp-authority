@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/timestamp-authority/pkg/log"
 )
@@ -55,6 +56,8 @@ func init() {
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.CliLogger.Fatal(err)
 	}
+
+	rootCmd.AddCommand(version.Version())
 }
 
 func initConfig(cmd *cobra.Command) error {

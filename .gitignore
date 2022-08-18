@@ -1,1 +1,5 @@
+.vscode/*
 dist/*
+timestampCLIImagerefs
+timestampServerImagerefs
+fetchTSAImagerefs
