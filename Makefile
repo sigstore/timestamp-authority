@@ -22,9 +22,7 @@ OPENAPIDEPS = openapi.yaml
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_timestamp_server.go $(GENSRC)
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
-BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 
-PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
@@ -43,23 +41,17 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-KO_PREFIX ?= gcr.io/projectsigstore
+KO_PREFIX ?= ghcr.io/cpanato
 export KO_DOCKER_REPO=$(KO_PREFIX)
-TIMESTAMP_YAML ?= timestamp-$(GIT_TAG).yaml
-GHCR_PREFIX ?= ghcr.io/sigstore/timestamp-authority
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
-TIMESTAMP_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
               -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
               -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
-
-CLI_LDFLAGS=$(TIMESTAMP_LDFLAGS)
-SERVER_LDFLAGS=$(TIMESTAMP_LDFLAGS)
-
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json
@@ -71,7 +63,6 @@ validate-openapi: $(SWAGGER)
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_timestamp_server.go: $(OPENAPIDEPS)
-
 
 lint:
 	$(GOBIN)/golangci-lint run -v ./...
@@ -104,28 +95,22 @@ up:
 
 ko:
 	# timestamp-server
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-server ko resolve --bare \
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-server ko build --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampServerImagerefs --filename config/ > $(TIMESTAMP_YAML)
+		--image-refs timestampServerImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-server
 
 	# timestamp-cli
-	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-cli ko build --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampCliImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
+		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
 
-deploy:
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
-
-sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/timestamp-server:$(GIT_HASH)
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/timestamp-cli:$(GIT_HASH)
-
-.PHONY: sign-keyless-ci
-sign-keyless-ci: ko
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/timestamp-server:$(GIT_HASH)
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/timestamp-cli:$(GIT_HASH)
+	# fetch-tsa-certs
+	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-cli ko build --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--image-refs fetchTSAImagerefs github.com/sigstore/timestamp-authority/cmd/fetch-tsa-certs
 
 .PHONY: ko-local
 ko-local:
