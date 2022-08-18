@@ -23,7 +23,6 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pk
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 
-RUNTIME_IMAGE ?= gcr.io/distroless/static
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -41,7 +40,8 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-KO_PREFIX ?= ghcr.io/cpanato
+// TODO: upate to sigstore if we move
+KO_PREFIX ?= ghcr.io/haydentherapper
 export KO_DOCKER_REPO=$(KO_PREFIX)
 
 # Binaries
@@ -49,9 +49,9 @@ SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
 LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
-              -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
-              -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
-              -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
+				-X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
+				-X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
+				-X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json
@@ -108,7 +108,7 @@ ko:
 
 	# fetch-tsa-certs
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-cli ko build --bare \
+	KO_DOCKER_REPO=$(KO_PREFIX)/fetch-tsa-certs ko build --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs fetchTSAImagerefs github.com/sigstore/timestamp-authority/cmd/fetch-tsa-certs
 

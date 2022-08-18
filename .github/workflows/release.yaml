@@ -1,4 +1,4 @@
-name: Cut Release
+name: cut-release
 
 on:
   push:
@@ -25,6 +25,7 @@ jobs:
 
       - uses: sigstore/cosign-installer@b3413d484cc23cf8778c3d2aa361568d4eb54679 # v2
       - uses: anchore/sbom-action/download-syft@bb716408e75840bbb01e839347cd213767269d4a # v0.11.0
+      - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
 
       - uses: goreleaser/goreleaser-action@68acf3b1adf004ac9c2f0a4259e85c5f66e99bef # v3
         with:

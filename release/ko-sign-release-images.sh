@@ -26,8 +26,8 @@ if [[ ! -f timestampServerImagerefs ]]; then
     exit 1
 fi
 
-if [[ ! -f timestampCliImagerefs ]]; then
-    echo "timestampCliImagerefs not found"
+if [[ ! -f timestampCLIImagerefs ]]; then
+    echo "timestampCLIImagerefs not found"
     exit 1
 fi
 
@@ -38,5 +38,5 @@ fi
 
 echo "Signing images with Keyless..."
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampServerImagerefs)"
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCliImagerefs)"
+cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCLIImagerefs)"
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat fetchTSAImagerefs)"
