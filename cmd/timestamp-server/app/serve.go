@@ -80,4 +80,5 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(version.Version())
 }

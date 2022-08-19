@@ -1,4 +1,4 @@
-# Sigstore Timestamp Authority 
+# Sigstore Timestamp Authority
 
 A service for issuing RFC3161 timestamps.
 

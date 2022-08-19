@@ -20,26 +20,17 @@ set -o pipefail
 
 : "${GIT_HASH:?Environment variable empty or not defined.}"
 : "${GIT_VERSION:?Environment variable empty or not defined.}"
-: "${PROJECT_ID:?Environment variable empty or not defined.}"
-: "${KEY_LOCATION:?Environment variable empty or not defined.}"
-: "${KEY_RING:?Environment variable empty or not defined.}"
-: "${KEY_NAME:?Environment variable empty or not defined.}"
-: "${KEY_VERSION:?Environment variable empty or not defined.}"
 
 if [[ ! -f timestampServerImagerefs ]]; then
     echo "timestampServerImagerefs not found"
     exit 1
 fi
 
-if [[ ! -f timestampCliImagerefs ]]; then
-    echo "timestampCliImagerefs not found"
+if [[ ! -f timestampCLIImagerefs ]]; then
+    echo "timestampCLIImagerefs not found"
     exit 1
 fi
 
-echo "Signing images with GCP KMS Key..."
-cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampServerImagerefs)"
-cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCliImagerefs)"
-
 echo "Signing images with Keyless..."
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampServerImagerefs)"
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCliImagerefs)"
+cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCLIImagerefs)"
