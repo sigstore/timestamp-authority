@@ -106,12 +106,6 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
 
-	# fetch-tsa-certs
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/fetch-tsa-certs ko build --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs fetchTSAImagerefs github.com/sigstore/timestamp-authority/cmd/fetch-tsa-certs
-
 .PHONY: ko-local
 ko-local:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \

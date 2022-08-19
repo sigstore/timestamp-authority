@@ -46,17 +46,3 @@ builds:
   ldflags:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
-
-- id: fetch-tsa-certs
-  dir: .
-  main: ./cmd/fetch-tsa-certs
-  env:
-  - CGO_ENABLED=0
-  flags:
-  - -trimpath
-  - --tags
-  - "{{ .Env.GIT_HASH }}"
-  - --tags
-  - "{{ .Env.GIT_VERSION }}"
-  ldflags:
-  - -extldflags "-static"
