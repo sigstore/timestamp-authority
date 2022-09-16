@@ -3,7 +3,7 @@ module github.com/sigstore/timestamp-authority
 go 1.19
 
 require (
-	cloud.google.com/go/security v1.4.1
+	cloud.google.com/go/security v1.6.0
 	github.com/digitorus/timestamp v0.0.0-20220704143351-8225fba02d52
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.3
@@ -26,7 +26,7 @@ require (
 	github.com/urfave/negroni v1.0.0
 	go.uber.org/zap v1.22.0
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234
-	google.golang.org/genproto v0.0.0-20220817144833-d7fd3f11b9b1
+	google.golang.org/genproto v0.0.0-20220914142337-ca0e39ece12f
 	google.golang.org/protobuf v1.28.1
 	sigs.k8s.io/release-utils v0.7.3
 )
@@ -140,13 +140,13 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/oauth2 v0.0.0-20220808172628-8227340efae7 // indirect
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20220817070843-5a390386f1f2 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
-	google.golang.org/api v0.93.0 // indirect
+	google.golang.org/api v0.95.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
