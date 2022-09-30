@@ -17,92 +17,53 @@ package signer
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"math/big"
-	"net"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-// CreateTimestampingAuthority generates a self-signed root CA to issue timestamping certificates
-func CreateTimestampingAuthority() (*x509.Certificate, signature.SignerVerifier, error) {
-	sv, priv, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+// NewTimestampingCertWithChain generates an in-memory certificate chain.
+func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]*x509.Certificate, error) {
+	rootPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "generating TSA CA key")
+		return nil, fmt.Errorf("generating in-memory root key")
 	}
-
-	rootTemplate := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
+	sn, err := cryptoutils.GenerateSerialNumber()
+	if err != nil {
+		return nil, fmt.Errorf("generating serial number: %w", err)
+	}
+	ca := &x509.Certificate{
+		SerialNumber: sn,
 		Subject: pkix.Name{
-			CommonName:   "sigstore-tsa-root",
-			Organization: []string{"sigstore.dev"},
+			CommonName:   "Test TSA Root",
+			Organization: []string{"local"},
 		},
 		NotBefore:             time.Now().Add(-5 * time.Minute),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
 		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 	}
-
-	rootDER, err := x509.CreateCertificate(rand.Reader, rootTemplate, rootTemplate, priv.Public(), priv)
+	caCertDER, err := x509.CreateCertificate(rand.Reader, ca, ca, rootPriv.Public(), rootPriv)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "creating self-signed TSA CA")
+		return nil, fmt.Errorf("creating self-signed CA: %w", err)
 	}
-	rootCert, err := x509.ParseCertificate(rootDER)
+
+	sn, err = cryptoutils.GenerateSerialNumber()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "parsing self-signed TSA CA certificate")
+		return nil, fmt.Errorf("generating serial number: %w", err)
 	}
-	return rootCert, sv, nil
-}
-
-// Generate a timestamping certificate for pub using the signer. The chain must verify the signer's public key if provided.
-// Otherwise, a self-signed root CA will be generated.
-func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, signer signature.Signer, chain []*x509.Certificate) ([]*x509.Certificate, error) {
-	// Get the signer's public key
-	signerPubKey, err := signer.PublicKey(options.WithContext(ctx))
+	caCert, err := x509.ParseCertificate(caCertDER)
 	if err != nil {
-		return nil, err
-	}
-
-	// If the signer is not in-memory, retrieve the crypto.Signer
-	var cryptoSigner crypto.Signer
-	if s, ok := signer.(*gcp.SignerVerifier); ok {
-		if cryptoSigner, _, err = s.CryptoSigner(ctx, func(err error) {}); err != nil {
-			return nil, errors.Wrap(err, "getting kms signer")
-		}
-	} else {
-		cryptoSigner = signer.(crypto.Signer)
-	}
-
-	if len(chain) == 0 {
-		// Generate an in-memory self-signed root CA.
-		ca := &x509.Certificate{
-			SerialNumber: big.NewInt(2019),
-			Subject: pkix.Name{
-				Organization: []string{"tsa in-memory root CA"},
-			},
-			NotBefore:             time.Now(),
-			NotAfter:              time.Now().AddDate(10, 0, 0),
-			IsCA:                  true,
-			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageCertSign,
-			BasicConstraintsValid: true,
-		}
-		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, signerPubKey, cryptoSigner)
-		if err != nil {
-			return nil, errors.Wrap(err, "creating self-signed CA")
-		}
-		chain, err = x509.ParseCertificates(caBytes)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("parsing CA certificate: %w", err)
 	}
 
 	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
@@ -111,17 +72,16 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 	}
 
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		SerialNumber: sn,
 		Subject: pkix.Name{
-			Organization: []string{"TSA Timestamping Cert"},
+			CommonName:   "Test TSA Timestamping",
+			Organization: []string{"local"},
 		},
-		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-		IsCA:         false,
+		NotBefore: time.Now().Add(-3 * time.Minute),
+		NotAfter:  time.Now().AddDate(9, 0, 0),
+		IsCA:      false,
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
 		ExtraExtensions: []pkix.Extension{
 			{
 				Id:       asn1.ObjectIdentifier{2, 5, 29, 37},
@@ -129,33 +89,27 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 				Value:    timestampExt,
 			},
 		},
-		BasicConstraintsValid: true,
 	}
 
-	// Create the certificate
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, chain[0], pub, cryptoSigner)
+	certDER, err := x509.CreateCertificate(rand.Reader, cert, caCert, signer.Public(), rootPriv)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating tsa certificate")
 	}
-	tsaCert, err := x509.ParseCertificates(certBytes)
+	tsaCert, err := x509.ParseCertificate(certDER)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify and return the certificate chain
 	root := x509.NewCertPool()
-	root.AddCert(chain[len(chain)-1])
-	intermediates := x509.NewCertPool()
-	for _, intermediate := range chain[:len(chain)-1] {
-		intermediates.AddCert(intermediate)
-	}
+	root.AddCert(caCert)
 	verifyOptions := x509.VerifyOptions{
-		Roots:         root,
-		Intermediates: intermediates,
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+		Roots:     root,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
 	}
-	if _, err = tsaCert[0].Verify(verifyOptions); err != nil {
+	if _, err = tsaCert.Verify(verifyOptions); err != nil {
 		return nil, err
 	}
-	return append(tsaCert, chain...), nil
+
+	return []*x509.Certificate{tsaCert, caCert}, nil
 }

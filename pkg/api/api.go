@@ -16,17 +16,21 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/base64"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/log"
-	pki "github.com/sigstore/timestamp-authority/pkg/pki/x509"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
+	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
 type API struct {
@@ -38,48 +42,43 @@ type API struct {
 func NewAPI() (*API, error) {
 	ctx := context.Background()
 
-	// TODO(hayden): Revamp
-	// * Load key from disk with Tink (Requires KMS decryption key)
-	// * Load certificate chain from config, without extra base64 encoding
-	rekorSigner, err := signer.New(ctx, viper.GetString("timestamp_server.signer"))
-	if err != nil {
-		return nil, errors.Wrap(err, "getting new signer")
-	}
-
-	// timestamping authority setup
-	// Use an in-memory key for timestamping
-	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp_server.timestamp_signer"))
+	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp-signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
 	}
 
 	var certChain []*x509.Certificate
-	b64CertChainStr := viper.GetString("timestamp_server.timestamp_chain")
-	if b64CertChainStr != "" {
-		certChainStr, err := base64.StdEncoding.DecodeString(b64CertChainStr)
-		if err != nil {
-			return nil, errors.Wrap(err, "decoding timestamping cert")
-		}
-		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
-			return nil, errors.Wrap(err, "parsing timestamp cert chain")
-		}
-	}
-	// TODO: Verify certificate chain for non-in-memory
 
-	// Generate a tsa certificate from the rekor signer and provided certificate chain
-	certChain, err = signer.NewTimestampingCertWithChain(ctx, tsaSigner.Public(), rekorSigner, certChain)
-	if err != nil {
-		return nil, errors.Wrap(err, "generating timestamping cert chain")
+	if viper.GetString("timestamp-signer") != signer.MemoryScheme {
+		certChainPath := viper.GetString("certificate-chain-path")
+		data, err := os.ReadFile(filepath.Clean(certChainPath))
+		if err != nil {
+			return nil, err
+		}
+		certChain, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		if err := tsx509.VerifyCertChain(certChain, tsaSigner); err != nil {
+			return nil, err
+		}
+	} else {
+		// Generate an in-memory TSA certificate chain
+		certChain, err = signer.NewTimestampingCertWithChain(ctx, tsaSigner)
+		if err != nil {
+			return nil, errors.Wrap(err, "generating timestamping cert chain")
+		}
 	}
-	certChainPem, err := pki.CertChainToPEM(certChain)
+
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(certChain)
 	if err != nil {
-		return nil, errors.Wrap(err, "timestamping cert chain")
+		return nil, fmt.Errorf("marshal certificates to PEM: %w", err)
 	}
 
 	return &API{
 		tsaSigner:    tsaSigner,
 		certChain:    certChain,
-		certChainPem: string(certChainPem),
+		certChainPem: string(certChainPEM),
 	}, nil
 }
 

@@ -26,16 +26,6 @@ import (
 
 const MemoryScheme = "memory"
 
-func New(ctx context.Context, signer string) (signature.Signer, error) {
-	switch {
-	case signer == MemoryScheme:
-		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
-		return sv, err
-	default:
-		return kms.Get(ctx, signer, crypto.SHA256)
-	}
-}
-
 func NewCryptoSigner(ctx context.Context, signer string) (crypto.Signer, error) {
 	switch {
 	case signer == MemoryScheme:

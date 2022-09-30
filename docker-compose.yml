@@ -21,10 +21,11 @@ services:
     command: [
       "timestamp-server",
       "serve",
-      "--timestamp_server.address=0.0.0.0",
-      "--timestamp_server.signer=memory",
+      "--hostname=timestamp.local",
+      "--address=0.0.0.0",
+      "--signer=memory",
       # Uncomment this for production logging
-      # "--log_type=prod",
+      # "--log-type=prod",
       ]
     # volumes:
     # - "/var/run/attestations:/var/run/attestations:z"

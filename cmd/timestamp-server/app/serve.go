@@ -39,7 +39,7 @@ var serveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Setup the logger to dev/prod
-		log.ConfigureLogger(viper.GetString("log_type"))
+		log.ConfigureLogger(viper.GetString("log-type"))
 
 		// workaround for https://github.com/sigstore/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
@@ -60,7 +60,7 @@ var serveCmd = &cobra.Command{
 			}
 		}()
 
-		server.Host = viper.GetString("timestamp_server.address")
+		server.Host = viper.GetString("address")
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = []string{"http"}
 

@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/digitorus/timestamp"
+	"github.com/haydentherapper/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/client"
@@ -106,13 +106,10 @@ func createRequestFromFlags() ([]byte, error) {
 type timestampCmdOutput struct {
 	Timestamp time.Time
 	Location  string
-	UUID      string
-	Index     int64
 }
 
 func (t *timestampCmdOutput) String() string {
-	return fmt.Sprintf("Artifact timestamped at %s\nWrote timestamp response to %v\nCreated entry at index %d, available at: %v%v\n",
-		t.Timestamp, t.Location, t.Index, viper.GetString("timestamp_server"), t.UUID)
+	return fmt.Sprintf("Artifact timestamped at %s\nWrote timestamp response to %v\n", t.Timestamp, t.Location)
 }
 
 var timestampCmd = &cobra.Command{
@@ -151,7 +148,7 @@ var timestampCmd = &cobra.Command{
 		}
 
 		// validate that timestamp is parseable
-		_, err = timestamp.ParseResponse(respBytes.Bytes())
+		ts, err := timestamp.ParseResponse(respBytes.Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +163,8 @@ var timestampCmd = &cobra.Command{
 		}
 
 		return &timestampCmdOutput{
-			Location: outStr,
+			Timestamp: ts.Time,
+			Location:  outStr,
 		}, nil
 	}),
 }
