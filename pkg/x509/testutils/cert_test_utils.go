@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"math/big"
 	"time"
 )
@@ -115,17 +116,29 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 }
 
 func GenerateLeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
+	if err != nil {
+		return nil, nil, err
+	}
+
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			CommonName:   "Test TSA Timestamping Leaf",
 			Organization: []string{"local"},
 		},
-		NotBefore:   time.Now().Add(-1 * time.Minute),
-		NotAfter:    time.Now().Add(time.Hour),
-		KeyUsage:    x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
-		IsCA:        false,
+		NotBefore: time.Now().Add(-1 * time.Minute),
+		NotAfter:  time.Now().Add(time.Hour),
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+		IsCA:      false,
+		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       asn1.ObjectIdentifier{2, 5, 29, 37},
+				Critical: true,
+				Value:    timestampExt,
+			},
+		},
 	}
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

@@ -28,6 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
 // NewTimestampingCertWithChain generates an in-memory certificate chain.
@@ -66,7 +67,7 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 		return nil, fmt.Errorf("parsing CA certificate: %w", err)
 	}
 
-	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
 		ExtraExtensions: []pkix.Extension{
 			{
-				Id:       asn1.ObjectIdentifier{2, 5, 29, 37},
+				Id:       tsx509.EKUOID,
 				Critical: true,
 				Value:    timestampExt,
 			},

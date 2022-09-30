@@ -17,9 +17,15 @@ package x509
 import (
 	"crypto"
 	"crypto/x509"
+	"encoding/asn1"
 	"errors"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+)
+
+var (
+	EKUOID             = asn1.ObjectIdentifier{2, 5, 29, 37}
+	EKUTimestampingOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 8}
 )
 
 // VerifyCertChain verifies that the certificate chain is valid for issuing
@@ -58,6 +64,24 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer) error {
 		if !c.IsCA {
 			return errors.New("certificate is not a CA certificate")
 		}
+	}
+
+	// Verify leaf has only a single EKU for timestamping, per RFC 3161 2.3
+	// This should be enforced by Verify already
+	leafEKU := certs[0].ExtKeyUsage
+	if len(leafEKU) != 1 {
+		return errors.New("certificate should only contain one EKU")
+	}
+
+	// Verify leaf's EKU is set to critical, per RFC 3161 2.3
+	var criticalEKU bool
+	for _, ext := range certs[0].Extensions {
+		if ext.Id.Equal(EKUOID) {
+			criticalEKU = ext.Critical
+		}
+	}
+	if !criticalEKU {
+		return errors.New("certificate must set EKU to critical")
 	}
 
 	// If the chain contains intermediates, verify that the extended key

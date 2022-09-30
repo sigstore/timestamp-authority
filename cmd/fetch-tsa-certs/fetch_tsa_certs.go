@@ -31,6 +31,7 @@ import (
 
 	privateca "cloud.google.com/go/security/privateca/apiv1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 	privatecapb "google.golang.org/genproto/googleapis/cloud/security/privateca/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -76,7 +77,7 @@ func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMS
 	}
 
 	// OID for Extended Key Usage Timestamping
-	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
 	if err != nil {
 		return nil, err
 	}
