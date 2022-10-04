@@ -181,10 +181,6 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/digitorus/pkcs7 v0.0.0-20220704143225-a9c8106cbfc6 h1:b98clxJQS08ohZb7PuAqYJw6WvIJGcAWoUVPgOHwNw0=
-github.com/digitorus/pkcs7 v0.0.0-20220704143225-a9c8106cbfc6/go.mod h1:ajT9Iifwrck892Z07+wD+dRRv9ULmlmPG0A+OHSrDuQ=
-github.com/digitorus/timestamp v0.0.0-20220704143351-8225fba02d52 h1:8yE7SkzxCSHuu6++s3P2lJJZGLLS8Q5uL3MMwK3wD/U=
-github.com/digitorus/timestamp v0.0.0-20220704143351-8225fba02d52/go.mod h1:pSqPNzhOhJrn3N5w7GvPHUuaGa7pPf4cKNm57fGLe2E=
 github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi/U=
 github.com/dimchansky/utfbom v1.1.1/go.mod h1:SxdoEBH5qIqFocHMyGOXVAybYJdr71b1Q/j0mACtrfE=
 github.com/docker/go-units v0.4.0 h1:3uh0PgVws3nIA0Q+MwDC8yjEPf9zjRfZZWXZYDct3Tw=
@@ -445,6 +441,10 @@ github.com/hashicorp/vault/sdk v0.6.0 h1:6Z+In5DXHiUfZvIZdMx7e2loL1PPyDjA4bVh9ZT
 github.com/hashicorp/vault/sdk v0.6.0/go.mod h1:+DRpzoXIdMvKc88R4qxr+edwy/RvH5QK8itmxLiDHLc=
 github.com/hashicorp/yamux v0.1.1 h1:yrQxtgseBDrq9Y652vSRDvsKCJKOUD+GzTS4Y0Y8pvE=
 github.com/hashicorp/yamux v0.1.1/go.mod h1:CtWFDAQgb7dxtzFs4tWbplKIe2jSi3+5vKbgIO0SLnQ=
+github.com/haydentherapper/pkcs7 v0.0.0-20220929222125-43f9df7f9dec h1:PJ83NprF+Bwpegl0k015xCcCHFUNFkpwi69isxKHSyY=
+github.com/haydentherapper/pkcs7 v0.0.0-20220929222125-43f9df7f9dec/go.mod h1:m3Dur7+IMNAZ6jZIL9aDzuk47A83XzbMywFc6OQJ3j0=
+github.com/haydentherapper/timestamp v0.0.0-20220930163439-e8d86ff777a3 h1:VEydSeVHij1f4GNWR6gLMO4JKfW2eY56GJTizVAC4Io=
+github.com/haydentherapper/timestamp v0.0.0-20220930163439-e8d86ff777a3/go.mod h1:k73hF6yflk4SlrZvzdL95BYMveZWQBKs7D+YEaI3Zfc=
 github.com/honeycombio/beeline-go v1.1.1 h1:sU8r4ae34uEL3/CguSl8Mr+Asz9DL1nfH9Wwk85Pc7U=
 github.com/honeycombio/libhoney-go v1.15.2 h1:5NGcjOxZZma13dmzNcl3OtGbF1hECA0XHJNHEb2t2ck=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=

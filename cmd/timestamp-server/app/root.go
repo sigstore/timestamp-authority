@@ -56,14 +56,14 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.timestamp-server.yaml)")
-	rootCmd.PersistentFlags().StringVar(&logType, "log_type", "dev", "logger type to use (dev/prod)")
-	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable_pprof", false, "enable pprof for profiling on port 6060")
+	rootCmd.PersistentFlags().StringVar(&logType, "log-type", "dev", "logger type to use (dev/prod)")
+	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable-pprof", false, "enable pprof for profiling on port 6060")
 
-	rootCmd.PersistentFlags().String("timestamp_server.hostname", "timestamp.sigstore.dev", "public hostname of instance")
-	rootCmd.PersistentFlags().String("timestamp_server.address", "127.0.0.1", "Address to bind to")
-	rootCmd.PersistentFlags().String("timestamp_server.signer", "memory", "Timestamp signer to use. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource, memory]")
-	rootCmd.PersistentFlags().String("timestamp_server.timestamp_chain", "", "PEM encoded certificate chain certifying the timestamp_signer key to act as a timestamping authority")
-	rootCmd.PersistentFlags().String("timestamp_server.timestamp_signer", "memory", "Timestamping authority signer. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource, memory]")
+	rootCmd.PersistentFlags().String("hostname", "timestamp.sigstore.dev", "public hostname of instance")
+	rootCmd.PersistentFlags().String("address", "127.0.0.1", "Address to bind to")
+	rootCmd.PersistentFlags().String("signer", "memory", "Timestamp signer to use. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource, memory]")
+	rootCmd.PersistentFlags().String("certificate-chain-path", "", "PEM encoded certificate chain certifying the timestamp_signer key to act as a timestamping authority")
+	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource, memory]")
 
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
@@ -71,9 +71,7 @@ func init() {
 		log.Logger.Fatal(err)
 	}
 
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	log.Logger.Debugf("pprof enabled %v", enablePprof)
+	log.Logger.Debugf("pprof enabled: %v", enablePprof)
 	// Enable pprof
 	if enablePprof {
 		go func() {

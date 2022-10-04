@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/haydentherapper/timestamp"
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
 )
 

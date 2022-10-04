@@ -31,7 +31,7 @@ To use:
 
 rootCert, rootKey, _ := GenerateRootCa()
 subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
-leafCert, _, _ := GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+leafCert, _, _ := GenerateLeafCert(subCert, subKey)
 
 roots := x509.NewCertPool()
 subs := x509.NewCertPool()
@@ -41,7 +41,7 @@ opts := x509.VerifyOptions{
 	Roots:         roots,
 	Intermediates: subs,
 	KeyUsages: []x509.ExtKeyUsage{
-		x509.ExtKeyUsageCodeSigning,
+		x509.ExtKeyUsageTimeStamping,
 	},
 }
 _, err := leafCert.Verify(opts)
@@ -64,10 +64,10 @@ func GenerateRootCa() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	rootTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName:   "sigstore",
-			Organization: []string{"sigstore.dev"},
+			CommonName:   "Test TSA Timestamping Root",
+			Organization: []string{"local"},
 		},
-		NotBefore:             time.Now().Add(-5 * time.Minute),
+		NotBefore:             time.Now().Add(-10 * time.Minute),
 		NotAfter:              time.Now().Add(5 * time.Hour),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
@@ -91,13 +91,13 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 	subTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName:   "sigstore-sub",
-			Organization: []string{"sigstore.dev"},
+			CommonName:   "Test TSA Timestamping Intermediate",
+			Organization: []string{"local"},
 		},
-		NotBefore:             time.Now().Add(-2 * time.Minute),
+		NotBefore:             time.Now().Add(-9 * time.Minute),
 		NotAfter:              time.Now().Add(2 * time.Hour),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
@@ -115,21 +115,30 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 	return cert, priv, nil
 }
 
-func GenerateLeafCert(subject string, oidcIssuer string, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateLeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
+	if err != nil {
+		return nil, nil, err
+	}
+
 	certTemplate := &x509.Certificate{
-		SerialNumber:   big.NewInt(1),
-		EmailAddresses: []string{subject},
-		NotBefore:      time.Now().Add(-1 * time.Minute),
-		NotAfter:       time.Now().Add(time.Hour),
-		KeyUsage:       x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-		IsCA:           false,
-		ExtraExtensions: []pkix.Extension{{
-			// OID for OIDC Issuer extension
-			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
-			Critical: false,
-			Value:    []byte(oidcIssuer),
-		}},
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   "Test TSA Timestamping Leaf",
+			Organization: []string{"local"},
+		},
+		NotBefore: time.Now().Add(-1 * time.Minute),
+		NotAfter:  time.Now().Add(time.Hour),
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+		IsCA:      false,
+		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       asn1.ObjectIdentifier{2, 5, 29, 37},
+				Critical: true,
+				Value:    timestampExt,
+			},
+		},
 	}
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
