@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	// Extended Key Usage OID, per RFC 5280
+	// EKUOID is the Extended Key Usage OID, per RFC 5280
 	EKUOID             = asn1.ObjectIdentifier{2, 5, 29, 37}
 	EKUTimestampingOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 8}
 )
