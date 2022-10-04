@@ -155,7 +155,7 @@ func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMS
 	if err != nil {
 		return nil, err
 	}
-	leafSigner, _, err := leafKMSSigner.CryptoSigner(ctx, func(err error) {})
+	leafPubKey, err := leafKMSSigner.PublicKey()
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMS
 			},
 		},
 	}
-	certDER, err := x509.CreateCertificate(rand.Reader, cert, intermediate, leafSigner.Public(), intermediateSigner)
+	certDER, err := x509.CreateCertificate(rand.Reader, cert, intermediate, leafPubKey, intermediateSigner)
 	if err != nil {
 		return nil, fmt.Errorf("creating tsa certificate: %w", err)
 	}

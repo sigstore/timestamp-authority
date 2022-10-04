@@ -24,6 +24,7 @@ import (
 )
 
 var (
+	// Extended Key Usage OID, per RFC 5280
 	EKUOID             = asn1.ObjectIdentifier{2, 5, 29, 37}
 	EKUTimestampingOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 8}
 )
@@ -32,7 +33,7 @@ var (
 // timestamping certificates. The chain should start with a leaf certificate,
 // followed by any number of intermediates, and end with the root certificate.
 func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer) error {
-	// chain must contain at least one CA certificate and a leaf certificate
+	// Chain must contain at least one CA certificate and a leaf certificate
 	if len(certs) < 2 {
 		return errors.New("certificate chain must contain at least two certificates")
 	}
