@@ -18,6 +18,7 @@ package app
 import (
 	"flag"
 	"net/http"
+	"time"
 
 	"github.com/go-openapi/loads"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -69,7 +70,12 @@ var serveCmd = &cobra.Command{
 
 		http.Handle("/metrics", promhttp.Handler())
 		go func() {
-			_ = http.ListenAndServe(":2112", nil)
+			srv := &http.Server{
+				Addr:         ":2112",
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 10 * time.Second,
+			}
+			_ = srv.ListenAndServe()
 		}()
 
 		if err := server.Serve(); err != nil {
