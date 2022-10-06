@@ -111,6 +111,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+	returnHandler = middleware.Recoverer(returnHandler)
 
 	handleCORS := cors.Default().Handler
 	returnHandler = handleCORS(returnHandler)
