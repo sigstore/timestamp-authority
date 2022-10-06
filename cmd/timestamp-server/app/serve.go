@@ -75,7 +75,10 @@ var serveCmd = &cobra.Command{
 				ReadTimeout:  10 * time.Second,
 				WriteTimeout: 10 * time.Second,
 			}
-			_ = srv.ListenAndServe()
+
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Logger.Fatalf("error when starting or running http server for metrics: %v", err)
+			}
 		}()
 
 		if err := server.Serve(); err != nil {

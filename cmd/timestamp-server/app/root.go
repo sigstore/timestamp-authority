@@ -90,7 +90,7 @@ func init() {
 			}
 
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Logger.Fatalf("Error when starting or running http server: %v", err)
+				log.Logger.Fatalf("error when starting or running http server for pprof: %v", err)
 			}
 		}()
 	}
