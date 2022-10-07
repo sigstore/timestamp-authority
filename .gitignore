@@ -6,3 +6,4 @@ fetchTSAImagerefs
 timestamp-cli
 timestamp-server
 *.tsr
+hack/tools/bin/*
