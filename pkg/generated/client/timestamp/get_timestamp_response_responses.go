@@ -86,9 +86,39 @@ type GetTimestampResponseCreated struct {
 	Payload io.Writer
 }
 
+// IsSuccess returns true when this get timestamp response created response has a 2xx status code
+func (o *GetTimestampResponseCreated) IsSuccess() bool {
+	return true
+}
+
+// IsRedirect returns true when this get timestamp response created response has a 3xx status code
+func (o *GetTimestampResponseCreated) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this get timestamp response created response has a 4xx status code
+func (o *GetTimestampResponseCreated) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this get timestamp response created response has a 5xx status code
+func (o *GetTimestampResponseCreated) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this get timestamp response created response a status code equal to that given
+func (o *GetTimestampResponseCreated) IsCode(code int) bool {
+	return code == 201
+}
+
 func (o *GetTimestampResponseCreated) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
 }
+
+func (o *GetTimestampResponseCreated) String() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
+}
+
 func (o *GetTimestampResponseCreated) GetPayload() io.Writer {
 	return o.Payload
 }
@@ -117,9 +147,39 @@ type GetTimestampResponseBadRequest struct {
 	Payload *models.Error
 }
 
+// IsSuccess returns true when this get timestamp response bad request response has a 2xx status code
+func (o *GetTimestampResponseBadRequest) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this get timestamp response bad request response has a 3xx status code
+func (o *GetTimestampResponseBadRequest) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this get timestamp response bad request response has a 4xx status code
+func (o *GetTimestampResponseBadRequest) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this get timestamp response bad request response has a 5xx status code
+func (o *GetTimestampResponseBadRequest) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this get timestamp response bad request response a status code equal to that given
+func (o *GetTimestampResponseBadRequest) IsCode(code int) bool {
+	return code == 400
+}
+
 func (o *GetTimestampResponseBadRequest) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
 }
+
+func (o *GetTimestampResponseBadRequest) String() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
+}
+
 func (o *GetTimestampResponseBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -149,7 +209,36 @@ The content requested is not implemented
 type GetTimestampResponseNotImplemented struct {
 }
 
+// IsSuccess returns true when this get timestamp response not implemented response has a 2xx status code
+func (o *GetTimestampResponseNotImplemented) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this get timestamp response not implemented response has a 3xx status code
+func (o *GetTimestampResponseNotImplemented) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this get timestamp response not implemented response has a 4xx status code
+func (o *GetTimestampResponseNotImplemented) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this get timestamp response not implemented response has a 5xx status code
+func (o *GetTimestampResponseNotImplemented) IsServerError() bool {
+	return true
+}
+
+// IsCode returns true when this get timestamp response not implemented response a status code equal to that given
+func (o *GetTimestampResponseNotImplemented) IsCode(code int) bool {
+	return code == 501
+}
+
 func (o *GetTimestampResponseNotImplemented) Error() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
+}
+
+func (o *GetTimestampResponseNotImplemented) String() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
 }
 
@@ -181,9 +270,39 @@ func (o *GetTimestampResponseDefault) Code() int {
 	return o._statusCode
 }
 
+// IsSuccess returns true when this get timestamp response default response has a 2xx status code
+func (o *GetTimestampResponseDefault) IsSuccess() bool {
+	return o._statusCode/100 == 2
+}
+
+// IsRedirect returns true when this get timestamp response default response has a 3xx status code
+func (o *GetTimestampResponseDefault) IsRedirect() bool {
+	return o._statusCode/100 == 3
+}
+
+// IsClientError returns true when this get timestamp response default response has a 4xx status code
+func (o *GetTimestampResponseDefault) IsClientError() bool {
+	return o._statusCode/100 == 4
+}
+
+// IsServerError returns true when this get timestamp response default response has a 5xx status code
+func (o *GetTimestampResponseDefault) IsServerError() bool {
+	return o._statusCode/100 == 5
+}
+
+// IsCode returns true when this get timestamp response default response a status code equal to that given
+func (o *GetTimestampResponseDefault) IsCode(code int) bool {
+	return o._statusCode == code
+}
+
 func (o *GetTimestampResponseDefault) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
 }
+
+func (o *GetTimestampResponseDefault) String() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
+}
+
 func (o *GetTimestampResponseDefault) GetPayload() *models.Error {
 	return o.Payload
 }
