@@ -1,4 +1,4 @@
-*			@sigstore/tsa-codeowners
+*			@sigstore/timestamp-codeowners
 
 /.github/ 		@cpanato
 /release/ 		@cpanato
@@ -10,6 +10,4 @@ haydentherapper
 
 # asraa
 # bobcallaway
-# dlorenc
 # haydentherapper
-# lukehinds
