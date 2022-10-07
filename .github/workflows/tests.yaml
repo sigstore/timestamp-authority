@@ -74,7 +74,7 @@ jobs:
           go-version-file: './go.mod'
           check-latest: true
       - name: Install addlicense
-        run: go install github.com/google/addlicense@latest
+        run: go install github.com/google/addlicense@2fe3ee94479d08be985a84861de4e6b06a1c7208 # v1.0.0
       - name: Check license headers
         run: |
           set -e
@@ -93,5 +93,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc # v3
         with:
-          version: v1.48.0
-          args: --timeout=15m
+          version: v1.50
+          args: --timeout=5m --verbose
