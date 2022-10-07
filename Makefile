@@ -40,8 +40,7 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-// TODO: upate to sigstore if we move
-KO_PREFIX ?= ghcr.io/haydentherapper
+KO_PREFIX ?= ghcr.io/sigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
 
 # Binaries
