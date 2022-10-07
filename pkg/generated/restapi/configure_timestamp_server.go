@@ -71,7 +71,6 @@ func configureAPI(api *operations.TimestampServerAPI) http.Handler {
 
 	api.ServerShutdown = func() {}
 
-	api.AddMiddlewareFor("GET", "/api/v1/timestamp", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/timestamp/certchain", cacheForDay)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
