@@ -30,7 +30,7 @@ const TinkScheme = "tink"
 const MemoryScheme = "memory"
 const FileScheme = "file"
 
-func NewCryptoSigner(ctx context.Context, signer, kmsKey, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
 	switch {
 	case signer == MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
@@ -44,6 +44,12 @@ func NewCryptoSigner(ctx context.Context, signer, kmsKey, fileSignerPath, fileSi
 		}
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
+	case signer == TinkScheme:
+		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey)
+		if err != nil {
+			return nil, err
+		}
+		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey)
 	default:
 		return nil, fmt.Errorf("unsupported signer type: %s", signer)
 	}
