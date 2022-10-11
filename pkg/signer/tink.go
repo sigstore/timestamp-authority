@@ -29,6 +29,7 @@ import (
 	"github.com/google/tink/go/core/registry"
 	"github.com/google/tink/go/integration/awskms"
 	"github.com/google/tink/go/integration/gcpkms"
+	"github.com/google/tink/go/integration/hcvault"
 	signatureSubtle "github.com/google/tink/go/signature/subtle"
 	"github.com/google/tink/go/subtle"
 	"github.com/google/tink/go/tink"
@@ -69,8 +70,8 @@ func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.A
 }
 
 // GetPrimaryKey returns a Tink AEAD encryption key from KMS
-// Supports GCP and AWS
-func GetPrimaryKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
+// Supports GCP, AWS, and Vault
+func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD, error) {
 	switch {
 	case strings.HasPrefix(kmsKey, "gcp-kms://"):
 		gcpClient, err := gcpkms.NewClientWithOptions(ctx, kmsKey)
@@ -86,6 +87,13 @@ func GetPrimaryKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
 		}
 		registry.RegisterKMSClient(awsClient)
 		return awsClient.GetAEAD(kmsKey)
+	case strings.HasPrefix(kmsKey, "hcvault://"):
+		hcVaultClient, err := hcvault.NewClient(kmsKey, nil, hcVaultToken)
+		if err != nil {
+			return nil, err
+		}
+		registry.RegisterKMSClient(hcVaultClient)
+		return hcVaultClient.GetAEAD(kmsKey)
 	default:
 		return nil, errors.New("unsupported Tink KMS key type")
 	}

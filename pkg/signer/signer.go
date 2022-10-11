@@ -30,7 +30,7 @@ const TinkScheme = "tink"
 const MemoryScheme = "memory"
 const FileScheme = "file"
 
-func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
 	switch {
 	case signer == MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
@@ -45,7 +45,7 @@ func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeyset
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
 	case signer == TinkScheme:
-		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey)
+		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey, hcVaultToken)
 		if err != nil {
 			return nil, err
 		}

@@ -45,6 +45,7 @@ func NewAPI() (*API, error) {
 	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp-signer"),
 		viper.GetString("kms-key-resource"),
 		viper.GetString("tink-key-resource"), viper.GetString("tink-keyset-path"),
+		viper.GetString("tink-hcvault-token"),
 		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
