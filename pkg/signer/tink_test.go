@@ -15,13 +15,20 @@
 package signer
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"hash"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/google/tink/go/aead"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
 	"github.com/google/tink/go/keyset"
 	"github.com/google/tink/go/proto/tink_go_proto"
@@ -31,6 +38,61 @@ import (
 type TestStruct struct {
 	keyTemplate *tink_go_proto.KeyTemplate
 	h           hash.Hash
+}
+
+func TestNewTinkSigner(t *testing.T) {
+	aeskh, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
+	if err != nil {
+		t.Fatalf("error creating AEAD key handle: %v", err)
+	}
+	a, err := aead.New(aeskh)
+	if err != nil {
+		t.Fatalf("error creating AEAD key: %v", err)
+	}
+	kh, err := keyset.NewHandle(signature.ECDSAP256KeyTemplate())
+	if err != nil {
+		t.Fatalf("error creating ECDSA key handle: %v", err)
+	}
+	khsigner, err := KeyHandleToSigner(kh)
+	if err != nil {
+		t.Fatalf("error converting ECDSA key handle to signer: %v", err)
+	}
+
+	dir := t.TempDir()
+	keysetPath := filepath.Join(dir, "keyset.json.enc")
+	f, err := os.Create(keysetPath)
+	if err != nil {
+		t.Fatalf("error creating file: %v", err)
+	}
+	defer f.Close()
+	jsonWriter := keyset.NewJSONWriter(f)
+	if err := kh.Write(jsonWriter, a); err != nil {
+		t.Fatalf("error writing enc keyset: %v", err)
+	}
+
+	signer, err := NewTinkSigner(context.TODO(), keysetPath, a)
+	if err != nil {
+		t.Fatalf("unexpected error creating Tink signer: %v", err)
+	}
+
+	// Expect signer and key handle's public keys match
+	if err := cryptoutils.EqualKeys(signer.Public(), khsigner.Public()); err != nil {
+		t.Fatalf("keys of signer and key handle do not match: %v", err)
+	}
+
+	// Failure: Unable to decrypt keyset
+	aeskh1, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
+	if err != nil {
+		t.Fatalf("error creating AEAD key handle: %v", err)
+	}
+	a1, err := aead.New(aeskh1)
+	if err != nil {
+		t.Fatalf("error creating AEAD key: %v", err)
+	}
+	_, err = NewTinkSigner(context.TODO(), keysetPath, a1)
+	if err == nil || !strings.Contains(err.Error(), "decryption failed") {
+		t.Fatalf("expected error decrypting keyset, got %v", err)
+	}
 }
 
 func TestKeyHandleToSignerECDSA(t *testing.T) {
