@@ -42,7 +42,8 @@ type API struct {
 func NewAPI() (*API, error) {
 	ctx := context.Background()
 
-	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp-signer"))
+	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp-signer"),
+		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
 	}

@@ -25,12 +25,15 @@ import (
 )
 
 const MemoryScheme = "memory"
+const FileScheme = "file"
 
-func NewCryptoSigner(ctx context.Context, signer string) (crypto.Signer, error) {
+func NewCryptoSigner(ctx context.Context, signer, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
 	switch {
 	case signer == MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 		return sv, err
+	case signer == FileScheme:
+		return NewFileSigner(fileSignerPath, fileSignerPasswd)
 	default:
 		signer, err := kms.Get(ctx, signer, crypto.SHA256)
 		if err != nil {
