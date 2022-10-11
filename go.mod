@@ -32,7 +32,11 @@ require (
 	sigs.k8s.io/release-utils v0.7.3
 )
 
-require go.step.sm/crypto v0.21.0
+require (
+	github.com/golang/protobuf v1.5.2
+	github.com/google/tink/go v1.7.0
+	go.step.sm/crypto v0.21.0
+)
 
 require (
 	cloud.google.com/go v0.104.0 // indirect
@@ -83,7 +87,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-containerregistry v0.11.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect

@@ -62,8 +62,9 @@ func init() {
 
 	rootCmd.PersistentFlags().String("hostname", "timestamp.sigstore.dev", "public hostname of instance")
 	rootCmd.PersistentFlags().String("address", "127.0.0.1", "Address to bind to")
-	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource, memory, file]. Memory and file-based signers should only be used for testing")
-	rootCmd.PersistentFlags().String("certificate-chain-path", "", "PEM-encoded certificate chain certifying the timestamp-signer key to act as a timestamping authority")
+	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
+	rootCmd.PersistentFlags().String("kms-key", "memory", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]. Memory and file-based signers should only be used for testing")
+	rootCmd.PersistentFlags().String("certificate-chain-path", "", "PEM-encoded certificate chain certifying the kms-key to act as a timestamping authority")
 	rootCmd.PersistentFlags().String("file-signer-key-path", "", "Path to file containing PEM-encoded private key. Supported formats include PKCS#1, PKCS#8, and RFC5915 for EC")
 	rootCmd.PersistentFlags().String("file-signer-passwd", "", "Password to decrypt private key")
 

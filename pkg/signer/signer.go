@@ -19,27 +19,32 @@ import (
 	"crypto"
 	"crypto/elliptic"
 	"crypto/rand"
+	"fmt"
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
+const KMSScheme = "kms"
+const TinkScheme = "tink"
 const MemoryScheme = "memory"
 const FileScheme = "file"
 
-func NewCryptoSigner(ctx context.Context, signer, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+func NewCryptoSigner(ctx context.Context, signer, kmsKey, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
 	switch {
 	case signer == MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 		return sv, err
 	case signer == FileScheme:
 		return NewFileSigner(fileSignerPath, fileSignerPasswd)
-	default:
-		signer, err := kms.Get(ctx, signer, crypto.SHA256)
+	case signer == KMSScheme:
+		signer, err := kms.Get(ctx, kmsKey, crypto.SHA256)
 		if err != nil {
 			return nil, err
 		}
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
+	default:
+		return nil, fmt.Errorf("unsupported signer type: %s", signer)
 	}
 }
