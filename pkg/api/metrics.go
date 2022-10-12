@@ -41,4 +41,9 @@ var (
 			float64(4*time.Second),
 			10),
 	}, []string{"path", "method"})
+
+	MetricRequestCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Total number of HTTP requests by status code, path, and method.",
+	}, []string{"code", "path", "method"})
 )
