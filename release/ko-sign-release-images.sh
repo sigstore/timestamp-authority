@@ -32,5 +32,7 @@ if [[ ! -f timestampCLIImagerefs ]]; then
 fi
 
 echo "Signing images with Keyless..."
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampServerImagerefs)"
-cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" "$(cat timestampCLIImagerefs)"
+readarray -t server_images < <(cat timestampServerImagerefs || true)
+cosign sign --force -a GIT_HASH="${GIT_HASH}" -a GIT_VERSION="${GIT_VERSION}" "${server_images[@]}"
+readarray -t cli_images < <(cat timestampCLIImagerefs || true)
+cosign sign --force -a GIT_HASH="${GIT_HASH}" -a GIT_VERSION="${GIT_VERSION}" "${cli_images[@]}"
