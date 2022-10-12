@@ -66,7 +66,7 @@ func init() {
 	// KMS flags
 	rootCmd.PersistentFlags().String("kms-key-resource", "", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]")
 	// Tink flags
-	rootCmd.PersistentFlags().String("tink-key-resource", "", "KMS key for signing timestamp responses for Tink keysets. Valid options include: [gcp-kms://resource, aws-kms://resource]")
+	rootCmd.PersistentFlags().String("tink-key-resource", "", "KMS key for signing timestamp responses for Tink keysets. Valid options include: [gcp-kms://resource, aws-kms://resource, hcvault://]")
 	rootCmd.PersistentFlags().String("tink-keyset-path", "", "Path to KMS-encrypted keyset for Tink, decrypted by tink-key-resource")
 	rootCmd.PersistentFlags().String("tink-hcvault-token", "", "Authentication token for Hashicorp Vault API calls")
 	// KMS and Tink flags
