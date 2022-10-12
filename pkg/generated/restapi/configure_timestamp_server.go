@@ -148,13 +148,6 @@ func wrapMetrics(handler http.Handler) http.Handler {
 				"path":   r.URL.Path,
 				"method": r.Method,
 			}).Observe(float64(time.Since(start)))
-
-			pkgapi.MetricRequestCount.With(
-				map[string]string{
-					"path":   r.URL.Path,
-					"method": r.Method,
-					"code":   strconv.Itoa(ww.Status()),
-				}).Inc()
 		}()
 
 		handler.ServeHTTP(ww, r)
