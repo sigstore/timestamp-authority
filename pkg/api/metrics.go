@@ -24,7 +24,7 @@ import (
 
 var (
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "timestamp_api_latency",
+		Name: "timestamp_authority_api_latency",
 		Help: "API Latency on calls",
 	}, []string{"path", "code"})
 
@@ -43,7 +43,7 @@ var (
 	}, []string{"path", "method"})
 
 	MetricRequestCount = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "http_requests_total",
+		Name: "timestamp_authority_http_requests_total",
 		Help: "Total number of HTTP requests by status code, path, and method.",
 	}, []string{"code", "path", "method"})
 )
