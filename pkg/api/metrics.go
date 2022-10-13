@@ -20,6 +20,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var (
@@ -46,4 +47,19 @@ var (
 		Name: "timestamp_authority_http_requests_total",
 		Help: "Total number of HTTP requests by status code, path, and method.",
 	}, []string{"code", "path", "method"})
+
+	_ = promauto.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "timestamp_authority",
+			Name:      "build_info",
+			Help:      "A metric with a constant '1' value labeled by version, revision, branch, and goversion from which timestamp-authority was built.",
+			ConstLabels: prometheus.Labels{
+				"version":    version.GetVersionInfo().GitVersion,
+				"revision":   version.GetVersionInfo().GitCommit,
+				"build_date": version.GetVersionInfo().BuildDate,
+				"goversion":  version.GetVersionInfo().GoVersion,
+			},
+		},
+		func() float64 { return 1 },
+	)
 )
