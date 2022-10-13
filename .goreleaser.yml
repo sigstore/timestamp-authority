@@ -16,12 +16,11 @@ before:
 # this is needed because we are generating files that goreleaser was not aware to push to GH project release
     - /bin/bash -c 'if [ -n "$CI" ]; then make sign-container-release; fi'
 
-# TODO: uncomment when if move to sigstore or point to haydentherapper the go modules
-# gomod:
-#   proxy: true
+gomod:
+  proxy: true
 
 sboms:
-- artifacts: binary
+  - artifacts: binary
 
 builds:
   - id: timestamp-server
@@ -63,7 +62,7 @@ builds:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
-     - "{{ .Env.LDFLAGS }}"
+      - "{{ .Env.LDFLAGS }}"
 
 signs:
   # Keyless
@@ -92,9 +91,8 @@ snapshot:
   name_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
-  prerelease: allow # remove this when we start publishing non-prerelease or set to auto
+  prerelease: auto
   draft: true # allow for manual edits
   github:
-    # TODO: update the sigstore after the transfer
-    owner: haydentherapper
+    owner: sigstore
     name: timestamp-authority

@@ -14,35 +14,35 @@
 # limitations under the License.
 
 # We need a shell for a lot of redirection/piping to work
-defaultBaseImage: ghcr.io/distroless/static:latest
+defaultBaseImage: ghcr.io/chainguard-images/static:latest
 
 builds:
-- id: timestamp-cli
-  dir: .
-  main: ./cmd/timestamp-cli
-  env:
-  - CGO_ENABLED=0
-  flags:
-  - -trimpath
-  - -tags
-  - "{{ .Env.GIT_HASH }}"
-  - -tags
-  - "{{ .Env.GIT_VERSION }}"
-  ldflags:
-  - -extldflags "-static"
-  - "{{ .Env.LDFLAGS }}"
+  - id: timestamp-cli
+    dir: .
+    main: ./cmd/timestamp-cli
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -tags
+      - "{{ .Env.GIT_HASH }}"
+      - -tags
+      - "{{ .Env.GIT_VERSION }}"
+    ldflags:
+      - -extldflags "-static"
+      - "{{ .Env.LDFLAGS }}"
 
-- id: timestamp-server
-  dir: .
-  main: ./cmd/timestamp-server
-  env:
-  - CGO_ENABLED=0
-  flags:
-  - -trimpath
-  - --tags
-  - "{{ .Env.GIT_HASH }}"
-  - --tags
-  - "{{ .Env.GIT_VERSION }}"
-  ldflags:
-  - -extldflags "-static"
-  - "{{ .Env.LDFLAGS }}"
+  - id: timestamp-server
+    dir: .
+    main: ./cmd/timestamp-server
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - --tags
+      - "{{ .Env.GIT_HASH }}"
+      - --tags
+      - "{{ .Env.GIT_VERSION }}"
+    ldflags:
+      - -extldflags "-static"
+      - "{{ .Env.LDFLAGS }}"
