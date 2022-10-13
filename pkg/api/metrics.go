@@ -16,13 +16,34 @@
 package api
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "timestamp_api_latency",
-		Help: "Api Latency on calls",
+		Name: "timestamp_authority_api_latency",
+		Help: "API Latency on calls",
 	}, []string{"path", "code"})
+
+	MetricLatencySummary = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "timestamp_authority_api_latency_summary",
+		Help: "API Latency on calls",
+	}, []string{"path", "code"})
+
+	MetricRequestLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "timestamp_authority_latency_by_api",
+		Help: "API Latency (in ns) by path and method",
+		Buckets: prometheus.ExponentialBucketsRange(
+			float64(time.Millisecond),
+			float64(4*time.Second),
+			10),
+	}, []string{"path", "method"})
+
+	MetricRequestCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "timestamp_authority_http_requests_total",
+		Help: "Total number of HTTP requests by status code, path, and method.",
+	}, []string{"code", "path", "method"})
 )
