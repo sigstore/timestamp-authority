@@ -4,6 +4,14 @@ A service for issuing [RFC 3161 timestamps](https://datatracker.ietf.org/doc/htm
 
 Timestamps conform to the [RFC 3628 policy](https://datatracker.ietf.org/doc/html/rfc3628).
 
+### Prerequisites
+
+On MacOS, we currently require the installation of `openssl`. 
+
+```shell
+brew install openssl
+```
+
 ## Local development
 
 To launch the server:
