@@ -31,6 +31,10 @@ issues:
     linters:
     - errcheck
     - gosec
+  - path: pkg/signer/tink.go 
+    linters:
+    - staticcheck
+    text: SA1019
   max-issues-per-linter: 0
   max-same-issues: 0
 run:
