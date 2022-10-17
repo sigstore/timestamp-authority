@@ -38,7 +38,9 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.Logger.Fatal(err)
+		}
 		// Setup the logger to dev/prod
 		log.ConfigureLogger(viper.GetString("log-type"))
 
@@ -63,7 +65,7 @@ var serveCmd = &cobra.Command{
 
 		server.Host = viper.GetString("address")
 		server.Port = int(viper.GetUint("port"))
-		server.EnabledListeners = []string{"http"}
+		server.EnabledListeners = viper.GetStringSlice("scheme")
 
 		api.ConfigureAPI()
 		server.ConfigureAPI()
