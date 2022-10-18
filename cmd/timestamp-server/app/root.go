@@ -29,9 +29,11 @@ import (
 )
 
 var (
-	cfgFile     string
-	logType     string
-	enablePprof bool
+	cfgFile      string
+	logType      string
+	enablePprof  bool
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -60,8 +62,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&logType, "log-type", "dev", "logger type to use (dev/prod)")
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable-pprof", false, "enable pprof for profiling on port 6060")
 
-	rootCmd.PersistentFlags().String("hostname", "timestamp.sigstore.dev", "public hostname of instance")
-	rootCmd.PersistentFlags().String("address", "127.0.0.1", "Address to bind to")
+	// pprof/metrics read and write timeout flags
+	rootCmd.PersistentFlags().DurationVar(&readTimeout, "read-timeout", 10*time.Second, "pprof/metrics read timeout")
+	rootCmd.PersistentFlags().DurationVar(&writeTimeout, "write-timeout", 10*time.Second, "pprof/metrics write timeout")
+
 	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
 	// KMS flags
 	rootCmd.PersistentFlags().String("kms-key-resource", "", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]")
@@ -74,8 +78,6 @@ func init() {
 	// File flags
 	rootCmd.PersistentFlags().String("file-signer-key-path", "", "Path to file containing PEM-encoded private key. Supported formats include PKCS#1, PKCS#8, and RFC5915 for EC")
 	rootCmd.PersistentFlags().String("file-signer-passwd", "", "Password to decrypt private key")
-
-	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
@@ -93,8 +95,8 @@ func init() {
 
 			srv := &http.Server{
 				Addr:         ":6060",
-				ReadTimeout:  10 * time.Second,
-				WriteTimeout: 10 * time.Second,
+				ReadTimeout:  readTimeout,
+				WriteTimeout: writeTimeout,
 				Handler:      mux,
 			}
 

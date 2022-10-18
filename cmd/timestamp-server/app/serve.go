@@ -63,9 +63,11 @@ var serveCmd = &cobra.Command{
 			}
 		}()
 
-		server.Host = viper.GetString("address")
+		server.Host = viper.GetString("host")
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = viper.GetStringSlice("scheme")
+		server.ReadTimeout = viper.GetDuration("read-timeout")
+		server.WriteTimeout = viper.GetDuration("read-timeout")
 
 		api.ConfigureAPI()
 		server.ConfigureAPI()
