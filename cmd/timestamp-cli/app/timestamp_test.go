@@ -82,10 +82,7 @@ func TestTimestampFlags(t *testing.T) {
 
 	for _, tc := range tests {
 		var blankCmd = &cobra.Command{}
-		if err := addTimestampFlags(blankCmd); err != nil {
-			t.Fatalf("unexpected error adding flags in '%v': %v", tc.caseDesc, err)
-		}
-
+		addTimestampFlags(blankCmd)
 		args := []string{}
 
 		if tc.artifact != "" {

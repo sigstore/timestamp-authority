@@ -21,8 +21,7 @@ services:
     command: [
       "timestamp-server",
       "serve",
-      "--hostname=timestamp.local",
-      "--address=0.0.0.0",
+      "--host=0.0.0.0",
       "--timestamp-signer=memory",
       # Uncomment this for production logging
       # "--log-type=prod",
