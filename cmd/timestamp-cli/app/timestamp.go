@@ -37,7 +37,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func addTimestampFlags(cmd *cobra.Command) error {
+func addTimestampFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an artifact to timestamp")
 	cmd.Flags().String("hash", "sha256", "hash algorithm to use - Valid values are sha256, sha384, and sha512")
 	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
@@ -45,7 +45,6 @@ func addTimestampFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
 
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
-	return nil
 }
 
 func validateTimestampFlags() error {
@@ -171,9 +170,6 @@ var timestampCmd = &cobra.Command{
 
 func init() {
 	initializePFlagMap()
-	if err := addTimestampFlags(timestampCmd); err != nil {
-		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
-	}
-
+	addTimestampFlags(timestampCmd)
 	rootCmd.AddCommand(timestampCmd)
 }

@@ -48,7 +48,7 @@ func init() {
 	initializePFlagMap()
 	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/.timestamp.yaml)")
 
-	rootCmd.PersistentFlags().Var(NewFlagValue(urlFlag, "https://timestamp.sigstore.dev"), "timestamp_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(NewFlagValue(urlFlag, "https://timestamp.sigstore.dev"), "timestamp_server", "Server host:port")
 	rootCmd.PersistentFlags().Var(NewFlagValue(formatFlag, "default"), "format", "Command output format")
 	rootCmd.PersistentFlags().Var(NewFlagValue(timeoutFlag, "30s"), "timeout", "HTTP timeout")
 
