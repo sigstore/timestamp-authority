@@ -18,7 +18,6 @@ package app
 import (
 	"flag"
 	"net/http"
-	"time"
 
 	"github.com/go-openapi/loads"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,6 +29,7 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/generated/restapi"
 	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations"
 	"github.com/sigstore/timestamp-authority/pkg/log"
+	tsaserver "github.com/sigstore/timestamp-authority/pkg/server"
 )
 
 // serveCmd represents the serve command
@@ -67,23 +67,41 @@ var serveCmd = &cobra.Command{
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = viper.GetStringSlice("scheme")
 		server.ReadTimeout = viper.GetDuration("read-timeout")
-		server.WriteTimeout = viper.GetDuration("read-timeout")
+		server.WriteTimeout = viper.GetDuration("write-timeout")
 
 		api.ConfigureAPI()
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())
 		go func() {
+			readTimeout = viper.GetDuration("read-timeout")
+			writeTimeout = viper.GetDuration("write-timeout")
 			srv := &http.Server{
 				Addr:         ":2112",
-				ReadTimeout:  10 * time.Second,
-				WriteTimeout: 10 * time.Second,
+				ReadTimeout:  readTimeout,
+				WriteTimeout: writeTimeout,
 			}
 
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Logger.Fatalf("error when starting or running http server for metrics: %v", err)
 			}
 		}()
+
+		enablePprof := viper.GetBool("enable-pprof")
+		log.Logger.Debugf("pprof enabled: %v", enablePprof)
+		// Enable pprof
+		if enablePprof {
+			go func() {
+				readTimeout = viper.GetDuration("read-timeout")
+				writeTimeout = viper.GetDuration("write-timeout")
+
+				srv := tsaserver.NewPprofServer(readTimeout, writeTimeout)
+
+				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Logger.Fatalf("error when starting or running http server for pprof: %v", err)
+				}
+			}()
+		}
 
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)

@@ -17,8 +17,6 @@ package app
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/pprof"
 	"os"
 	"time"
 
@@ -62,10 +60,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&logType, "log-type", "dev", "logger type to use (dev/prod)")
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable-pprof", false, "enable pprof for profiling on port 6060")
 
-	// pprof/metrics read and write timeout flags
-	rootCmd.PersistentFlags().DurationVar(&readTimeout, "read-timeout", 10*time.Second, "pprof/metrics read timeout")
-	rootCmd.PersistentFlags().DurationVar(&writeTimeout, "write-timeout", 10*time.Second, "pprof/metrics write timeout")
-
 	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
 	// KMS flags
 	rootCmd.PersistentFlags().String("kms-key-resource", "", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]")
@@ -81,29 +75,6 @@ func init() {
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
-	}
-
-	log.Logger.Debugf("pprof enabled: %v", enablePprof)
-	// Enable pprof
-	if enablePprof {
-		go func() {
-			mux := http.NewServeMux()
-
-			mux.HandleFunc("/debug/pprof/", pprof.Index)
-			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
-			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-
-			srv := &http.Server{
-				Addr:         ":6060",
-				ReadTimeout:  readTimeout,
-				WriteTimeout: writeTimeout,
-				Handler:      mux,
-			}
-
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Logger.Fatalf("error when starting or running http server for pprof: %v", err)
-			}
-		}()
 	}
 }
 
