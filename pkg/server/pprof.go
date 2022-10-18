@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-func NewPprofServer(readTimeout time.Duration, writeTimeout time.Duration) *http.Server {
+func NewPprofServer(readTimeout, writeTimeout time.Duration) *http.Server {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
