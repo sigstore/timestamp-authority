@@ -58,8 +58,6 @@ func configureAPI(api *operations.TimestampServerAPI) http.Handler {
 	// api.UseRedoc()
 
 	api.JSONConsumer = runtime.JSONConsumer()
-	api.JSONProducer = runtime.JSONProducer()
-
 	api.ApplicationPemCertificateChainProducer = runtime.TextProducer()
 	api.ApplicationTimestampQueryConsumer = runtime.ByteStreamConsumer()
 	api.ApplicationTimestampReplyProducer = runtime.ByteStreamProducer()

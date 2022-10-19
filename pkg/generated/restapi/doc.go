@@ -30,7 +30,6 @@
 //	Produces:
 //	  - application/pem-certificate-chain
 //	  - application/timestamp-reply
-//	  - application/json
 //
 // swagger:meta
 package restapi

@@ -33,12 +33,6 @@ var (
 
 func init() {
 	SwaggerJSON = json.RawMessage([]byte(`{
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
-  ],
   "schemes": [
     "http"
   ],
@@ -97,6 +91,9 @@ func init() {
     "/api/v1/timestamp/certchain": {
       "get": {
         "description": "Returns the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "consumes": [
+          "application/json"
+        ],
         "produces": [
           "application/pem-certificate-chain"
         ],
@@ -157,12 +154,6 @@ func init() {
   }
 }`))
 	FlatSwaggerJSON = json.RawMessage([]byte(`{
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
-  ],
   "schemes": [
     "http"
   ],
@@ -227,6 +218,9 @@ func init() {
     "/api/v1/timestamp/certchain": {
       "get": {
         "description": "Returns the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "consumes": [
+          "application/json"
+        ],
         "produces": [
           "application/pem-certificate-chain"
         ],

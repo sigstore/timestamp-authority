@@ -23,11 +23,6 @@ host: timestamp.sigstore.dev
 schemes:
   - http
 
-consumes:
-  - application/json
-produces:
-  - application/json
-
 paths:
   /api/v1/timestamp:
     post:
@@ -66,6 +61,8 @@ paths:
       operationId: getTimestampCertChain
       tags:
         - timestamp
+      consumes:
+        - application/json
       produces:
         - application/pem-certificate-chain
       responses:
