@@ -16,22 +16,17 @@ package server
 
 import (
 	"net/http"
-	"net/http/pprof"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// NewPprofServer creates a server for handling pprof
-func NewPprofServer(readTimeout, writeTimeout time.Duration) *http.Server {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-
+// NewPrometheusServer creates a server for serving prometheus metrics
+func NewPrometheusServer(readTimeout, writeTimeout time.Duration) *http.Server {
 	return &http.Server{
-		Addr:         ":6060",
+		Addr:         ":2112",
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
-		Handler:      mux,
+		Handler:      promhttp.Handler(),
 	}
 }
