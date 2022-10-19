@@ -62,7 +62,6 @@ func init() {
 }
 
 func initConfig(cmd *cobra.Command) error {
-
 	viper.SetEnvPrefix("timestamp")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
