@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local sign-container cross-cli
+.PHONY: all test clean clean-gen lint gosec ko ko-local
 
 all: timestamp-cli timestamp-server
 
@@ -26,7 +26,6 @@ TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
-GIT_TAG ?= dirty-tag
 DATE_FMT = +%Y-%m-%dT%H:%M:%SZ
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
 ifdef SOURCE_DATE_EPOCH
