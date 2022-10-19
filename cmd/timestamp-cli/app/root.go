@@ -18,6 +18,7 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ func init() {
 
 	rootCmd.PersistentFlags().Var(NewFlagValue(urlFlag, "https://timestamp.sigstore.dev"), "timestamp_server", "Server host:port")
 	rootCmd.PersistentFlags().Var(NewFlagValue(formatFlag, "default"), "format", "Command output format")
-	rootCmd.PersistentFlags().Var(NewFlagValue(timeoutFlag, "30s"), "timeout", "HTTP timeout")
+	rootCmd.PersistentFlags().Duration("timeout", 30*time.Second, "HTTP timeout")
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {

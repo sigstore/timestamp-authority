@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
+	// "time"
 
 	validator "github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
@@ -29,11 +29,10 @@ import (
 type FlagType string
 
 const (
-	fileFlag    FlagType = "file"
-	urlFlag     FlagType = "url"
-	oidFlag     FlagType = "oid"
-	formatFlag  FlagType = "format"
-	timeoutFlag FlagType = "timeout"
+	fileFlag   FlagType = "file"
+	urlFlag    FlagType = "url"
+	oidFlag    FlagType = "oid"
+	formatFlag FlagType = "format"
 )
 
 type newPFlagValueFunc func() pflag.Value
@@ -58,10 +57,6 @@ func initializePFlagMap() {
 		formatFlag: func() pflag.Value {
 			// this validates the output format requested
 			return valueFactory(formatFlag, validateString("required,oneof=json default"), "")
-		},
-		timeoutFlag: func() pflag.Value {
-			// this validates the timeout is >= 0
-			return valueFactory(formatFlag, validateTimeout, "")
 		},
 	}
 }
@@ -124,18 +119,6 @@ func validateOID(v string) error {
 	}{strings.Split(v, ".")}
 
 	return useValidator(oidFlag, o)
-}
-
-// validateTimeout ensures that the supplied string is a valid time.Duration value >= 0
-func validateTimeout(v string) error {
-	duration, err := time.ParseDuration(v)
-	if err != nil {
-		return err
-	}
-	d := struct {
-		Duration time.Duration `validate:"min=0"`
-	}{duration}
-	return useValidator(timeoutFlag, d)
 }
 
 // validateString returns a function that validates an input string against the specified tag,
