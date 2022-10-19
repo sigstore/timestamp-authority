@@ -44,7 +44,6 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
-GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
 LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 				-X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
@@ -119,9 +118,6 @@ ko-local:
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
-
-$(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR);go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/go-fuzz-build github.com/dvyukov/go-fuzz/go-fuzz-build
 
 $(SWAGGER): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
