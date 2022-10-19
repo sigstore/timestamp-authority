@@ -67,7 +67,6 @@ func NewTimestampServerAPI(spec *loads.Document) *TimestampServerAPI {
 		ApplicationTimestampReplyProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationTimestampReply producer has not yet been implemented")
 		}),
-		JSONProducer: runtime.JSONProducer(),
 
 		TimestampGetTimestampCertChainHandler: timestamp.GetTimestampCertChainHandlerFunc(func(params timestamp.GetTimestampCertChainParams) middleware.Responder {
 			return middleware.NotImplemented("operation timestamp.GetTimestampCertChain has not yet been implemented")
@@ -116,9 +115,6 @@ type TimestampServerAPI struct {
 	// ApplicationTimestampReplyProducer registers a producer for the following mime types:
 	//   - application/timestamp-reply
 	ApplicationTimestampReplyProducer runtime.Producer
-	// JSONProducer registers a producer for the following mime types:
-	//   - application/json
-	JSONProducer runtime.Producer
 
 	// TimestampGetTimestampCertChainHandler sets the operation handler for the get timestamp cert chain operation
 	TimestampGetTimestampCertChainHandler timestamp.GetTimestampCertChainHandler
@@ -206,9 +202,6 @@ func (o *TimestampServerAPI) Validate() error {
 	if o.ApplicationTimestampReplyProducer == nil {
 		unregistered = append(unregistered, "ApplicationTimestampReplyProducer")
 	}
-	if o.JSONProducer == nil {
-		unregistered = append(unregistered, "JSONProducer")
-	}
 
 	if o.TimestampGetTimestampCertChainHandler == nil {
 		unregistered = append(unregistered, "timestamp.GetTimestampCertChainHandler")
@@ -268,8 +261,6 @@ func (o *TimestampServerAPI) ProducersFor(mediaTypes []string) map[string]runtim
 			result["application/pem-certificate-chain"] = o.ApplicationPemCertificateChainProducer
 		case "application/timestamp-reply":
 			result["application/timestamp-reply"] = o.ApplicationTimestampReplyProducer
-		case "application/json":
-			result["application/json"] = o.JSONProducer
 		}
 
 		if p, ok := o.customProducers[mt]; ok {
