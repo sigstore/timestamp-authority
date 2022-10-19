@@ -18,7 +18,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/timestamp-authority/pkg/log"
@@ -27,11 +26,9 @@ import (
 )
 
 var (
-	cfgFile      string
-	logType      string
-	enablePprof  bool
-	readTimeout  time.Duration
-	writeTimeout time.Duration
+	cfgFile     string
+	logType     string
+	enablePprof bool
 )
 
 // rootCmd represents the base command when called without any subcommands

@@ -19,17 +19,12 @@ import (
 	"flag"
 	"net/http"
 
-	"github.com/go-openapi/loads"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/timestamp-authority/pkg/api"
-	"github.com/sigstore/timestamp-authority/pkg/generated/restapi"
-	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations"
 	"github.com/sigstore/timestamp-authority/pkg/log"
-	tsaserver "github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
 // serveCmd represents the serve command
@@ -55,34 +50,15 @@ var serveCmd = &cobra.Command{
 		}
 		log.Logger.Infof("starting timestamp-server @ %v", viStr)
 
-		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
-		server := restapi.NewServer(operations.NewTimestampServerAPI(doc))
-		defer func() {
-			if err := server.Shutdown(); err != nil {
-				log.Logger.Error(err)
-			}
-		}()
+		// create the prometheus, pprof, and rest API servers
 
-		server.Host = viper.GetString("host")
-		server.Port = int(viper.GetUint("port"))
-		server.EnabledListeners = viper.GetStringSlice("scheme")
-		server.ReadTimeout = viper.GetDuration("read-timeout")
-		server.WriteTimeout = viper.GetDuration("write-timeout")
+		readTimeout := viper.GetDuration("read-timeout")
+		writeTimeout := viper.GetDuration("write-timeout")
 
-		api.ConfigureAPI()
-		server.ConfigureAPI()
-
-		http.Handle("/metrics", promhttp.Handler())
 		go func() {
-			readTimeout = viper.GetDuration("read-timeout")
-			writeTimeout = viper.GetDuration("write-timeout")
-			srv := &http.Server{
-				Addr:         ":2112",
-				ReadTimeout:  readTimeout,
-				WriteTimeout: writeTimeout,
-			}
+			promServer := server.NewPrometheusServer(readTimeout, writeTimeout)
 
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := promServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Logger.Fatalf("error when starting or running http server for metrics: %v", err)
 			}
 		}()
@@ -92,17 +68,24 @@ var serveCmd = &cobra.Command{
 		// Enable pprof
 		if enablePprof {
 			go func() {
-				readTimeout = viper.GetDuration("read-timeout")
-				writeTimeout = viper.GetDuration("write-timeout")
+				pprofServer := server.NewPprofServer(readTimeout, writeTimeout)
 
-				srv := tsaserver.NewPprofServer(readTimeout, writeTimeout)
-
-				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				if err := pprofServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					log.Logger.Fatalf("error when starting or running http server for pprof: %v", err)
 				}
 			}()
 		}
 
+		host := viper.GetString("host")
+		port := int(viper.GetUint("port"))
+		scheme := viper.GetStringSlice("scheme")
+
+		server := server.NewRestAPIServer(host, port, scheme, readTimeout, writeTimeout)
+		defer func() {
+			if err := server.Shutdown(); err != nil {
+				log.Logger.Error(err)
+			}
+		}()
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)
 		}
