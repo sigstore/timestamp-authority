@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/security v1.8.0
+	github.com/digitorus/timestamp v0.0.0-20221019073249-0b6a45065722
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.3
 	github.com/go-openapi/loads v0.21.2
@@ -12,9 +13,9 @@ require (
 	github.com/go-openapi/strfmt v0.21.3
 	github.com/go-openapi/swag v0.22.3
 	github.com/go-playground/validator/v10 v10.11.1
+	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.9
-	// TODO: Update once fix to upstream is accepted
-	github.com/haydentherapper/timestamp v0.0.0-20220930163439-e8d86ff777a3
+	github.com/google/tink/go v1.7.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
@@ -25,17 +26,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/urfave/negroni v1.0.0
+	go.step.sm/crypto v0.21.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.0.0-20220927171203-f486391704dc
 	google.golang.org/genproto v0.0.0-20220929141241-1ce7b20da813
 	google.golang.org/protobuf v1.28.1
 	sigs.k8s.io/release-utils v0.7.3
-)
-
-require (
-	github.com/golang/protobuf v1.5.2
-	github.com/google/tink/go v1.7.0
-	go.step.sm/crypto v0.21.0
 )
 
 require (
@@ -76,6 +72,7 @@ require (
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
+	github.com/digitorus/pkcs7 v0.0.0-20220704143225-a9c8106cbfc6 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
@@ -112,7 +109,6 @@ require (
 	github.com/hashicorp/vault/api v1.8.0 // indirect
 	github.com/hashicorp/vault/sdk v0.6.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
-	github.com/haydentherapper/pkcs7 v0.0.0-20220929222125-43f9df7f9dec // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
