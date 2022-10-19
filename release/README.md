@@ -27,9 +27,9 @@ $ git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
 $ git push origin ${RELEASE_TAG}
 ```
 
-1. Tah will trigger a GitHub Workflow that will build the binaries and the images.
+1. This will trigger a GitHub Workflow that will build the binaries and the images.
 
-1. Send an annoucement email to `sigstore-dev@googlegroups.com` mailling list
+1. Send an announcement email to `sigstore-dev@googlegroups.com` mailing list
 
 1. Tweet about the new release with a fun new trigonometry pun!
 
