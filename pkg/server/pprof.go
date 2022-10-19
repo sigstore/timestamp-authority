@@ -20,6 +20,7 @@ import (
 	"time"
 )
 
+// NewPprofServer creates a server for handling pprof
 func NewPprofServer(readTimeout, writeTimeout time.Duration) *http.Server {
 	mux := http.NewServeMux()
 
