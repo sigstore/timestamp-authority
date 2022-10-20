@@ -27,15 +27,31 @@ func TestGetTimestampClientWithOptions(t *testing.T) {
 	requestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			requestReceived = true
 			file := []byte{}
 
 			got := r.UserAgent()
 			if got != expectedUserAgent {
-				t.Errorf("wanted User-Agent %q, got %q", expectedUserAgent, got)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
+
+			var expectedAccept string
+			if r.URL.Path == "/api/v1/timestamp/certchain" {
+				expectedAccept = "application/pem-certificate-chain"
+			} else if r.URL.Path == "/api/v1/timestamp" {
+				expectedAccept = "application/timestamp-reply"
+			}
+
+			accept := r.Header["Accept"][0]
+			if accept != expectedAccept {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(file)
+
+			requestReceived = true
 		}))
 	defer testServer.Close()
 
@@ -44,6 +60,13 @@ func TestGetTimestampClientWithOptions(t *testing.T) {
 		t.Error(err)
 	}
 	_, _ = client.Timestamp.GetTimestampCertChain(nil)
+	if !requestReceived {
+		t.Fatal("no requests were received")
+	}
+	// reset
+	requestReceived = false
+
+	_, _ = client.Timestamp.GetTimestampResponse(nil, nil)
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}

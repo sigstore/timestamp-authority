@@ -51,8 +51,8 @@ LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 				-X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
-	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json
-	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A timestamp_server --flag-strategy=pflag --default-produces application/json
+	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated
+	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A timestamp_server --flag-strategy=pflag
 
 .PHONY: validate-openapi
 validate-openapi: $(SWAGGER)

@@ -31,7 +31,10 @@ func GetTimestampClient(timestampServerURL string, opts ...Option) (*client.Time
 	o := makeOptions(opts...)
 
 	rt := httptransport.New(url.Host, client.DefaultBasePath, []string{url.Scheme})
+	// Input to server
 	rt.Producers["application/timestamp-query"] = runtime.ByteStreamProducer()
+	rt.Producers["application/json"] = runtime.JSONProducer()
+	// Output from server
 	rt.Consumers["application/timestamp-reply"] = runtime.ByteStreamConsumer()
 	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
 
