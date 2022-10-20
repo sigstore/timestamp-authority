@@ -16,8 +16,14 @@
 package app
 
 import (
+	"crypto/x509"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/digitorus/pkcs7"
+	"github.com/digitorus/timestamp"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/spf13/cobra"
@@ -25,18 +31,18 @@ import (
 )
 
 func addVerifyFlags(cmd *cobra.Command) {
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an artifact with signed data")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "data", "path to an blob with signed data")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "in", "path to timestamp response to verify")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "CAfile", "path to certificate chain PEM file")
 }
 
 func validateVerifyFlags() error {
-	artifactStr := viper.GetString("artifact")
+	dataStr := viper.GetString("data")
 	hashStr := viper.GetString("in")
 	caFile := viper.GetString("CAfile")
 
-	if artifactStr == "" || hashStr == "" || caFile == "" {
-		return errors.New("artifact, timestamp response file, and CA certificate chain file must be specified")
+	if dataStr == "" || hashStr == "" || caFile == "" {
+		return errors.New("data, timestamp response file, and CA certificate chain file must be specified")
 	}
 
 	return nil
@@ -57,12 +63,49 @@ var verifyCmd = &cobra.Command{
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		responseTSR := viper.GetString("in")
+		tsrBytes, err := os.ReadFile(filepath.Clean(responseTSR))
+		if err != nil {
+			return nil, fmt.Errorf("error reading request from file: %w", err)
+		}
+
+		ts, err := timestamp.ParseResponse(tsrBytes)
+		if err != nil {
+			pe := timestamp.ParseError("")
+			if errors.As(err, &pe) {
+				return nil, fmt.Errorf("Given timestamp response is not valid: %w", err)
+			}
+			return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
+		}
+
+		p7Message, err := pkcs7.Parse(ts.HashedMessage)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing hashed message: %w", err)
+		}
+
+		certChainPEM := viper.GetString("CAfile")
+		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
+		if err != nil {
+			return nil, fmt.Errorf("error reading request from file: %w", err)
+		}
+
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM(pemBytes)
+		if !ok {
+			return nil, fmt.Errorf("error while appending certs from PEM")
+		}
+
+		err = p7Message.VerifyWithChain(certPool)
+		if err != nil {
+			return nil, fmt.Errorf("error while verifying with chain: %w", err)
+		}
+
 		return nil, nil
 	}),
 }
 
 func init() {
 	initializePFlagMap()
-	addVerifyFlags(timestampCmd)
-	rootCmd.AddCommand(timestampCmd)
+	addVerifyFlags(verifyCmd)
+	rootCmd.AddCommand(verifyCmd)
 }
