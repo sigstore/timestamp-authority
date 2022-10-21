@@ -33,7 +33,6 @@ import (
 )
 
 type verifyCmdOutput struct {
-	Status        string
 	TimestampPath string
 }
 
@@ -82,20 +81,18 @@ func runVerify() (interface{}, error) {
 	}
 
 	// verify the timestamp response against the certificate chain PEM file
-	fmt.Println("Verifying TSR against the cert chain PEM file")
 	err = verifyTSRWithPEM(ts)
 	if err != nil {
 		return nil, err
 	}
 
 	// verify the timestamp response signature against the local arficat hash
-	fmt.Println("Verifying TSR signature")
 	err = verifyArtifactWithTSR(ts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &verifyCmdOutput{Status: "success!", TimestampPath: tsrPath}, nil
+	return &verifyCmdOutput{TimestampPath: tsrPath}, nil
 }
 
 func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
