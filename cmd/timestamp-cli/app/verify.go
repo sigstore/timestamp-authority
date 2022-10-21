@@ -33,21 +33,12 @@ import (
 )
 
 func addVerifyFlags(cmd *cobra.Command) {
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "data", "path to an blob with signed data")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "in", "path to timestamp response to verify")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "CAfile", "path to certificate chain PEM file")
-}
-
-func validateVerifyFlags() error {
-	dataStr := viper.GetString("data")
-	hashStr := viper.GetString("in")
-	caFile := viper.GetString("CAfile")
-
-	if dataStr == "" || hashStr == "" || caFile == "" {
-		return errors.New("data, timestamp response file, and CA certificate chain file must be specified")
-	}
-
-	return nil
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an blob with signed data")
+	cmd.MarkFlagRequired("artifact")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
+	cmd.MarkFlagRequired("timestamp")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
+	cmd.MarkFlagRequired("ca-chain")
 }
 
 type verifyCmdOutput struct {
@@ -62,19 +53,16 @@ var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify timestamp",
 	Long:  "Verify the timestamp response using a timestamp certificate chain.",
+	Args:  cobra.MinimumNArgs(3),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateVerifyFlags(); err != nil {
-			log.Logger.Error(err)
-			return err
-		}
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		responseTSR := viper.GetString("in")
-		tsrBytes, err := os.ReadFile(filepath.Clean(responseTSR))
+		tsrPath := viper.GetString("timestamp")
+		tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
 		if err != nil {
 			return nil, fmt.Errorf("error reading request from file: %w", err)
 		}
@@ -94,9 +82,7 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
-		// validate the timestamp response hashed signature against
-		// the local arficat hash
-
+		// validate the timestamp response signature against the local arficat hash
 		err = validateArtifactWithTSR(ts)
 		if err != nil {
 			return nil, err
@@ -118,7 +104,7 @@ func validateTSRWithPEM(ts *timestamp.Timestamp) error {
 		return fmt.Errorf("error parsing hashed message: %w", err)
 	}
 
-	certChainPEM := viper.GetString("CAfile")
+	certChainPEM := viper.GetString("ca-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
 		return fmt.Errorf("error reading request from file: %w", err)
@@ -141,8 +127,8 @@ func validateTSRWithPEM(ts *timestamp.Timestamp) error {
 }
 
 func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
-	dataFilePath := viper.GetString("data")
-	dataBytes, err := os.ReadFile(filepath.Clean(dataFilePath))
+	artifactPath := viper.GetString("artifact")
+	artifactBytes, err := os.ReadFile(filepath.Clean(artifactPath))
 	if err != nil {
 		return err
 	}
@@ -150,7 +136,7 @@ func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
 	h := ts.HashAlgorithm.New()
 	b := make([]byte, h.Size())
 
-	r := bytes.NewReader(dataBytes)
+	r := bytes.NewReader(artifactBytes)
 	n, err := r.Read(b)
 	if err == io.EOF {
 		return err
