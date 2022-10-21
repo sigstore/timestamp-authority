@@ -117,6 +117,7 @@ func createRequestFromFlags() ([]byte, error) {
 }
 
 func runTimestamp() (interface{}, error) {
+	fmt.Println("Generating a new signed timestamp")
 	tsClient, err := client.GetTimestampClient(viper.GetString("timestamp_server"), client.WithUserAgent(UserAgent()))
 	if err != nil {
 		return nil, err

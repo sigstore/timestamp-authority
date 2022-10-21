@@ -33,11 +33,12 @@ import (
 )
 
 type verifyCmdOutput struct {
-	Status string
+	Status        string
+	TimestampPath string
 }
 
-func (t *verifyCmdOutput) String() string {
-	return fmt.Sprintln("successfully verified timestamp")
+func (v *verifyCmdOutput) String() string {
+	return fmt.Sprintf("successfully verified timestamp %s", v.TimestampPath)
 }
 
 func addVerifyFlags(cmd *cobra.Command) {
@@ -81,21 +82,23 @@ func runVerify() (interface{}, error) {
 	}
 
 	// verify the timestamp response against the CAE chain PEM file
-	err = validateTSRWithPEM(ts)
+	fmt.Println("Verifying TSR against the cert chain PEM file")
+	err = verifyTSRWithPEM(ts)
 	if err != nil {
 		return nil, err
 	}
 
-	// validate the timestamp response signature against the local arficat hash
-	err = validateArtifactWithTSR(ts)
+	// verify the timestamp response signature against the local arficat hash
+	fmt.Println("Verifying TSR signature")
+	err = verifyArtifactWithTSR(ts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &verifyCmdOutput{Status: "success!"}, nil
+	return &verifyCmdOutput{Status: "success!", TimestampPath: tsrPath}, nil
 }
 
-func validateTSRWithPEM(ts *timestamp.Timestamp) error {
+func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
 		return fmt.Errorf("error parsing hashed message: %w", err)
@@ -123,7 +126,7 @@ func validateTSRWithPEM(ts *timestamp.Timestamp) error {
 	return nil
 }
 
-func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
+func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 	artifactPath := viper.GetString("artifact")
 	artifactBytes, err := os.ReadFile(filepath.Clean(artifactPath))
 	if err != nil {
