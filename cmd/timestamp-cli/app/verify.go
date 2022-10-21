@@ -32,15 +32,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-func addVerifyFlags(cmd *cobra.Command) {
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an blob with signed data")
-	cmd.MarkFlagRequired("artifact")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
-	cmd.MarkFlagRequired("timestamp")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
-	cmd.MarkFlagRequired("ca-chain")
-}
-
 type verifyCmdOutput struct {
 	Status string
 }
@@ -49,53 +40,64 @@ func (t *verifyCmdOutput) String() string {
 	return fmt.Sprintf("successfully verified timestamp")
 }
 
-var verifyCmd = &cobra.Command{
-	Use:   "verify",
-	Short: "Verify timestamp",
-	Long:  "Verify the timestamp response using a timestamp certificate chain.",
-	Args:  cobra.MinimumNArgs(3),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
-		}
-		return nil
-	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		tsrPath := viper.GetString("timestamp")
-		tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
-		if err != nil {
-			return nil, fmt.Errorf("error reading request from file: %w", err)
-		}
-
-		ts, err := timestamp.ParseResponse(tsrBytes)
-		if err != nil {
-			pe := timestamp.ParseError("")
-			if errors.As(err, &pe) {
-				return nil, fmt.Errorf("Given timestamp response is not valid: %w", err)
+func verifyCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "verify",
+		Short: "Verify timestamp",
+		Long:  "Verify the timestamp response using a timestamp certificate chain.",
+		Args:  cobra.MinimumNArgs(3),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			initializePFlagMap()
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 			}
-			return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
-		}
+			return nil
+		},
+		Run: format.WrapCmd(func(args []string) (interface{}, error) {
+			runVerify()
+			return nil, nil
+		}),
+	}
 
-		// verify the timestamp response against the CAE chain PEM file
-		err = validateTSRWithPEM(ts)
-		if err != nil {
-			return nil, err
-		}
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an blob with signed data")
+	cmd.MarkFlagRequired("artifact")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
+	cmd.MarkFlagRequired("timestamp")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
+	cmd.MarkFlagRequired("ca-chain")
 
-		// validate the timestamp response signature against the local arficat hash
-		err = validateArtifactWithTSR(ts)
-		if err != nil {
-			return nil, err
-		}
-
-		return &verifyCmdOutput{Status: "success!"}, nil
-	}),
+	return cmd
 }
 
-func init() {
-	initializePFlagMap()
-	addVerifyFlags(verifyCmd)
-	rootCmd.AddCommand(verifyCmd)
+func runVerify() (interface{}, error) {
+	tsrPath := viper.GetString("timestamp")
+	tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
+	if err != nil {
+		return nil, fmt.Errorf("error reading request from file: %w", err)
+	}
+
+	ts, err := timestamp.ParseResponse(tsrBytes)
+	if err != nil {
+		pe := timestamp.ParseError("")
+		if errors.As(err, &pe) {
+			return nil, fmt.Errorf("Given timestamp response is not valid: %w", err)
+		}
+		return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
+	}
+
+	// verify the timestamp response against the CAE chain PEM file
+	err = validateTSRWithPEM(ts)
+	if err != nil {
+		return nil, err
+	}
+
+	// validate the timestamp response signature against the local arficat hash
+	err = validateArtifactWithTSR(ts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &verifyCmdOutput{Status: "success!"}, nil
 }
 
 func validateTSRWithPEM(ts *timestamp.Timestamp) error {
