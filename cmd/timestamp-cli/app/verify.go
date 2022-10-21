@@ -81,7 +81,7 @@ func runVerify() (interface{}, error) {
 		return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 
-	// verify the timestamp response against the CAE chain PEM file
+	// verify the timestamp response against the certificate chain PEM file
 	fmt.Println("Verifying TSR against the cert chain PEM file")
 	err = verifyTSRWithPEM(ts)
 	if err != nil {
