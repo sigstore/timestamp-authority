@@ -45,7 +45,6 @@ func verifyCmd() *cobra.Command {
 		Use:   "verify",
 		Short: "Verify timestamp",
 		Long:  "Verify the timestamp response using a timestamp certificate chain.",
-		Args:  cobra.MinimumNArgs(3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			initializePFlagMap()
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -54,8 +53,7 @@ func verifyCmd() *cobra.Command {
 			return nil
 		},
 		Run: format.WrapCmd(func(args []string) (interface{}, error) {
-			runVerify()
-			return nil, nil
+			return runVerify()
 		}),
 	}
 
