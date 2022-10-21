@@ -16,9 +16,11 @@
 package app
 
 import (
+	"bytes"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -46,6 +48,14 @@ func validateVerifyFlags() error {
 	}
 
 	return nil
+}
+
+type verifyCmdOutput struct {
+	Status string
+}
+
+func (t *verifyCmdOutput) String() string {
+	return fmt.Sprintf("successfully verified timestamp")
 }
 
 var verifyCmd = &cobra.Command{
@@ -78,29 +88,21 @@ var verifyCmd = &cobra.Command{
 			return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
 		}
 
-		p7Message, err := pkcs7.Parse(ts.HashedMessage)
+		// verify the timestamp response against the CAE chain PEM file
+		err = validateTSRWithPEM(ts)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing hashed message: %w", err)
+			return nil, err
 		}
 
-		certChainPEM := viper.GetString("CAfile")
-		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
+		// validate the timestamp response hashed signature against
+		// the local arficat hash
+
+		err = validateArtifactWithTSR(ts)
 		if err != nil {
-			return nil, fmt.Errorf("error reading request from file: %w", err)
+			return nil, err
 		}
 
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM(pemBytes)
-		if !ok {
-			return nil, fmt.Errorf("error while appending certs from PEM")
-		}
-
-		err = p7Message.VerifyWithChain(certPool)
-		if err != nil {
-			return nil, fmt.Errorf("error while verifying with chain: %w", err)
-		}
-
-		return nil, nil
+		return &verifyCmdOutput{Status: "success!"}, nil
 	}),
 }
 
@@ -108,4 +110,61 @@ func init() {
 	initializePFlagMap()
 	addVerifyFlags(verifyCmd)
 	rootCmd.AddCommand(verifyCmd)
+}
+
+func validateTSRWithPEM(ts *timestamp.Timestamp) error {
+	p7Message, err := pkcs7.Parse(ts.RawToken)
+	if err != nil {
+		return fmt.Errorf("error parsing hashed message: %w", err)
+	}
+
+	certChainPEM := viper.GetString("CAfile")
+	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
+	if err != nil {
+		return fmt.Errorf("error reading request from file: %w", err)
+	}
+
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(pemBytes)
+	if !ok {
+		return fmt.Errorf("error while appending certs from PEM")
+	}
+
+	err = p7Message.VerifyWithChain(certPool)
+	if err != nil {
+		return fmt.Errorf("error while verifying with chain: %w", err)
+	}
+
+	log.CliLogger.Info("verified with chain")
+
+	return nil
+}
+
+func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
+	dataFilePath := viper.GetString("data")
+	dataBytes, err := os.ReadFile(filepath.Clean(dataFilePath))
+	if err != nil {
+		return err
+	}
+
+	h := ts.HashAlgorithm.New()
+	b := make([]byte, h.Size())
+
+	r := bytes.NewReader(dataBytes)
+	n, err := r.Read(b)
+	if err == io.EOF {
+		return err
+	}
+
+	_, err = h.Write(b[:n])
+	if err != nil {
+		return fmt.Errorf("failed to create hash")
+	}
+
+	localHashedMessage := h.Sum(nil)
+	if bytes.Compare(localHashedMessage, ts.HashedMessage) != 0 {
+		return fmt.Errorf("hashed messages don't match")
+	}
+
+	return nil
 }
