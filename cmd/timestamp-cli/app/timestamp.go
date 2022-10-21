@@ -39,9 +39,9 @@ import (
 
 func addTimestampFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an artifact to timestamp")
-	cmd.MarkFlagRequired("artifact")
+	cmd.MarkFlagRequired("artifact") //nolint:errcheck
 	cmd.Flags().String("hash", "sha256", "hash algorithm to use - Valid values are sha256, sha384, and sha512")
-	cmd.MarkFlagRequired("hash")
+	cmd.MarkFlagRequired("hash") //nolint:errcheck
 	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
 	cmd.Flags().Bool("certificate", true, "if the timestamp response should contain a certificate chain")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")

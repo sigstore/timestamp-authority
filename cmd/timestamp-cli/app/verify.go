@@ -37,16 +37,16 @@ type verifyCmdOutput struct {
 }
 
 func (t *verifyCmdOutput) String() string {
-	return fmt.Sprintf("successfully verified timestamp")
+	return fmt.Sprintln("successfully verified timestamp")
 }
 
 func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an blob with signed data")
-	cmd.MarkFlagRequired("artifact")
+	cmd.MarkFlagRequired("artifact") //nolint:errcheck
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
-	cmd.MarkFlagRequired("timestamp")
+	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
-	cmd.MarkFlagRequired("ca-chain")
+	cmd.MarkFlagRequired("ca-chain") //nolint:errcheck
 }
 
 var verifyCmd = &cobra.Command{
@@ -145,7 +145,7 @@ func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
 	}
 
 	localHashedMessage := h.Sum(nil)
-	if bytes.Compare(localHashedMessage, ts.HashedMessage) != 0 {
+	if !bytes.Equal(localHashedMessage, ts.HashedMessage) {
 		return fmt.Errorf("hashed messages don't match")
 	}
 
