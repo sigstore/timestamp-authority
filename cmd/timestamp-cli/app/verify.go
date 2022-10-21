@@ -40,31 +40,28 @@ func (t *verifyCmdOutput) String() string {
 	return fmt.Sprintf("successfully verified timestamp")
 }
 
-func verifyCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "verify",
-		Short: "Verify timestamp",
-		Long:  "Verify the timestamp response using a timestamp certificate chain.",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			initializePFlagMap()
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				log.CliLogger.Fatal("Error initializing cmd line args: ", err)
-			}
-			return nil
-		},
-		Run: format.WrapCmd(func(args []string) (interface{}, error) {
-			return runVerify()
-		}),
-	}
-
+func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an blob with signed data")
 	cmd.MarkFlagRequired("artifact")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
 	cmd.MarkFlagRequired("timestamp")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
 	cmd.MarkFlagRequired("ca-chain")
+}
 
-	return cmd
+var verifyCmd = &cobra.Command{
+	Use:   "verify",
+	Short: "Verify timestamp",
+	Long:  "Verify the timestamp response using a timestamp certificate chain.",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
+		}
+		return nil
+	},
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		return runVerify()
+	}),
 }
 
 func runVerify() (interface{}, error) {
@@ -153,4 +150,10 @@ func validateArtifactWithTSR(ts *timestamp.Timestamp) error {
 	}
 
 	return nil
+}
+
+func init() {
+	initializePFlagMap()
+	addVerifyFlags(verifyCmd)
+	rootCmd.AddCommand(verifyCmd)
 }

@@ -58,7 +58,7 @@ func init() {
 		log.CliLogger.Fatal(err)
 	}
 
-	rootCmd.AddCommand(version.Version(), verifyCmd(), timestampCmd())
+	rootCmd.AddCommand(version.Version())
 }
 
 func initConfig(cmd *cobra.Command) error {
