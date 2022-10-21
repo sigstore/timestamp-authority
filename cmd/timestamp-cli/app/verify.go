@@ -46,8 +46,8 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("artifact") //nolint:errcheck
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
 	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "ca-chain", "path to certificate chain PEM file")
-	cmd.MarkFlagRequired("ca-chain") //nolint:errcheck
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert-chain", "path to certificate chain PEM file")
+	cmd.MarkFlagRequired("cert-chain") //nolint:errcheck
 }
 
 var verifyCmd = &cobra.Command{
@@ -104,7 +104,7 @@ func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
 		return fmt.Errorf("error parsing hashed message: %w", err)
 	}
 
-	certChainPEM := viper.GetString("ca-chain")
+	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
 		return fmt.Errorf("error reading request from file: %w", err)
