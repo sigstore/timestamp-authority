@@ -26,7 +26,7 @@ To fetch a timestamp:
 1. Build client: `go build ./cmd/timestamp-cli`
 1. Create test blob to sign: `echo "myblob" > myblob`
 1. Fetch timestamp: `./timestamp-cli --timestamp_server http://localhost:3000 timestamp --hash sha256 --artifact myblob --out response.tsr`
-1. Verify timestamp: `openssl ts -verify -in response.tsr -data "myblob" -CAfile ts_chain.pem`
+1. Verify timestamp: `./timestamp-cli verify --timestamp response.tsr --data "myblob" --cert-chain ts_chain.pem`
 1. Inspect timestamp: `openssl ts -reply -in response.tsr -text`
 
 ## Production deployment
