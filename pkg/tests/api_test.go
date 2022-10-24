@@ -20,8 +20,6 @@ import (
 	"encoding/asn1"
 	"io"
 	"math/big"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -30,9 +28,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/sigstore/timestamp-authority/pkg/x509"
-	"github.com/spf13/viper"
 )
 
 // TestSigner encapsulates a public key for verification
@@ -130,20 +126,4 @@ func TestGetTimestampResponse(t *testing.T) {
 	if !tsr.Policy.Equal(asn1.ObjectIdentifier{0, 4, 0, 2023, 1, 1}) {
 		t.Fatalf("unexpected policy ID")
 	}
-}
-
-func createServer(t *testing.T) string {
-	viper.Set("timestamp-signer", "memory")
-	// unused port
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	// verify the server's health
-	response, err := http.Get(server.URL + "/ping")
-	if err != nil || response.StatusCode != 200 {
-		t.Fatalf("unexpected error starting up server - status code: %d, err: %v", response.StatusCode, err)
-	}
-
-	return server.URL
 }
