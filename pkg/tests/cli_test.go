@@ -46,10 +46,13 @@ func TestInspect(t *testing.T) {
 	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
 
 	// test that output can be parsed as a timestamp
-	var timestamp ts.Timestamp
-	err := json.Unmarshal([]byte(out), &timestamp)
+	resp := struct {
+		TimestampResponse ts.Timestamp
+	}{}
+
+	err := json.Unmarshal([]byte(out), &resp)
 	if err != nil {
-		t.Errorf("failed to parse CLI response to a timestamp")
+		t.Errorf("failed to parse CLI response to a timestamp: %v", err)
 	}
 }
 
