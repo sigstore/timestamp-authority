@@ -55,8 +55,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		// Not qualified for the european directive
 		Qualified:         false,
 		AddTSACertificate: req.Certificates,
-		ExtraExtensions:   req.ExtraExtensions,
-		Certificates:      api.certChain,
+		ExtraExtensions:   req.Extensions,
 	}
 
 	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner)
