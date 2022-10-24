@@ -29,7 +29,9 @@ To fetch a timestamp:
 1. Verify timestamp with either openssl or with the timestamp cli: 
   - `openssl ts -verify -in response.tsr -data "myblob" -CAfile ts_chain.pem`
   - `./bin/timestamp-cli verify --timestamp response.tsr --artifact "myblob" --cert-chain ts_chain.pem`
-1. Inspect timestamp: `openssl ts -reply -in response.tsr -text`
+1. Inspect timestamp with either openssl or with the timestamp cli:
+  - `openssl ts -reply -in response.tsr -text`
+  - `./bin/timestamp-cli inspect --timestamp response.tsr --format json`
 
 ## Production deployment
 
