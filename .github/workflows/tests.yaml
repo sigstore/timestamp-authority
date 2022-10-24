@@ -55,7 +55,7 @@ jobs:
           go-version-file: './go.mod'
           check-latest: true
       - name: Build timestamp CLI
-        run: make bin/timestamp-cli
+        run: make timestamp-cli
       - name: Run Go tests
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
