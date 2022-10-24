@@ -16,7 +16,7 @@ brew install openssl
 
 To launch the server:
 * `docker-compose up`
-* `go build ./cmd/timestamp-server && ./bin/timestamp-server serve`
+* `go build ./cmd/timestamp-server && ./cmd/timestamp-server serve`
 
 Both of these commands launch a server with an in-memory signing key and certificate chain. **This should not
 be used for production.**
