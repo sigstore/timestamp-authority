@@ -39,8 +39,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 
 	policyID := req.TSAPolicyOID
 	if policyID.String() == "" {
-		// https://datatracker.ietf.org/doc/html/rfc3628#section-5.2
-		policyID = asn1.ObjectIdentifier{0, 4, 0, 2023, 1, 1}
+		policyID = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
 	}
 
 	duration, _ := time.ParseDuration("1s")
