@@ -50,6 +50,9 @@ LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 				-X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
 				-X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
+CLI_LDFLAGS=$(LDFLAGS)
+SERVER_LDFLAGS=$(LDFLAGS)
+
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A timestamp_server --flag-strategy=pflag

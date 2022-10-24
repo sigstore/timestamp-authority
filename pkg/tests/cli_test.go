@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	ts "github.com/digitorus/timestamp"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 )
@@ -193,6 +194,7 @@ func getTimestamp(t *testing.T, url string, artifactContent string) string {
 	return path
 }
 
+// getCertChainPEM returns the CA certificates to verify a signed timestamp
 func getCertChainPEM(t *testing.T, restapiURL string) string {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
@@ -211,7 +213,17 @@ func getCertChainPEM(t *testing.T, restapiURL string) string {
 	}
 	defer file.Close()
 
-	reader := strings.NewReader(chain.Payload)
+	// Remove the non-CA certificate from the chain
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(chain.Payload))
+	if err != nil {
+		t.Fatalf("unexpected error unmarshalling cert chain: %v", err)
+	}
+	caCertsPEM, err := cryptoutils.MarshalCertificatesToPEM(certs[1:])
+	if err != nil {
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+	}
+
+	reader := bytes.NewReader(caCertsPEM)
 	file.ReadFrom(reader)
 
 	return path
