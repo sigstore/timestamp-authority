@@ -19,6 +19,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -28,6 +29,10 @@ import (
 
 var (
 	restapiURL string
+)
+
+const (
+	cli = "../timestamp-cli"
 )
 
 func getCertChainPEMRestCall(t *testing.T) string {
@@ -128,7 +133,7 @@ func TestTimestampVerify_InvalidTSR(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--cert-chain", pemPath)
-	outputContains(t, out, "error parsing response into Timestamp")
+	outputContains(t, out, "Error parsing response into Timestamp")
 }
 
 func TestTimestampVerify_InvalidPEM(t *testing.T) {
@@ -144,5 +149,56 @@ func TestTimestampVerify_InvalidPEM(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", invalidPEMPath)
-	outputContains(t, out, "error while appending certs from PEM")
+	outputContains(t, out, "Error while appending certs from PEM")
+}
+
+func runCliErr(t *testing.T, arg ...string) string {
+	t.Helper()
+
+	// use a blank config file to ensure no collision
+	if os.Getenv("TSATMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("TSATMPDIR")+".timestamp-server.yaml")
+	}
+	cmd := exec.Command(cli, arg...)
+	b, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Log(string(b))
+		t.Fatalf("expected error, got %s", string(b))
+	}
+	return string(b)
+}
+
+func runCli(t *testing.T, arg ...string) string {
+	t.Helper()
+
+	// use a blank config file to ensure no collision
+	if os.Getenv("TSATMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("TSATMPDIR")+".timestamp-server.yaml")
+	}
+	return run(t, "", cli, arg...)
+}
+
+func run(t *testing.T, stdin, cmd string, arg ...string) string {
+	t.Helper()
+	c := exec.Command(cmd, arg...)
+	if stdin != "" {
+		c.Stdin = strings.NewReader(stdin)
+	}
+	if os.Getenv("TSATMPDIR") != "" {
+		// ensure that we use a clean state.json file for each run
+		c.Env = append(c.Env, "HOME="+os.Getenv("TSATMPDIR"))
+	}
+	b, err := c.CombinedOutput()
+	if err != nil {
+		t.Log(string(b))
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func outputContains(t *testing.T, output, sub string) {
+	t.Helper()
+	if !strings.Contains(output, sub) {
+		t.Errorf("Expected [%s] in response, got %s", sub, output)
+	}
 }
