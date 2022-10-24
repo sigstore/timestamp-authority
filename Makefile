@@ -15,7 +15,7 @@
 
 .PHONY: all test clean clean-gen lint gosec ko ko-local
 
-all: timestamp-cli timestamp-server
+all: bin/timestamp-cli bin/timestamp-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml
@@ -69,19 +69,19 @@ gosec:
 
 gen: $(GENSRC)
 
-timestamp-cli: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o timestamp-cli ./cmd/timestamp-cli
+bin/timestamp-cli: $(SRCS)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/timestamp-cli ./cmd/timestamp-cli
 
-timestamp-server: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o timestamp-server ./cmd/timestamp-server
+bin/timestamp-server: $(SRCS)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o bin/timestamp-server ./cmd/timestamp-server
 
-test: timestamp-cli
+test: bin/timestamp-cli
 	go test ./...
 
 clean:
 	rm -rf dist
 	rm -rf hack/tools/bin
-	rm -rf timestamp-cli timestamp-server
+	rm -rf bin/timestamp-cli bin/timestamp-server
 
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)

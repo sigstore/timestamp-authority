@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	cli = "../../timestamp-cli"
+	cli = "../../bin/timestamp-cli"
 )
 
 func TestTimestampCreation(t *testing.T) {

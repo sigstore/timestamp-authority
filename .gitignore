@@ -3,8 +3,6 @@ dist/*
 timestampCLIImagerefs
 timestampServerImagerefs
 fetchTSAImagerefs
-timestamp-cli
-timestamp-server
 *.tsr
 hack/tools/bin/*
-bin/timestamp-cli
+bin/
