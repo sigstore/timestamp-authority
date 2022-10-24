@@ -39,23 +39,37 @@ import (
 
 func addTimestampFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an artifact to timestamp")
+	cmd.MarkFlagRequired("artifact") //nolint:errcheck
 	cmd.Flags().String("hash", "sha256", "hash algorithm to use - Valid values are sha256, sha384, and sha512")
+	cmd.MarkFlagRequired("hash") //nolint:errcheck
 	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
 	cmd.Flags().Bool("certificate", true, "if the timestamp response should contain a certificate chain")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
-
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 }
 
-func validateTimestampFlags() error {
-	artifactStr := viper.GetString("artifact")
-	hashStr := viper.GetString("hash")
+type timestampCmdOutput struct {
+	Timestamp time.Time
+	Location  string
+}
 
-	if artifactStr == "" || hashStr == "" {
-		return errors.New("artifact and hash must be specified")
-	}
+func (t *timestampCmdOutput) String() string {
+	return fmt.Sprintf("Artifact timestamped at %s\nWrote timestamp response to %v\n", t.Timestamp, t.Location)
+}
 
-	return nil
+var timestampCmd = &cobra.Command{
+	Use:   "timestamp",
+	Short: "Signed timestamp command",
+	Long:  "Fetches a signed RFC 3161 timestamp. The timestamp response can be verified locally using a timestamp certificate chain.",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
+		}
+		return nil
+	},
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		return runTimestamp()
+	}),
 }
 
 func createRequestFromFlags() ([]byte, error) {
@@ -102,70 +116,47 @@ func createRequestFromFlags() ([]byte, error) {
 	return timestamp.CreateRequest(bytes.NewReader(artifactBytes), reqOpts)
 }
 
-type timestampCmdOutput struct {
-	Timestamp time.Time
-	Location  string
-}
+func runTimestamp() (interface{}, error) {
+	fmt.Println("Generating a new signed timestamp")
+	tsClient, err := client.GetTimestampClient(viper.GetString("timestamp_server"), client.WithUserAgent(UserAgent()))
+	if err != nil {
+		return nil, err
+	}
 
-func (t *timestampCmdOutput) String() string {
-	return fmt.Sprintf("Artifact timestamped at %s\nWrote timestamp response to %v\n", t.Timestamp, t.Location)
-}
+	requestBytes, err := createRequestFromFlags()
+	if err != nil {
+		return nil, err
+	}
 
-var timestampCmd = &cobra.Command{
-	Use:   "timestamp",
-	Short: "Signed timestamp command",
-	Long:  "Fetches a signed RFC 3161 timestamp. The timestamp response can be verified locally using a timestamp certificate chain.",
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
-		}
-		if err := validateTimestampFlags(); err != nil {
-			log.Logger.Error(err)
-			return err
-		}
-		return nil
-	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		tsClient, err := client.GetTimestampClient(viper.GetString("timestamp_server"), client.WithUserAgent(UserAgent()))
-		if err != nil {
-			return nil, err
-		}
+	params := ts.NewGetTimestampResponseParams()
+	params.SetTimeout(viper.GetDuration("timeout"))
+	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
 
-		requestBytes, err := createRequestFromFlags()
-		if err != nil {
-			return nil, err
-		}
+	var respBytes bytes.Buffer
+	_, err = tsClient.Timestamp.GetTimestampResponse(params, &respBytes)
+	if err != nil {
+		return nil, err
+	}
 
-		params := ts.NewGetTimestampResponseParams()
-		params.SetTimeout(viper.GetDuration("timeout"))
-		params.Request = io.NopCloser(bytes.NewReader(requestBytes))
+	// validate that timestamp is parseable
+	ts, err := timestamp.ParseResponse(respBytes.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
-		var respBytes bytes.Buffer
-		_, err = tsClient.Timestamp.GetTimestampResponse(params, &respBytes)
-		if err != nil {
-			return nil, err
-		}
+	// Write response to file
+	outStr := viper.GetString("out")
+	if outStr == "" {
+		outStr = "response.tsr"
+	}
+	if err := os.WriteFile(outStr, respBytes.Bytes(), 0600); err != nil {
+		return nil, err
+	}
 
-		// validate that timestamp is parseable
-		ts, err := timestamp.ParseResponse(respBytes.Bytes())
-		if err != nil {
-			return nil, err
-		}
-
-		// Write response to file
-		outStr := viper.GetString("out")
-		if outStr == "" {
-			outStr = "response.tsr"
-		}
-		if err := os.WriteFile(outStr, respBytes.Bytes(), 0600); err != nil {
-			return nil, err
-		}
-
-		return &timestampCmdOutput{
-			Timestamp: ts.Time,
-			Location:  outStr,
-		}, nil
-	}),
+	return &timestampCmdOutput{
+		Timestamp: ts.Time,
+		Location:  outStr,
+	}, nil
 }
 
 func init() {

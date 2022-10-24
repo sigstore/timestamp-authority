@@ -24,59 +24,52 @@ import (
 
 func TestTimestampFlags(t *testing.T) {
 	type test struct {
-		caseDesc              string
-		artifact              string
-		hash                  string
-		oid                   string
-		expectParseSuccess    bool
-		expectValidateSuccess bool
-		expectRequestSuccess  bool
+		caseDesc             string
+		artifact             string
+		hash                 string
+		oid                  string
+		expectParseSuccess   bool
+		expectRequestSuccess bool
 	}
 
 	tests := []test{
 		{
-			caseDesc:              "valid local artifact",
-			artifact:              "timestamp.go",
-			expectParseSuccess:    true,
-			expectValidateSuccess: true,
-			expectRequestSuccess:  true,
+			caseDesc:             "valid local artifact",
+			artifact:             "timestamp.go",
+			expectParseSuccess:   true,
+			expectRequestSuccess: true,
 		},
 		{
-			caseDesc:              "nonexistant local artifact",
-			artifact:              "not_a_file",
-			expectParseSuccess:    false,
-			expectValidateSuccess: false,
-			expectRequestSuccess:  false,
+			caseDesc:             "nonexistant local artifact",
+			artifact:             "not_a_file",
+			expectParseSuccess:   false,
+			expectRequestSuccess: false,
 		},
 		{
-			caseDesc:              "valid local artifact with hash algorithm",
-			artifact:              "timestamp.go",
-			hash:                  "sha512",
-			expectParseSuccess:    true,
-			expectValidateSuccess: true,
-			expectRequestSuccess:  true,
+			caseDesc:             "valid local artifact with hash algorithm",
+			artifact:             "timestamp.go",
+			hash:                 "sha512",
+			expectParseSuccess:   true,
+			expectRequestSuccess: true,
 		},
 		{
-			caseDesc:              "valid oid",
-			artifact:              "timestamp.go",
-			oid:                   "1.2.3.4",
-			expectParseSuccess:    true,
-			expectValidateSuccess: true,
-			expectRequestSuccess:  true,
+			caseDesc:             "valid oid",
+			artifact:             "timestamp.go",
+			oid:                  "1.2.3.4",
+			expectParseSuccess:   true,
+			expectRequestSuccess: true,
 		},
 		{
-			caseDesc:              "invalid oid",
-			artifact:              "timestamp.go",
-			oid:                   "1.a.3.4",
-			expectParseSuccess:    false,
-			expectValidateSuccess: true,
-			expectRequestSuccess:  true,
+			caseDesc:             "invalid oid",
+			artifact:             "timestamp.go",
+			oid:                  "1.a.3.4",
+			expectParseSuccess:   false,
+			expectRequestSuccess: true,
 		},
 		{
-			caseDesc:              "no request or artifact specified",
-			expectParseSuccess:    true,
-			expectValidateSuccess: false,
-			expectRequestSuccess:  false,
+			caseDesc:             "no request or artifact specified",
+			expectParseSuccess:   true,
+			expectRequestSuccess: false,
 		},
 	}
 
@@ -100,10 +93,6 @@ func TestTimestampFlags(t *testing.T) {
 		}
 		if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
 			t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
-		}
-		if err := validateTimestampFlags(); (err == nil) != tc.expectValidateSuccess {
-			t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
-			continue
 		}
 		if _, err := createRequestFromFlags(); (err == nil) != tc.expectRequestSuccess {
 			t.Errorf("unexpected result creating timestamp request '%v': %v", tc.caseDesc, err)
