@@ -26,7 +26,7 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
-func createServer() string {
+func createServer() *httptest.Server {
 	viper.Set("timestamp-signer", "memory")
 	// unused port
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
@@ -38,5 +38,5 @@ func createServer() string {
 		panic(fmt.Sprintf("unexpected error starting up server - status code: %d, err: %v", response.StatusCode, err))
 	}
 
-	return server.URL
+	return server
 }

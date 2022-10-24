@@ -35,60 +35,11 @@ const (
 	cli = "../timestamp-cli"
 )
 
-func getCertChainPEMRestCall(t *testing.T) string {
-	pemFileName := "e2e_test_ts_chain.pem"
-
-	resp, err := http.Get("http://localhost:3000/api/v1/timestamp/certchain")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	file, err := os.Create(pemFileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	file.ReadFrom(resp.Body)
-
-	return pemFileName
-}
-
-func getCertChainPEM(t *testing.T) string {
-	c, err := client.GetTimestampClient(restapiURL)
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
-	}
-
-	chain, err := c.Timestamp.GetTimestampCertChain(nil)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	path := filepath.Join(t.TempDir(), "artifact")
-	file, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	reader := strings.NewReader(chain.Payload)
-	file.ReadFrom(reader)
-
-	return path
-}
-
-// Create a random artifact to sign
-func makeArtifact(t *testing.T) string {
-	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	if err := os.WriteFile(artifactPath, []byte("some data"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	return artifactPath
-}
-
 func TestMain(m *testing.M) {
-	restapiURL = createServer()
+	server := createServer()
+	restapiURL = server.URL
 	m.Run()
+	server.Close()
 }
 
 func TestTimestampCreation(t *testing.T) {
@@ -201,4 +152,55 @@ func outputContains(t *testing.T, output, sub string) {
 	if !strings.Contains(output, sub) {
 		t.Errorf("Expected [%s] in response, got %s", sub, output)
 	}
+}
+
+func getCertChainPEMRestCall(t *testing.T) string {
+	pemFileName := "e2e_test_ts_chain.pem"
+
+	resp, err := http.Get("http://localhost:3000/api/v1/timestamp/certchain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	file, err := os.Create(pemFileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	file.ReadFrom(resp.Body)
+
+	return pemFileName
+}
+
+func getCertChainPEM(t *testing.T) string {
+	c, err := client.GetTimestampClient(restapiURL)
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
+	chain, err := c.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "artifact")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	reader := strings.NewReader(chain.Payload)
+	file.ReadFrom(reader)
+
+	return path
+}
+
+// Create a random artifact to sign
+func makeArtifact(t *testing.T) string {
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	if err := os.WriteFile(artifactPath, []byte("some data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return artifactPath
 }
