@@ -18,6 +18,7 @@ package tests
 import (
 	"bytes"
 	"crypto"
+	"encoding/json"
 	"errors"
 	"io"
 	"math/big"
@@ -36,7 +37,23 @@ const (
 	cli = "../../bin/timestamp-cli"
 )
 
-func TestTimestampCreation(t *testing.T) {
+func TestInspect(t *testing.T) {
+	serverURL := createServer(t)
+
+	tsrPath := getTimestamp(t, serverURL, "blob")
+
+	// It should create timestamp successfully.
+	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
+
+	// test that output can be parsed as a timestamp
+	var timestamp ts.Timestamp
+	err := json.Unmarshal([]byte(out), &timestamp)
+	if err != nil {
+		t.Errorf("failed to parse CLI response to a timestamp")
+	}
+}
+
+func TestTimestamp(t *testing.T) {
 	restapiURL := createServer(t)
 
 	tsrPath := filepath.Join(t.TempDir(), "response.tsr")
@@ -52,7 +69,7 @@ func TestTimestampCreation(t *testing.T) {
 	}
 }
 
-func TestTimestampVerify(t *testing.T) {
+func TestVerify(t *testing.T) {
 	restapiURL := createServer(t)
 
 	artifactContent := "blob"
@@ -68,7 +85,7 @@ func TestTimestampVerify(t *testing.T) {
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
-func TestTimestampVerify_InvalidTSR(t *testing.T) {
+func TestVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
 	pemPath := filepath.Join(t.TempDir(), "ts_chain.pem")
@@ -90,7 +107,7 @@ func TestTimestampVerify_InvalidTSR(t *testing.T) {
 	outputContains(t, out, "Error parsing response into Timestamp")
 }
 
-func TestTimestampVerify_InvalidPEM(t *testing.T) {
+func TestVerify_InvalidPEM(t *testing.T) {
 	restapiURL := createServer(t)
 
 	artifactContent := "blob"
