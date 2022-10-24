@@ -123,7 +123,7 @@ func TestGetTimestampResponse(t *testing.T) {
 	if tsr.Qualified {
 		t.Fatalf("tsr should not be qualified")
 	}
-	if !tsr.Policy.Equal(asn1.ObjectIdentifier{0, 4, 0, 2023, 1, 1}) {
+	if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
 		t.Fatalf("unexpected policy ID")
 	}
 }
