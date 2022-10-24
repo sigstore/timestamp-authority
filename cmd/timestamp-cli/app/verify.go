@@ -37,7 +37,7 @@ type verifyCmdOutput struct {
 }
 
 func (v *verifyCmdOutput) String() string {
-	return fmt.Sprintf("successfully verified timestamp %s", v.TimestampPath)
+	return fmt.Sprintf("Successfully verified timestamp %s", v.TimestampPath)
 }
 
 func addVerifyFlags(cmd *cobra.Command) {
@@ -68,7 +68,7 @@ func runVerify() (interface{}, error) {
 	tsrPath := viper.GetString("timestamp")
 	tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
 	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
+		return nil, fmt.Errorf("Error reading request from file: %w", err)
 	}
 
 	ts, err := timestamp.ParseResponse(tsrBytes)
@@ -77,7 +77,7 @@ func runVerify() (interface{}, error) {
 		if errors.As(err, &pe) {
 			return nil, fmt.Errorf("Given timestamp response is not valid: %w", err)
 		}
-		return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
+		return nil, fmt.Errorf("Error parsing response into Timestamp: %w", err)
 	}
 
 	// verify the timestamp response against the certificate chain PEM file
@@ -98,27 +98,27 @@ func runVerify() (interface{}, error) {
 func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
-		return fmt.Errorf("error parsing hashed message: %w", err)
+		return fmt.Errorf("Error parsing hashed message: %w", err)
 	}
 
 	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
-		return fmt.Errorf("error reading request from file: %w", err)
+		return fmt.Errorf("Error reading request from file: %w", err)
 	}
 
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pemBytes)
 	if !ok {
-		return fmt.Errorf("error while appending certs from PEM")
+		return fmt.Errorf("Error while appending certs from PEM")
 	}
 
 	err = p7Message.VerifyWithChain(certPool)
 	if err != nil {
-		return fmt.Errorf("error while verifying with chain: %w", err)
+		return fmt.Errorf("Error while verifying with chain: %w", err)
 	}
 
-	log.CliLogger.Info("verified with chain")
+	log.CliLogger.Info("Verified with chain")
 
 	return nil
 }
@@ -141,12 +141,12 @@ func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 
 	_, err = h.Write(b[:n])
 	if err != nil {
-		return fmt.Errorf("failed to create hash")
+		return fmt.Errorf("Failed to create local message hash")
 	}
 
 	localHashedMessage := h.Sum(nil)
 	if !bytes.Equal(localHashedMessage, ts.HashedMessage) {
-		return fmt.Errorf("hashed messages don't match")
+		return fmt.Errorf("Hashed messages don't match")
 	}
 
 	return nil
