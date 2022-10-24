@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"crypto"
 	"errors"
-	// "go/build"
 	"io"
 	"math/big"
 	"os"
@@ -45,7 +44,7 @@ func TestTimestampCreation(t *testing.T) {
 	artifactPath := makeArtifact(t, "blob")
 
 	// It should create timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "--timestamp_server", restapiURL, "timestamp", "--artifact", artifactPath, "--hash", "sha256", "--out", tsrPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "timestamp", "--artifact", artifactPath, "--hash", "sha256", "--out", tsrPath)
 	outputContains(t, out, "Artifact timestamped at")
 
 	if _, err := os.Stat(tsrPath); errors.Is(err, os.ErrNotExist) {
