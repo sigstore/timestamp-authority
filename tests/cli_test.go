@@ -16,35 +16,32 @@
 package tests
 
 import (
+	"bytes"
+	"crypto"
 	"errors"
-	"net/http"
+	"io"
+	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	ts "github.com/digitorus/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/client"
-)
-
-var (
-	restapiURL string
+	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 )
 
 const (
 	cli = "../timestamp-cli"
 )
 
-func TestMain(m *testing.M) {
-	server := createServer()
-	restapiURL = server.URL
-	m.Run()
-	server.Close()
-}
-
 func TestTimestampCreation(t *testing.T) {
+	restapiURL := createServer(t)
+
 	tsrPath := "response.tsr"
-	artifactPath := makeArtifact(t)
+
+	artifactPath := makeArtifact(t, "blob")
 
 	// It should create timestamp successfully.
 	out := runCli(t, "--timestamp_server", restapiURL, "--timestamp_server", restapiURL, "timestamp", "--artifact", artifactPath, "--hash", "sha256", "--out", tsrPath)
@@ -56,12 +53,15 @@ func TestTimestampCreation(t *testing.T) {
 }
 
 func TestTimestampVerify(t *testing.T) {
-	tsrPath := "response.tsr"
+	restapiURL := createServer(t)
 
-	artifactPath := makeArtifact(t)
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent)
 
 	// write the cert chain to a PEM file
-	pemPath := getCertChainPEM(t)
+	pemPath := getCertChainPEM(t, restapiURL)
 
 	// It should verify timestamp successfully.
 	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", pemPath)
@@ -69,12 +69,15 @@ func TestTimestampVerify(t *testing.T) {
 }
 
 func TestTimestampVerify_InvalidTSR(t *testing.T) {
+	restapiURL := createServer(t)
+
 	pemPath := "ts_chain.pem"
 	if err := os.WriteFile(pemPath, []byte("stuff"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	artifactPath := makeArtifact(t)
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
 
 	// Create invalid pem
 	invalidTSR := filepath.Join(t.TempDir(), "response.tsr")
@@ -88,9 +91,12 @@ func TestTimestampVerify_InvalidTSR(t *testing.T) {
 }
 
 func TestTimestampVerify_InvalidPEM(t *testing.T) {
+	restapiURL := createServer(t)
+
 	tsrPath := "response.tsr"
 
-	artifactPath := makeArtifact(t)
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
 
 	// Create invalid pem
 	invalidPEMPath := filepath.Join(t.TempDir(), "ts_chain.pem")
@@ -154,25 +160,40 @@ func outputContains(t *testing.T, output, sub string) {
 	}
 }
 
-func getCertChainPEMRestCall(t *testing.T) string {
-	pemFileName := "e2e_test_ts_chain.pem"
-
-	resp, err := http.Get("http://localhost:3000/api/v1/timestamp/certchain")
+func getTimestamp(t *testing.T, url string, artifactContent string) string {
+	c, err := client.GetTimestampClient(url)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("unexpected error creating client: %v", err)
 	}
-	defer resp.Body.Close()
-	file, err := os.Create(pemFileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	file.ReadFrom(resp.Body)
 
-	return pemFileName
+	tsNonce := big.NewInt(1234)
+	tsq, err := ts.CreateRequest(strings.NewReader(artifactContent), &ts.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+		Nonce:        tsNonce,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
+
+	params := timestamp.NewGetTimestampResponseParams()
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+	var respBytes bytes.Buffer
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "response.tsr")
+	if err := os.WriteFile(path, respBytes.Bytes(), 0600); err != nil {
+		t.Fatalf("unexpected error while writing timestamp to file: %v", err)
+	}
+
+	return path
 }
 
-func getCertChainPEM(t *testing.T) string {
+func getCertChainPEM(t *testing.T, restapiURL string) string {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
@@ -197,9 +218,9 @@ func getCertChainPEM(t *testing.T) string {
 }
 
 // Create a random artifact to sign
-func makeArtifact(t *testing.T) string {
+func makeArtifact(t *testing.T, content string) string {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	if err := os.WriteFile(artifactPath, []byte("some data"), 0600); err != nil {
+	if err := os.WriteFile(artifactPath, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
 	return artifactPath

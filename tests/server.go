@@ -16,9 +16,9 @@
 package tests
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"testing"
 	"time"
 
 	"github.com/spf13/viper"
@@ -26,17 +26,18 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
-func createServer() *httptest.Server {
+func createServer(t *testing.T) string {
 	viper.Set("timestamp-signer", "memory")
 	// unused port
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
 
 	// verify the server's health
 	response, err := http.Get(server.URL + "/ping")
 	if err != nil || response.StatusCode != 200 {
-		panic(fmt.Sprintf("unexpected error starting up server - status code: %d, err: %v", response.StatusCode, err))
+		t.Fatalf("unexpected error starting up server - status code: %d, err: %v", response.StatusCode, err)
 	}
 
-	return server
+	return server.URL
 }
