@@ -75,7 +75,7 @@ timestamp-cli: $(SRCS)
 timestamp-server: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o timestamp-server ./cmd/timestamp-server
 
-test:
+test: timestamp-cli
 	go test ./...
 
 clean:

@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto"
 	"errors"
+	// "go/build"
 	"io"
 	"math/big"
 	"os"
@@ -33,7 +34,7 @@ import (
 )
 
 const (
-	cli = "../timestamp-cli"
+	cli = "../../timestamp-cli"
 )
 
 func TestTimestampCreation(t *testing.T) {
@@ -93,10 +94,10 @@ func TestTimestampVerify_InvalidTSR(t *testing.T) {
 func TestTimestampVerify_InvalidPEM(t *testing.T) {
 	restapiURL := createServer(t)
 
-	tsrPath := "response.tsr"
-
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent)
 
 	// Create invalid pem
 	invalidPEMPath := filepath.Join(t.TempDir(), "ts_chain.pem")
