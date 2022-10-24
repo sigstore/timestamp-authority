@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
@@ -37,7 +36,6 @@ func addInspectFlags(cmd *cobra.Command) {
 
 type inspectCmdOutput struct {
 	TimestampResponse timestamp.Timestamp
-	Token             pkcs7.PKCS7
 }
 
 func (t *inspectCmdOutput) String() string {
@@ -58,24 +56,16 @@ var inspectCmd = &cobra.Command{
 		tsr := viper.GetString("timestamp")
 		tsrBytes, err := os.ReadFile(filepath.Clean(tsr))
 		if err != nil {
-			return nil, fmt.Errorf("error reading request from file: %w", err)
+			return nil, fmt.Errorf("Error reading request from TSR file: %w", err)
 		}
-
-		log.CliLogger.Info("get tsr bytes")
 
 		ts, err := timestamp.ParseResponse(tsrBytes)
 		if err != nil {
 			return nil, err
 		}
 
-		token, err := pkcs7.Parse(ts.RawToken)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing hashed message: %w", err)
-		}
-
 		return &inspectCmdOutput{
 			TimestampResponse: *ts,
-			Token:             *token,
 		}, nil
 	}),
 }
