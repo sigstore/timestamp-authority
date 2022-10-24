@@ -39,7 +39,7 @@ const (
 func TestTimestampCreation(t *testing.T) {
 	restapiURL := createServer(t)
 
-	tsrPath := "response.tsr"
+	tsrPath := filepath.Join(t.TempDir(), "response.tsr")
 
 	artifactPath := makeArtifact(t, "blob")
 
@@ -71,7 +71,7 @@ func TestTimestampVerify(t *testing.T) {
 func TestTimestampVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
-	pemPath := "ts_chain.pem"
+	pemPath := filepath.Join(t.TempDir(), "ts_chain.pem")
 	if err := os.WriteFile(pemPath, []byte("stuff"), 0600); err != nil {
 		t.Fatal(err)
 	}
