@@ -73,10 +73,10 @@ gosec:
 gen: $(GENSRC)
 
 timestamp-cli: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o timestamp-cli ./cmd/timestamp-cli
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/timestamp-cli ./cmd/timestamp-cli
 
 timestamp-server: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o timestamp-server ./cmd/timestamp-server
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o bin/timestamp-server ./cmd/timestamp-server
 
 test: timestamp-cli
 	go test ./...
@@ -84,7 +84,7 @@ test: timestamp-cli
 clean:
 	rm -rf dist
 	rm -rf hack/tools/bin
-	rm -rf timestamp-cli timestamp-server
+	rm -rf bin/timestamp-cli bin/timestamp-server
 
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
