@@ -6,3 +6,7 @@ fetchTSAImagerefs
 *.tsr
 hack/tools/bin/*
 bin/
+request.tsq
+response.tsr
+myblob
+ts_chain.pem
