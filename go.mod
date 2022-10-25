@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/security v1.8.0
+	github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.3
@@ -22,7 +23,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rs/cors v1.8.2
 	github.com/sigstore/sigstore v1.4.5
-	github.com/spf13/cobra v1.6.0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/urfave/negroni v1.0.0
@@ -72,7 +73,6 @@ require (
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
-	github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
