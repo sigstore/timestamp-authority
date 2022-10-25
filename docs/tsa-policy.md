@@ -226,12 +226,12 @@ NOTE 1: Without additional measures the relying party may not be able to ensure 
 
 A TSA may define its own policy which enhances the policy defined in this document. Such a policy shall incorporate or further constrain the requirements identified in this document.
 
-If an accuracy of better than 1 second is provided by a TSA and if all the TSUs have that same characteristics, then the accuracy shall be indicated in the TSA's disclosure statement (see section 7.1.2 TODO: ADD LINK)
+If an accuracy of better than 1 second is provided by a TSA and if all the TSUs have that same characteristics, then the accuracy shall be indicated in the TSA's disclosure statement (see section [7.1.2](#712-tsa-disclosure-statement)
 that  each time-stamp token is issued with an accuracy of better than
 1 second.
 
 NOTE 2: It is required that a time-stamp token includes an identifier
-for the applicable policy (see section 7.3.1 TODO: ADD LINK).
+for the applicable policy (see section [7.3.1](#731-time-stamp-token)).
 
 ## 5.2. Identification
 
@@ -252,9 +252,9 @@ The TSA shall use the identifier for the timestamp policy in timestamp tokens as
 
 A conformant TSA must demonstrate that:
 
-- It meets its obligations as defined in section 6.1 TODO: ADD LINK;
+- It meets its obligations as defined in section [6.1](#61-tsa-obligation);
 
-- It has implemented controls which meet the requirements specified in section 7 TODO: ADD LNK.
+- It has implemented controls which meet the requirements specified in section [7](#7-requirements-on-tsa-practices).
 
 # 6. Obligations and Liability
 
@@ -262,7 +262,7 @@ A conformant TSA must demonstrate that:
 
 ### 6.1.1. General
 
-The TSA shall ensure that all requirements on TSA, as detailed in section 7 TODO: ADD LINK, are implemented as applicable to the selected trusted time-stamp policy.
+The TSA shall ensure that all requirements on TSA, as detailed in section [7](#7-requirements-on-tsa-practices), are implemented as applicable to the selected trusted time-stamp policy.
 
 The TSA shall ensure conformance with the procedures prescribed in this policy, even when the TSA functionality is undertaken by subcontractors.
 
@@ -282,7 +282,7 @@ NOTE:  It is advisable that, when obtaining a time-stamp token, the subscriber v
 
 ## 6.3. Relying Party Obligations
 
-The terms and conditions made available to relying parties (see section 7.1.2 TODO: ADD LINK) shall include an obligation on the relying party that, when relying on a time-stamp token, it shall:
+The terms and conditions made available to relying parties (see section [7.1.2](#712-tsa-disclosure-statement) shall include an obligation on the relying party that, when relying on a time-stamp token, it shall:
 
 1. verify that the time-stamp token has been correctly signed and that the private key used to sign the time-stamp has not been compromised until the time of the verification;
 
@@ -305,7 +305,7 @@ These policy requirements are not meant to imply any restrictions on charging fo
 
 The requirements are indicated in terms of the security objectives, followed by more specific requirements for controls to meet those objectives where it is necessary to provide confidence that those objective will be met.
 
-NOTE: The details of controls required to meet an objective is a balance between achieving the necessary confidence whilst minimizing the restrictions on the techniques that a TSA may employ in issuing time-stamp tokens. In the case of section 7.4 TODO: ADD LINK (TSA management and operation), a reference is made to a source of more detailed control requirements. Due to these factors the specificity of the requirements given under a given topic may vary.
+NOTE: The details of controls required to meet an objective is a balance between achieving the necessary confidence whilst minimizing the restrictions on the techniques that a TSA may employ in issuing time-stamp tokens. In the case of section [7.4](#74-tsa-management-and-operation) (TSA management and operation), a reference is made to a source of more detailed control requirements. Due to these factors the specificity of the requirements given under a given topic may vary.
 
 The provision of a time-stamp token in response to a request is at the discretion of the TSA depending on any service level agreements with the subscriber.
 
@@ -439,7 +439,7 @@ In particular:
 
 1. The time included in the time-stamp token shall be synchronized with UTC within the accuracy defined in this policy and, if present, within the accuracy defined in the time-stamp token itself;
 
-1. If the time-stamp provider's clock is detected (see section 7.3.2c TODO: ADD LINK)) as being out of the stated accuracy (see section [7.1.2e](#712-tsa-disclosure-statement))) then time-stamp tokens shall not be issued.
+1. If the time-stamp provider's clock is detected (see section [7.3.2c](#732-clock-synchronization-with-utc)) as being out of the stated accuracy (see section [7.1.2e](#712-tsa-disclosure-statement))) then time-stamp tokens shall not be issued.
 
 1. The time-stamp token shall include a representation (e.g., hash value) of the datum being time-stamped as provided by the requestor;
 
@@ -465,7 +465,7 @@ In particular:
 1. The TSA shall ensure that, if the time that would be indicated in a time-stamp token drifts or jumps out of synchronization with UTC, this will be detected (see also [7.3.1e](#731-time-stamp-token))).
 
     NOTE 1: Relying parties are required to be informed of such events
-    (see section 7.4.8 TODO: ADD LINK).
+    (see section [7.4.8](#748-compromise-of-tsa-services)).
 
 1. The TSA shall ensure that clock synchronization is maintained when a leap second occurs as notified by the appropriate body. The change to take account of the leap second shall occur during the last minute of the day when the leap second is scheduled to occur.
 
