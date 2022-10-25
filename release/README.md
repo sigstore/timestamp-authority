@@ -24,18 +24,17 @@ git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
 ```shell
 $ export RELEASE_TAG=<release version, eg "v1.1.0">
 $ git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
-$ git push origin ${RELEASE_TAG}
+$ git push upstream ${RELEASE_TAG}
 ```
+
+Note that `upstream` should be the upstream Sigstore repository. You may have to change this if you've configured remotes.
 
 1. This will trigger a GitHub Workflow that will build the binaries and the images.
 
+1. Go to [releases](https://github.com/sigstore/timestamp-authority/releases) and edit the draft release.
+   The tag should be selected automatically. Edit the release notes, copying in the changelog.
+   Click "Publish Release".
+
 1. Send an announcement email to `sigstore-dev@googlegroups.com` mailing list
 
-1. Tweet about the new release with a fun new trigonometry pun!
-
-1. Honk!
-
-#### After the release:
-
-* Add a pending new section in CHANGELOG.md to set up for the next release
-* Create a new GitHub Milestone
+1. Post on the `#general` Slack channel
