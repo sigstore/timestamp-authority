@@ -72,16 +72,22 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 		return nil, err
 	}
 
+	skid, err := cryptoutils.SKID(signer.Public())
+	if err != nil {
+		return nil, err
+	}
+
 	cert := &x509.Certificate{
 		SerialNumber: sn,
 		Subject: pkix.Name{
 			CommonName:   "Test TSA Timestamping",
 			Organization: []string{"local"},
 		},
-		NotBefore: time.Now().Add(-3 * time.Minute),
-		NotAfter:  time.Now().AddDate(9, 0, 0),
-		IsCA:      false,
-		KeyUsage:  x509.KeyUsageDigitalSignature,
+		SubjectKeyId: skid,
+		NotBefore:    time.Now().Add(-3 * time.Minute),
+		NotAfter:     time.Now().AddDate(9, 0, 0),
+		IsCA:         false,
+		KeyUsage:     x509.KeyUsageDigitalSignature,
 		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
 		ExtraExtensions: []pkix.Extension{
 			{

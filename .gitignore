@@ -10,3 +10,5 @@ request.tsq
 response.tsr
 myblob
 ts_chain.pem
+enc-keyset.cfg
+chain.crt.pem
