@@ -27,10 +27,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	privateca "cloud.google.com/go/security/privateca/apiv1"
+	"github.com/google/tink/go/keyset"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 	privatecapb "google.golang.org/genproto/googleapis/cloud/security/privateca/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -45,23 +48,39 @@ import (
 
 /*
 To run:
-go run cmd/fetch_ca_cert/fetch_ca_cert.go \
+go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
   --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
   --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
   --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
   --output="chain.crt.pem"
 
-You must have the permissions to read the KMS keys, and create a certificate in the CA pool.
+go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
+  --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+  --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
+  --tink-keyset-path="enc-keyset.cfg" \
+  --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
+  --output="chain.crt.pem"
+
+You must have the permissions to read, sign with, and decrypt with the KMS keys, and create a certificate in the CA pool.
+
+You can create a GCP KMS encrypted Tink keyset with tinkey (changing the key template as needed):
+tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>
 */
 
 var (
-	gcpCaParent        = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA")
-	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
-	leafKMSKey         = flag.String("leaf-kms-resource", "", "Resource path to the KMS key for the leaf, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
-	outputPath         = flag.String("output", "", "Path to the output file")
+	// likely the root CA
+	gcpCaParent = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA")
+	// key only used for fetching intermediate certificate from root and signing leaf certificate
+	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	// leafKMSKey or Tink flags required
+	leafKMSKey     = flag.String("leaf-kms-resource", "", "Resource path to the asymmetric signing KMS key for the leaf, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	tinkKeysetPath = flag.String("tink-keyset-path", "", "Path to Tink keyset")
+	tinkKmsKey     = flag.String("tink-kms-resource", "", "Resource path to symmetric encryption KMS key to decrypt Tink keyset, starting with gcp-kms:// or aws-kms://")
+	outputPath     = flag.String("output", "", "Path to the output file")
 )
 
-func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMSKey string, client *privateca.CertificateAuthorityClient) ([]*x509.Certificate, error) {
+func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leafKMSKey, tinkKeysetPath, tinkKmsKey string,
+	client *privateca.CertificateAuthorityClient) ([]*x509.Certificate, error) {
 	intermediateKMSSigner, err := kms.Get(ctx, intermediateKMSKey, crypto.SHA256)
 	if err != nil {
 		return nil, err
@@ -151,28 +170,60 @@ func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMS
 	intermediate := parsedCerts[0]
 
 	// generate leaf certificate
-	leafKMSSigner, err := kms.Get(ctx, leafKMSKey, crypto.SHA256)
-	if err != nil {
-		return nil, err
+	var leafKMSSigner crypto.Signer
+	if len(leafKMSKey) > 0 {
+		kmsSigner, err := kms.Get(ctx, leafKMSKey, crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+		leafKMSSigner, _, err = kmsSigner.CryptoSigner(ctx, func(err error) {})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		primaryKey, err := signer.GetPrimaryKey(ctx, tinkKmsKey, "")
+		if err != nil {
+			return nil, err
+		}
+		f, err := os.Open(filepath.Clean(tinkKeysetPath))
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		kh, err := keyset.Read(keyset.NewJSONReader(f), primaryKey)
+		if err != nil {
+			return nil, err
+		}
+		leafKMSSigner, err = signer.KeyHandleToSigner(kh)
+		if err != nil {
+			return nil, err
+		}
 	}
-	leafPubKey, err := leafKMSSigner.PublicKey()
-	if err != nil {
-		return nil, err
-	}
+
+	leafPubKey := leafKMSSigner.Public()
+
 	sn, err := cryptoutils.GenerateSerialNumber()
 	if err != nil {
 		return nil, fmt.Errorf("generating serial number: %w", err)
 	}
+
+	skid, err := cryptoutils.SKID(leafPubKey)
+	if err != nil {
+		return nil, err
+	}
+
 	cert := &x509.Certificate{
 		SerialNumber: sn,
 		Subject: pkix.Name{
 			CommonName:   "sigstore-tsa",
 			Organization: []string{"sigstore.dev"},
 		},
-		NotBefore: intermediate.NotBefore,
-		NotAfter:  intermediate.NotAfter,
-		IsCA:      false,
-		KeyUsage:  x509.KeyUsageDigitalSignature,
+		SubjectKeyId: skid,
+		NotBefore:    intermediate.NotBefore,
+		NotAfter:     intermediate.NotAfter,
+		IsCA:         false,
+		KeyUsage:     x509.KeyUsageDigitalSignature,
 		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
 		ExtraExtensions: []pkix.Extension{
 			{
@@ -190,7 +241,7 @@ func fetchCACertificate(ctx context.Context, parent, intermediateKMSKey, leafKMS
 	if err != nil {
 		return nil, fmt.Errorf("parsing leaf certificate: %w", err)
 	}
-	parsedCerts = append(parsedCerts, leafCert)
+	parsedCerts = append([]*x509.Certificate{leafCert}, parsedCerts...)
 
 	return parsedCerts, nil
 }
@@ -204,8 +255,11 @@ func main() {
 	if *intermediateKMSKey == "" {
 		log.Fatal("intermediate-kms-resource must be set")
 	}
-	if *leafKMSKey == "" {
-		log.Fatal("leaf-kms-resource must be set")
+	if *leafKMSKey == "" && *tinkKeysetPath == "" {
+		log.Fatal("either leaf-kms-resource or tink-keyset-path must be set")
+	}
+	if *tinkKeysetPath != "" && *tinkKmsKey == "" {
+		log.Fatal("tink-keyset-path must be set with tink-kms-resource must be set")
 	}
 	if *outputPath == "" {
 		log.Fatal("output must be set")
@@ -215,7 +269,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	parsedCerts, err := fetchCACertificate(context.Background(), *gcpCaParent, *intermediateKMSKey, *leafKMSKey, client)
+	parsedCerts, err := fetchCertificateChain(context.Background(), *gcpCaParent, *intermediateKMSKey, *leafKMSKey, *tinkKeysetPath, *tinkKmsKey, client)
 	if err != nil {
 		log.Fatal(err)
 	}
