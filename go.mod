@@ -27,10 +27,10 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.22.0
+	go.step.sm/crypto v0.23.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.1.0
-	google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a
+	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
 	google.golang.org/protobuf v1.28.1
 	sigs.k8s.io/release-utils v0.7.3
 )
@@ -39,7 +39,7 @@ require (
 	cloud.google.com/go v0.104.0 // indirect
 	cloud.google.com/go/compute v1.10.0 // indirect
 	cloud.google.com/go/iam v0.5.0 // indirect
-	cloud.google.com/go/kms v1.4.0 // indirect
+	cloud.google.com/go/kms v1.5.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go v67.0.0+incompatible // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/aws/aws-sdk-go v1.44.119 // indirect
+	github.com/aws/aws-sdk-go v1.44.127 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.16 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.17.8 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.21 // indirect
@@ -153,7 +153,7 @@ require (
 	golang.org/x/term v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
-	google.golang.org/api v0.100.0 // indirect
+	google.golang.org/api v0.101.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/grpc v1.50.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
