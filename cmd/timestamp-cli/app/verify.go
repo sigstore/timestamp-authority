@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -130,14 +131,23 @@ func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 		return err
 	}
 
-	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifactBytes)
+	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, bytes.NewReader(artifactBytes))
 }
 
-func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactBytes []byte) error {
+func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReader io.Reader) error {
 	h := hashAlg
-	_, err := h.Write(artifactBytes)
-	if err != nil {
-		return fmt.Errorf("Failed to create local message hash")
+
+	b := make([]byte, h.Size())
+	for {
+		n, err := artifactReader.Read(b)
+		if err == io.EOF {
+			break
+		}
+
+		_, err = h.Write(b[:n])
+		if err != nil {
+			return fmt.Errorf("failed to create hash %w", err)
+		}
 	}
 	localHashedMsg := h.Sum(nil)
 

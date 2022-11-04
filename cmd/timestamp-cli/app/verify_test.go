@@ -19,15 +19,29 @@ import (
 	"bytes"
 	"crypto"
 	"io"
-	"log"
-	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/digitorus/timestamp"
+	"github.com/sigstore/timestamp-authority/pkg/client"
+	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
+	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/spf13/viper"
 )
 
 func TestVerifyArtifactHashedMessages(t *testing.T) {
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	c, err := client.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
 	type test struct {
 		message string
 	}
@@ -56,29 +70,25 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			Certificates: true,
 		})
 		if err != nil {
-			log.Fatal(err)
+			t.Fatalf("unexpected error creating request: %v", err)
 		}
 
-		tsr, err := http.Post("https://freetsa.org/tsr", "application/timestamp-query", bytes.NewReader(tsq))
+		params := tsatimestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+		var respBytes bytes.Buffer
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
 		if err != nil {
-			log.Fatal(err)
+			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}
 
-		if tsr.StatusCode > 200 {
-			log.Fatal(tsr.Status)
-		}
-
-		resp, err := io.ReadAll(tsr.Body)
+		tsr, err := timestamp.ParseResponse(respBytes.Bytes())
 		if err != nil {
-			log.Fatal(err)
+			t.Fatalf("unexpected error parsing response: %v", err)
 		}
 
-		tsResp, err := timestamp.ParseResponse(resp)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := verifyHashedMessages(tsResp.HashAlgorithm.New(), tsResp.HashedMessage, []byte(tc.message)); err != nil {
+		if err := verifyHashedMessages(tsr.HashAlgorithm.New(), tsr.HashedMessage, strings.NewReader(tc.message)); err != nil {
 			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
 		}
 
