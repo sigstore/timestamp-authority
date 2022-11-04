@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"hash"
 	"os"
 	"path/filepath"
 
@@ -129,14 +130,18 @@ func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 		return err
 	}
 
-	h := ts.HashAlgorithm.New()
-	_, err = h.Write(artifactBytes)
+	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifactBytes)
+}
+
+func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactBytes []byte) error {
+	h := hashAlg
+	_, err := h.Write(artifactBytes)
 	if err != nil {
 		return fmt.Errorf("Failed to create local message hash")
 	}
 	localHashedMsg := h.Sum(nil)
 
-	if !bytes.Equal(localHashedMsg, ts.HashedMessage) {
+	if !bytes.Equal(localHashedMsg, hashedMessage) {
 		return fmt.Errorf("Hashed messages don't match")
 	}
 
