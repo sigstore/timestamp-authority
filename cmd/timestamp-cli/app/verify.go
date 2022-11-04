@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -125,27 +126,22 @@ func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
 
 func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 	artifactPath := viper.GetString("artifact")
-	artifactBytes, err := os.ReadFile(filepath.Clean(artifactPath))
+	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
 		return err
 	}
 
-	h := ts.HashAlgorithm.New()
-	b := make([]byte, h.Size())
+	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
+}
 
-	r := bytes.NewReader(artifactBytes)
-	n, err := r.Read(b)
-	if err == io.EOF {
-		return err
+func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReader io.Reader) error {
+	h := hashAlg
+	if _, err := io.Copy(h, artifactReader); err != nil {
+		return fmt.Errorf("failed to create hash %w", err)
 	}
+	localHashedMsg := h.Sum(nil)
 
-	_, err = h.Write(b[:n])
-	if err != nil {
-		return fmt.Errorf("Failed to create local message hash")
-	}
-
-	localHashedMessage := h.Sum(nil)
-	if !bytes.Equal(localHashedMessage, ts.HashedMessage) {
+	if !bytes.Equal(localHashedMsg, hashedMessage) {
 		return fmt.Errorf("Hashed messages don't match")
 	}
 
