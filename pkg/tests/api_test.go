@@ -81,7 +81,7 @@ func TestGetTimestampResponse(t *testing.T) {
 
 	// create request with nonce and certificate, the typical request structure
 	tsNonce := big.NewInt(1234)
-	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
+	tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
 		Hash:         crypto.SHA256,
 		Certificates: true,
 		Nonce:        tsNonce,
@@ -120,7 +120,7 @@ func TestGetTimestampResponse(t *testing.T) {
 	if tsr.HashAlgorithm != crypto.SHA256 {
 		t.Fatalf("unexpected hash algorithm")
 	}
-	hashedMessage := sha256.Sum256([]byte("blob"))
+	hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
 	if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
 		t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
 	}

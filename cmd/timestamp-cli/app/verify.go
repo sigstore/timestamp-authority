@@ -20,7 +20,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -131,21 +130,13 @@ func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 	}
 
 	h := ts.HashAlgorithm.New()
-	b := make([]byte, h.Size())
-
-	r := bytes.NewReader(artifactBytes)
-	n, err := r.Read(b)
-	if err == io.EOF {
-		return err
-	}
-
-	_, err = h.Write(b[:n])
+	_, err = h.Write(artifactBytes)
 	if err != nil {
 		return fmt.Errorf("Failed to create local message hash")
 	}
+	localHashedMsg := h.Sum(nil)
 
-	localHashedMessage := h.Sum(nil)
-	if !bytes.Equal(localHashedMessage, ts.HashedMessage) {
+	if !bytes.Equal(localHashedMsg, ts.HashedMessage) {
 		return fmt.Errorf("Hashed messages don't match")
 	}
 
