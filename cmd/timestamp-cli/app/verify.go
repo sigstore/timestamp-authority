@@ -126,28 +126,18 @@ func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
 
 func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 	artifactPath := viper.GetString("artifact")
-	artifactBytes, err := os.ReadFile(filepath.Clean(artifactPath))
+	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
 		return err
 	}
 
-	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, bytes.NewReader(artifactBytes))
+	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
 }
 
 func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReader io.Reader) error {
 	h := hashAlg
-
-	b := make([]byte, h.Size())
-	for {
-		n, err := artifactReader.Read(b)
-		if err == io.EOF {
-			break
-		}
-
-		_, err = h.Write(b[:n])
-		if err != nil {
-			return fmt.Errorf("failed to create hash %w", err)
-		}
+	if _, err := io.Copy(h, artifactReader); err != nil {
+		return fmt.Errorf("failed to create hash %w", err)
 	}
 	localHashedMsg := h.Sum(nil)
 
