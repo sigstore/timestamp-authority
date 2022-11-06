@@ -16,19 +16,14 @@
 package app
 
 import (
-	"bytes"
 	"crypto/x509"
-	"errors"
 	"fmt"
-	"hash"
-	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/digitorus/pkcs7"
-	"github.com/digitorus/timestamp"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/pkg/verify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -72,80 +67,27 @@ func runVerify() (interface{}, error) {
 		return nil, fmt.Errorf("Error reading request from file: %w", err)
 	}
 
-	ts, err := timestamp.ParseResponse(tsrBytes)
-	if err != nil {
-		pe := timestamp.ParseError("")
-		if errors.As(err, &pe) {
-			return nil, fmt.Errorf("Given timestamp response is not valid: %w", err)
-		}
-		return nil, fmt.Errorf("Error parsing response into Timestamp: %w", err)
-	}
-
-	// verify the timestamp response against the certificate chain PEM file
-	err = verifyTSRWithPEM(ts)
-	if err != nil {
-		return nil, err
-	}
-
-	// verify the timestamp response signature against the local arficat hash
-	err = verifyArtifactWithTSR(ts)
-	if err != nil {
-		return nil, err
-	}
-
-	return &verifyCmdOutput{TimestampPath: tsrPath}, nil
-}
-
-func verifyTSRWithPEM(ts *timestamp.Timestamp) error {
-	p7Message, err := pkcs7.Parse(ts.RawToken)
-	if err != nil {
-		return fmt.Errorf("Error parsing hashed message: %w", err)
-	}
-
 	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
-		return fmt.Errorf("Error reading request from file: %w", err)
+		return nil, fmt.Errorf("Error reading request from file: %w", err)
 	}
 
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pemBytes)
 	if !ok {
-		return fmt.Errorf("Error while appending certs from PEM")
+		return nil, fmt.Errorf("Error parsing response into Timestamp while appending certs from PEM")
 	}
 
-	err = p7Message.VerifyWithChain(certPool)
-	if err != nil {
-		return fmt.Errorf("Error while verifying with chain: %w", err)
-	}
-
-	log.CliLogger.Info("Verified with chain")
-
-	return nil
-}
-
-func verifyArtifactWithTSR(ts *timestamp.Timestamp) error {
 	artifactPath := viper.GetString("artifact")
 	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
-}
+	err = verify.TimestampResponse(tsrBytes, artifact, certPool)
 
-func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReader io.Reader) error {
-	h := hashAlg
-	if _, err := io.Copy(h, artifactReader); err != nil {
-		return fmt.Errorf("failed to create hash %w", err)
-	}
-	localHashedMsg := h.Sum(nil)
-
-	if !bytes.Equal(localHashedMsg, hashedMessage) {
-		return fmt.Errorf("Hashed messages don't match")
-	}
-
-	return nil
+	return &verifyCmdOutput{TimestampPath: tsrPath}, err
 }
 
 func init() {
