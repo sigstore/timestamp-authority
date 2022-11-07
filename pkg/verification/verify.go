@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package verify
+package verification
 
 import (
 	"bytes"
@@ -28,35 +28,35 @@ import (
 )
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
-func TimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool) error {
+func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool) error {
 	ts, err := timestamp.ParseResponse(tsrBytes)
 	if err != nil {
 		pe := timestamp.ParseError("")
 		if errors.As(err, &pe) {
-			return fmt.Errorf("Given timestamp response is not valid: %w", err)
+			return fmt.Errorf("timestamp response is not valid: %w", err)
 		}
-		return fmt.Errorf("Error parsing response into Timestamp: %w", err)
+		return fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 
-	// verify the timestamp response against the certificate chain PEM file
-	err = verifyTSRWithPEM(ts, certPool)
+	// verify the timestamp response signature using the provided certificate pool
+	err = verifyTSRWithChain(ts, certPool)
 	if err != nil {
 		return err
 	}
 
-	// verify the timestamp response signature against the local arficat hash
+	// verify the hash in the timestamp response matches the artifact hash
 	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
 }
 
-func verifyTSRWithPEM(ts *timestamp.Timestamp, certPool *x509.CertPool) error {
+func verifyTSRWithChain(ts *timestamp.Timestamp, certPool *x509.CertPool) error {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
-		return fmt.Errorf("Error parsing hashed message: %w", err)
+		return fmt.Errorf("error parsing hashed message: %w", err)
 	}
 
 	err = p7Message.VerifyWithChain(certPool)
 	if err != nil {
-		return fmt.Errorf("Error while verifying with chain: %w", err)
+		return fmt.Errorf("error while verifying with chain: %w", err)
 	}
 
 	return nil
@@ -70,7 +70,7 @@ func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReade
 	localHashedMsg := h.Sum(nil)
 
 	if !bytes.Equal(localHashedMsg, hashedMessage) {
-		return fmt.Errorf("Hashed messages don't match")
+		return fmt.Errorf("hashed messages don't match")
 	}
 
 	return nil

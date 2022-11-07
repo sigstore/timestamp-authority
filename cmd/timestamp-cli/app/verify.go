@@ -23,7 +23,7 @@ import (
 
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
-	"github.com/sigstore/timestamp-authority/pkg/verify"
+	"github.com/sigstore/timestamp-authority/pkg/verification"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -76,7 +76,7 @@ func runVerify() (interface{}, error) {
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(pemBytes)
 	if !ok {
-		return nil, fmt.Errorf("Error parsing response into Timestamp while appending certs from PEM")
+		return nil, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
 	}
 
 	artifactPath := viper.GetString("artifact")
@@ -85,7 +85,7 @@ func runVerify() (interface{}, error) {
 		return nil, err
 	}
 
-	err = verify.TimestampResponse(tsrBytes, artifact, certPool)
+	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool)
 
 	return &verifyCmdOutput{TimestampPath: tsrPath}, err
 }

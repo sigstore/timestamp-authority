@@ -108,7 +108,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--cert-chain", pemPath)
-	outputContains(t, out, "Error parsing response into Timestamp while appending certs from PEM")
+	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
 }
 
 func TestVerify_InvalidPEM(t *testing.T) {
@@ -127,7 +127,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", invalidPEMPath)
-	outputContains(t, out, "Error parsing response into Timestamp while appending certs from PEM")
+	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
 }
 
 func runCliErr(t *testing.T, arg ...string) string {
