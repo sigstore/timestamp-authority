@@ -33,10 +33,19 @@ To fetch a timestamp with the provided `timestamp-cli`:
 To fetch a timestamp with `openssl` and `curl`:
 
 1. Retrieve the verification chain: `curl http://localhost:3000/api/v1/timestamp/certchain > ts_chain.pem`
+1. Split chain into root CA certificate and "untrusted" intermediate and leaf certificates:
+   1. Split: `csplit -s -f tmpcert- ts_chain.pem '/-----BEGIN CERTIFICATE-----/' '{*}'`
+   1. Remove empty file: `rm tmpcert-00`
+   1. Get root: `mv $(ls tmpcert-* | tail -1) root.crt.pem`
+   1. Merge remaining certificates: `cat tmpcert-* > chain.crts.pem`
+   1. Remove temp files: `rm tmpcert-*`
 1. Create test blob to sign: `echo "myblob" > myblob`
 1. Create timestamp request: `openssl ts -query -data myblob -cert -sha256 -out request.tsq`
 1. Fetch timestamp: `curl -sSH "Content-Type: application/timestamp-query" --data-binary @request.tsq http://localhost:3000/api/v1/timestamp -o response.tsr`
-1. Verify timestamp: `openssl ts -verify -in response.tsr -data "myblob" -CAfile ts_chain.pem`
+1. Verify timestamp: `openssl ts -verify -in response.tsr -data "myblob" -CAfile root.crt.pem -untrusted chain.crts.pem`
+   * Note that you will see a warning that one certificate is "not a CA cert", but this is expected, as you need to provide the TSA signing certificate
+     in case the certificate is not included in the response. When generating the timestamp query, setting `-cert` will mandate the signing certificate
+     is included.
 1. Inspect timestamp: `openssl ts -reply -in response.tsr -text`
 
 ## Production deployment
