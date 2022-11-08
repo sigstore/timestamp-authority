@@ -16,7 +16,7 @@ brew install openssl
 
 To launch the server, run either:
 * `docker-compose up`
-* `go build ./cmd/timestamp-server && ./bin/timestamp-server serve --port 3000`
+* `make timestamp-server && ./bin/timestamp-server serve --port 3000`
 
 Both of these commands launch a server with an in-memory signing key and certificate chain. **This should not
 be used for production.**
@@ -25,7 +25,7 @@ To fetch a timestamp with the provided `timestamp-cli`:
 
 1. Retrieve the verification chain: `curl http://localhost:3000/api/v1/timestamp/certchain > ts_chain.pem`
 1. Create test blob to sign: `echo "myblob" > myblob`
-1. Build client: `go build ./cmd/timestamp-cli`
+1. Build client: `make timestamp-cli`
 1. Fetch timestamp: `./bin/timestamp-cli --timestamp_server http://localhost:3000 timestamp --hash sha256 --artifact myblob --out response.tsr`
 1. Verify timestamp: `./bin/timestamp-cli verify --timestamp response.tsr --artifact "myblob" --cert-chain ts_chain.pem`
 1. Inspect timestamp: `./bin/timestamp-cli inspect --timestamp response.tsr --format json`
