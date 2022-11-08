@@ -17,6 +17,9 @@ package verification
 
 import (
 	"bytes"
+	"encoding/pem"
+	"math/big"
+	"encoding/asn1"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -26,6 +29,77 @@ import (
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 )
+
+type VerificationOpts struct {
+	Oid asn1.ObjectIdentifier
+	TsaCertificate *x509.Certificate
+	Intermediates *x509.CertPool
+	Roots *x509.CertPool
+	Nonce *big.Int
+	Subject string
+}
+
+func NewVerificationOpts(tsr []byte, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
+	ts, err := timestamp.ParseResponse(tsr)
+	if err != nil {
+		pe := timestamp.ParseError("")
+		if errors.As(err, &pe) {
+			return VerificationOpts{}, fmt.Errorf("timestamp response is not valid: %w", err)
+		}
+		return VerificationOpts{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
+	}
+	
+	intermediatesPemCerts := []byte{}
+	rootsPemCerts := []byte{}
+	for len(pemCerts) > 0 {
+		block, rest := pem.Decode(pemCerts)
+		// if there is nothing left, we have found the last block
+		// which should be the root
+		if rest == nil {
+			rootsPemCerts = append(rootsPemCerts, pem.EncodeToMemory(block)...)
+		} else {
+			intermediatesPemCerts = append(intermediatesPemCerts, pem.EncodeToMemory(block)...)
+		}
+		pemCerts = rest
+	}
+
+	intermediates := x509.NewCertPool()
+	if ok := intermediates.AppendCertsFromPEM(intermediatesPemCerts); !ok {
+		return VerificationOpts{}, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+	}
+
+	roots := x509.NewCertPool()
+	if ok := roots.AppendCertsFromPEM(rootsPemCerts); !ok {
+		return VerificationOpts{}, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+	}
+
+	opts := VerificationOpts{}
+	opts.Oid = ts.Policy
+	opts.TsaCertificate = ts.Certificates[0]
+	opts.Intermediates = intermediates
+	opts.Roots = roots
+	opts.Nonce = ts.Nonce
+	opts.Subject = ts.Certificates[0].Subject.String()
+
+	return opts, nil
+}
+
+func VerifyOID(oid []int, opts VerificationOpts) bool {
+	responseOid := opts.Oid
+	if len(oid) != len(responseOid) {
+		return false
+	}
+	for i, v := range oid {
+		if v != responseOid[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func VerifyNonce(requestNonce *big.Int, opts VerificationOpts) bool {
+	return opts.Nonce.Cmp(requestNonce) == 0
+}
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
 func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool) error {
