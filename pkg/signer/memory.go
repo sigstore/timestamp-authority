@@ -42,7 +42,7 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 	}
 	sn, err := cryptoutils.GenerateSerialNumber()
 	if err != nil {
-		return nil, fmt.Errorf("generating serial number: %w", err)
+		return nil, fmt.Errorf("generating root serial number: %w", err)
 	}
 	rootCA := &x509.Certificate{
 		SerialNumber: sn,
@@ -62,17 +62,17 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 	}
 	rootCACert, err := x509.ParseCertificate(rootCACertDER)
 	if err != nil {
-		return nil, fmt.Errorf("parsing CA certificate: %w", err)
+		return nil, fmt.Errorf("parsing root CA certificate: %w", err)
 	}
 
 	// generate subordinate
 	sn, err = cryptoutils.GenerateSerialNumber()
 	if err != nil {
-		return nil, fmt.Errorf("generating serial number: %w", err)
+		return nil, fmt.Errorf("generating subordinate serial number: %w", err)
 	}
 	subPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, fmt.Errorf("generating in-memory root key")
+		return nil, fmt.Errorf("generating in-memory subordinate key")
 	}
 	subCA := &x509.Certificate{
 		SerialNumber: sn,
@@ -89,17 +89,17 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 	}
 	subCACertDER, err := x509.CreateCertificate(rand.Reader, subCA, rootCACert, subPriv.Public(), rootPriv)
 	if err != nil {
-		return nil, fmt.Errorf("creating self-signed root CA: %w", err)
+		return nil, fmt.Errorf("creating self-signed subordinate CA: %w", err)
 	}
 	subCACert, err := x509.ParseCertificate(subCACertDER)
 	if err != nil {
-		return nil, fmt.Errorf("parsing CA certificate: %w", err)
+		return nil, fmt.Errorf("parsing subordinate CA certificate: %w", err)
 	}
 
 	// generate leaf
 	sn, err = cryptoutils.GenerateSerialNumber()
 	if err != nil {
-		return nil, fmt.Errorf("generating serial number: %w", err)
+		return nil, fmt.Errorf("generating leaf serial number: %w", err)
 	}
 	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
 	if err != nil {
