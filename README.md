@@ -35,6 +35,7 @@ To fetch a timestamp with `openssl` and `curl`:
 1. Retrieve the verification chain: `curl http://localhost:3000/api/v1/timestamp/certchain > ts_chain.pem`
 1. Split chain into root CA certificate and "untrusted" intermediate and leaf certificates:
    1. Split: `csplit -s -f tmpcert- ts_chain.pem '/-----BEGIN CERTIFICATE-----/' '{*}'`
+      * Note, on macOS, you will need to install GNU utilities with `brew install coreutils`, and use `gcsplit`
    1. Remove empty file: `rm tmpcert-00`
    1. Get root: `mv $(ls tmpcert-* | tail -1) root.crt.pem`
    1. Merge remaining certificates: `cat tmpcert-* > chain.crts.pem`
