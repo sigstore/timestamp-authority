@@ -53,7 +53,8 @@ func NewAPI() (*API, error) {
 
 	var certChain []*x509.Certificate
 
-	if viper.GetString("timestamp-signer") == signer.KMSScheme || viper.GetString("timestamp-signer") == signer.TinkScheme {
+	// KMS, Tink and File signers require a provided certificate chain
+	if viper.GetString("timestamp-signer") != signer.MemoryScheme {
 		certChainPath := viper.GetString("certificate-chain-path")
 		data, err := os.ReadFile(filepath.Clean(certChainPath))
 		if err != nil {
