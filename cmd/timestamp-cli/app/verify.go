@@ -43,6 +43,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert-chain", "path to certificate chain PEM file")
 	cmd.MarkFlagRequired("cert-chain") //nolint:errcheck
+	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
 }
 
 var verifyCmd = &cobra.Command{
