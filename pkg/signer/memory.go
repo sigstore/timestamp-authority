@@ -118,8 +118,8 @@ func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]
 			Organization: []string{"local"},
 		},
 		SubjectKeyId: skid,
-		NotBefore:    time.Now().Add(-3 * time.Minute),
-		NotAfter:     time.Now().AddDate(9, 0, 0),
+		NotBefore:    now.Add(-3 * time.Minute),
+		NotAfter:     now.AddDate(9, 0, 0),
 		IsCA:         false,
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
