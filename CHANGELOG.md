@@ -1,3 +1,25 @@
+# 0.1.1
+
+## Changes
+
+### Enhancements
+
+* Update in memory signer to use intermediate certificate (https://github.com/sigstore/timestamp-authority/pull/136)
+* Move verify logic to pkg (https://github.com/sigstore/timestamp-authority/pull/120)
+
+### Bug fixes
+
+* Require the file signer to specify the certificate chain (https://github.com/sigstore/timestamp-authority/pull/137)
+* Fix hashed message verification (https://github.com/sigstore/timestamp-authority/pull/118)
+* Update fetch TSA certs script for Tink (https://github.com/sigstore/timestamp-authority/pull/111)
+
+### Misc
+
+## Contributors
+
+* Hayden Blauzvern
+* Hector Fernandez
+
 # 0.1.0
 
 Initial release of sigstore/timestamp-authority
