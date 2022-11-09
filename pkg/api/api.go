@@ -60,7 +60,7 @@ func NewAPI() (*API, error) {
 		if err != nil {
 			return nil, err
 		}
-		certChain, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(data))
+		certChain, err = cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(data))
 		if err != nil {
 			return nil, err
 		}
