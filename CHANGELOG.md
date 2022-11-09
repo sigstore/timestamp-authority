@@ -1,3 +1,19 @@
+# 0.1.2
+
+## Changes
+
+### Enhancements
+
+### Bug fixes
+
+* Fix a bug where certChain was not set correctly (https://github.com/sigstore/timestamp-authority/pull/140)
+
+### Misc
+
+## Contributors
+
+* Ville Aikas
+
 # 0.1.1
 
 ## Changes
