@@ -47,6 +47,9 @@ func TestNewTimestampingCertWithChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generating timestamping cert: %v", err)
 	}
+	if len(certChain) != 3 {
+		t.Fatalf("expected 3 certificates in chain, got %d", len(certChain))
+	}
 
 	// verify that certificate can verify signature
 	pkCert := certChain[0].PublicKey

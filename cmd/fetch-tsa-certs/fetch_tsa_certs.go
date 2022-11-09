@@ -31,11 +31,11 @@ import (
 	"time"
 
 	privateca "cloud.google.com/go/security/privateca/apiv1"
+	"cloud.google.com/go/security/privateca/apiv1/privatecapb"
 	"github.com/google/tink/go/keyset"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
-	privatecapb "google.golang.org/genproto/googleapis/cloud/security/privateca/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	// Register the provider-specific plugins

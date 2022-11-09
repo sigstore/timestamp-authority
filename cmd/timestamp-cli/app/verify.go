@@ -65,13 +65,13 @@ func runVerify() (interface{}, error) {
 	tsrPath := viper.GetString("timestamp")
 	tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
 	if err != nil {
-		return nil, fmt.Errorf("Error reading request from file: %w", err)
+		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
 	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
-		return nil, fmt.Errorf("Error reading request from file: %w", err)
+		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
 	certPool := x509.NewCertPool()

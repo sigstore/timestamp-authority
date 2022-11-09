@@ -92,10 +92,7 @@ func TestVerify(t *testing.T) {
 func TestVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
-	pemPath := filepath.Join(t.TempDir(), "ts_chain.pem")
-	if err := os.WriteFile(pemPath, []byte("stuff"), 0600); err != nil {
-		t.Fatal(err)
-	}
+	pemPath := getCertChainPEM(t, restapiURL)
 
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
@@ -108,7 +105,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--cert-chain", pemPath)
-	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
+	outputContains(t, out, "error parsing response into Timestamp")
 }
 
 func TestVerify_InvalidPEM(t *testing.T) {
