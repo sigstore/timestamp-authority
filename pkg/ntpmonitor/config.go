@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Config holds the configuration for a NTPMonitor
 type Config struct {
 	RequestRetries  int      `yaml:"request_retries"`
 	NumServers      int      `yaml:"num_servers"`
@@ -16,6 +17,9 @@ type Config struct {
 	Servers         []string `yaml:"servers"`
 }
 
+// LoadConfig reads a yaml file from a provided path, instantiating a new
+// Config object with the vales found. No sanity checking is made of the
+// loaded values.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

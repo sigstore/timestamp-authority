@@ -4,12 +4,12 @@ request_retries: 3
 num_servers: 4
 # Number of servers who must agree with local time.
 server_threshold: 3
-# Maximum number of seconds the local time is drifting from the
+# Maximum number of seconds the local time is allowed to drifting from the
 # response of a ntp server
 max_time_delta: 1
-# Period (in seconds) for checking time consistency
+# Period (in seconds) for polling ntp servers
 period: 60
-# List of servers to contact. Many DNS resolves to multiple A records.
+# List of servers to contact. Many DNS names resolves to multiple A records.
 servers:
   #
   # stratum 1 servers:

@@ -29,7 +29,7 @@ type NTPMonitor struct {
 	run atomic.Bool
 }
 
-// New creates a NTPMonnitor, reading the configuration from the proided
+// New creates a NTPMonitor, reading the configuration from the provided
 // path.
 func New(configFile string) (*NTPMonitor, error) {
 	cfg, err := LoadConfig(configFile)
@@ -45,9 +45,8 @@ func NewFromConfig(cfg *Config) *NTPMonitor {
 }
 
 // Start the periodic monitor. If there is an initialization error, the
-// function returns immediatly. Once the periodic montoring starts, it does
-// not return (nil) until Stop() is being called, or ErrInvTime if the local
-// time differs from the time received from the NTP servers.
+// function returns immediatly. Once the periodic montoring starts, it runs
+// until an error is found, or Stop() is being called.
 func (n *NTPMonitor) Start() error {
 	n.run.Store(true)
 
@@ -59,6 +58,7 @@ func (n *NTPMonitor) Start() error {
 		return ErrTooFewServers
 	}
 
+	delta := time.Duration(n.cfg.MaxTimeDelta) * time.Second
 	for n.run.Load() {
 		// Get a random set of servers
 		servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers)
@@ -70,7 +70,6 @@ func (n *NTPMonitor) Start() error {
 		validResponses := 0
 		noResponse := 0
 		for _, srv := range servers {
-			delta := time.Duration(n.cfg.MaxTimeDelta) * time.Second
 			// Create a time interval from 'now' with the max
 			// time delta added/remobed
 			// Make sure the time from the remote NTP server lies
