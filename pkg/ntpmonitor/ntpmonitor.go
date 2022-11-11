@@ -45,7 +45,7 @@ func NewFromConfig(cfg *Config) *NTPMonitor {
 }
 
 // Start the periodic monitor. If there is an initialization error, the
-// function returns immediatly. Once the periodic montoring starts, it runs
+// function returns immediately. Once the periodic monitoring starts, it runs
 // until an error is found, or Stop() is being called.
 func (n *NTPMonitor) Start() error {
 	n.run.Store(true)

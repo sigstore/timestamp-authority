@@ -23,6 +23,9 @@ func RandomChoice[T any](s []T, n int) []T {
 	}
 
 	for {
+		// The use of deterministic (pseudo) random generators are
+		// ok for this use-case.
+		//nolint:gosec
 		i := rand.Intn(len(indices))
 
 		result = append(result, s[indices[i]])
