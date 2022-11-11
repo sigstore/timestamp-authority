@@ -4,7 +4,7 @@ request_retries: 3
 num_servers: 4
 # Number of servers who must agree with local time.
 server_threshold: 3
-# Maximum number of seconds the local time is allowed to drifting from the
+# Maximum number of seconds the local time is allowed to drift from the
 # response of a ntp server
 max_time_delta: 1
 # Period (in seconds) for polling ntp servers
