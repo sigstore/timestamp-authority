@@ -69,6 +69,8 @@ func init() {
 	// File flags
 	rootCmd.PersistentFlags().String("file-signer-key-path", "", "Path to file containing PEM-encoded private key. Supported formats include PKCS#1, PKCS#8, and RFC5915 for EC")
 	rootCmd.PersistentFlags().String("file-signer-passwd", "", "Password to decrypt private key")
+	// NTP time introspection
+	rootCmd.PersistentFlags().String("ntp-monitoring", "", "Path to a file configuring ntp monitoring")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

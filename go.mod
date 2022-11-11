@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	cloud.google.com/go/security v1.10.0
+	github.com/beevik/ntp v0.3.0
 	github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
 	github.com/go-chi/chi v4.1.2+incompatible
@@ -31,6 +32,7 @@ require (
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.2.0
 	google.golang.org/protobuf v1.28.1
+	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/release-utils v0.7.3
 )
 
@@ -161,5 +163,4 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

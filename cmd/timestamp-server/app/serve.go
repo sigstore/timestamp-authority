@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/pkg/ntpmonitor"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
@@ -79,6 +80,31 @@ var serveCmd = &cobra.Command{
 		host := viper.GetString("host")
 		port := int(viper.GetUint("port"))
 		scheme := viper.GetStringSlice("scheme")
+
+		ntpMonitoring := viper.GetString("ntp-monitoring")
+		if ntpMonitoring != "" {
+			log.Logger.Infof("ntp monitoring: %s", ntpMonitoring)
+			go func() {
+				ntpm, err := ntpmonitor.New(ntpMonitoring)
+				if err != nil {
+					log.Logger.Fatalf("error initializing ntp monitor %s", err)
+				}
+
+				// Restart ntp monitor if needed
+				for {
+					err = ntpm.Start()
+					if err != nil {
+						log.Logger.Warnf("ntp monitor: %s", err)
+					}
+					// Local time have drifted from the
+					// observed NTP time. Shut down the
+					// service.
+					if err == ntpmonitor.ErrInvTime {
+						log.Logger.Fatalf("local time can not be trusted: %s", err)
+					}
+				}
+			}()
+		}
 
 		server := server.NewRestAPIServer(host, port, scheme, readTimeout, writeTimeout)
 		defer func() {
