@@ -73,7 +73,7 @@ servers:
   - "ntp2.net.berkeley.edu"
 
   #
-  # stratum 3 servers
+  # stratum 3 servers:
   #
   # Cloudflare AS13335
   - "time.cloudflare.com"
@@ -81,7 +81,7 @@ servers:
   - "time.windows.com"
 
   #
-  # stratum 4 servers
+  # stratum 4 servers:
   #
   # AWS AS16509
   - "time.aws.com"

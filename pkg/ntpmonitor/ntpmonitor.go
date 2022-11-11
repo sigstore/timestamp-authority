@@ -134,6 +134,7 @@ func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
 	var i = 1
 	for {
 		log.Logger.Debugf("querying ntp server %s", srv)
+		// Query using default options, timeout is 5s.
 		resp, err := ntp.Query(srv)
 		if err == nil {
 			return resp, nil
