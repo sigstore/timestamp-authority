@@ -39,14 +39,6 @@ servers:
   - "time3.google.com"
   - "time4.google.com"
 
-  # Facebook AS32934
-  - "time.facebook.com"
-  - "time1.facebook.com"
-  - "time2.facebook.com"
-  - "time3.facebook.com"
-  - "time4.facebook.com"
-  - "time5.facebook.com"
-
   # Nist AS49 AS104
   - "time-a-b.nist.gov"
   - "time-b-b.nist.gov"
