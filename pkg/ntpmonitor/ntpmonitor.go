@@ -40,7 +40,7 @@ var (
 	// ErrThreshold means that there is no positive threshold value
 	ErrThreshold = errors.New("no valid server threshold set")
 	// ErrDeltaTooSmall is referring to when the max delta time is
-	// smaller than the request timeout wich can give unstable behavioiur.
+	// smaller than the request timeout which can give unstable behaviour.
 	ErrDeltaTooSmall = errors.New("delta is too small")
 )
 
