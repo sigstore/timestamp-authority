@@ -82,27 +82,17 @@ var serveCmd = &cobra.Command{
 		scheme := viper.GetStringSlice("scheme")
 
 		ntpMonitoring := viper.GetString("ntp-monitoring")
+		var ntpm *ntpmonitor.NTPMonitor
 		if ntpMonitoring != "" {
 			log.Logger.Infof("ntp monitoring: %s", ntpMonitoring)
 			go func() {
-				ntpm, err := ntpmonitor.New(ntpMonitoring)
+				ntpm, err = ntpmonitor.New(ntpMonitoring)
 				if err != nil {
-					log.Logger.Fatalf("error initializing ntp monitor %s", err)
+					log.Logger.Errorf("error initializing ntp monitor %s", err)
+					return
 				}
 
-				// Restart ntp monitor if needed
-				for {
-					err = ntpm.Start()
-					if err != nil {
-						log.Logger.Warnf("ntp monitor: %s", err)
-					}
-					// Local time have drifted from the
-					// observed NTP time. Shut down the
-					// service.
-					if err == ntpmonitor.ErrInvTime {
-						log.Logger.Fatalf("local time can not be trusted: %s", err)
-					}
-				}
+				ntpm.Start()
 			}()
 		}
 
@@ -110,6 +100,9 @@ var serveCmd = &cobra.Command{
 		defer func() {
 			if err := server.Shutdown(); err != nil {
 				log.Logger.Error(err)
+			}
+			if ntpm != nil {
+				ntpm.Stop()
 			}
 		}()
 		if err := server.Serve(); err != nil {

@@ -25,6 +25,7 @@ import (
 // Config holds the configuration for a NTPMonitor
 type Config struct {
 	RequestRetries  int      `yaml:"request_retries"`
+	RequestTimeout  int      `yaml:"request_timeout"`
 	NumServers      int      `yaml:"num_servers"`
 	MaxTimeDelta    int      `yaml:"max_time_delta"`
 	ServerThreshold int      `yaml:"server_threshold"`

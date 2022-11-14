@@ -15,13 +15,16 @@
 
 # Number of attempts to contact a ntp server before giving up.
 request_retries: 3
+# The timeout in seconds for a request to respond. This value must be
+# smaller than max_time_delta.
+request_timeout: 5
 # Number of randomly selected ntp servers to interrogate.
 num_servers: 4
 # Number of servers who must agree with local time.
 server_threshold: 3
 # Maximum number of seconds the local time is allowed to drift from the
 # response of a ntp server
-max_time_delta: 1
+max_time_delta: 6
 # Period (in seconds) for polling ntp servers
 period: 60
 # List of servers to contact. Many DNS names resolves to multiple A records.

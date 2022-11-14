@@ -48,6 +48,21 @@ var (
 		Help: "Total number of HTTP requests by status code, path, and method.",
 	}, []string{"code", "path", "method"})
 
+	MetricNTPLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "timestamp_authority_ntp_latency",
+		Help: "NTP request latency",
+	}, []string{"host"})
+
+	MetricNTPSyncCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "timestamp_authority_ntp_sync_total",
+		Help: "Total number of NTP requests against a remote server",
+	}, []string{"host", "failed"})
+
+	MetricNTPErrorCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "timestamp_authority_ntp_errors_total",
+		Help: "Total number of NTP related errors",
+	}, []string{"reason"})
+
 	_ = promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Namespace: "timestamp_authority",
