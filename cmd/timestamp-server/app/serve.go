@@ -88,8 +88,7 @@ var serveCmd = &cobra.Command{
 			go func() {
 				ntpm, err = ntpmonitor.New(ntpMonitoring)
 				if err != nil {
-					log.Logger.Errorf("error initializing ntp monitor %s", err)
-					return
+					log.Logger.Fatalf("error initializing ntp monitor %s", err)
 				}
 
 				ntpm.Start()

@@ -74,7 +74,7 @@ func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
 		return nil, ErrTooFewServers
 	}
 
-	if cfg.MaxTimeDelta < cfg.RequestTimeout || cfg.MaxTimeDelta < 1 {
+	if cfg.RequestTimeout < 1 || cfg.MaxTimeDelta < cfg.RequestTimeout {
 		return nil, ErrDeltaTooSmall
 	}
 
@@ -178,8 +178,8 @@ func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
 		}).Inc()
 
 		log.Logger.Infof("ntp timeout from %s, attempt %d/%d",
-			srv, i, n.cfg.RequestRetries)
-		if i == n.cfg.RequestRetries {
+			srv, i, n.cfg.RequestAttempts)
+		if i == n.cfg.RequestAttempts {
 			break
 		}
 		i++

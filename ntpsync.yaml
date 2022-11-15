@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Number of attempts to contact a ntp server before giving up.
-request_retries: 3
+request_attempts: 3
 # The timeout in seconds for a request to respond. This value must be
 # smaller than max_time_delta.
 request_timeout: 5
