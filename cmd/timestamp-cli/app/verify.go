@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/digitorus/timestamp"
 
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
@@ -44,6 +48,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert-chain", "path to certificate chain PEM file")
 	cmd.MarkFlagRequired("cert-chain") //nolint:errcheck
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
+	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional oid passed with the request")
 }
 
 var verifyCmd = &cobra.Command{
@@ -67,6 +72,10 @@ func runVerify() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
+	ts, err := timestamp.ParseResponse(tsr)
+	if err != nil {
+		return nil, err
+	}
 
 	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
@@ -83,6 +92,33 @@ func runVerify() (interface{}, error) {
 	artifactPath := viper.GetString("artifact")
 	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
+		return nil, err
+	}
+
+	opts, err := verification.NewVerificationOpts(tsrBytes, artifact, pemBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	reqOIDStr := strings.Split(viper.GetString("oid"), ".")
+	reqOID := make([]int, len(reqOIDStr))
+	for i, el := range reqOIDStr {
+		intVar, err := strconv.Atoi(el)
+		if err != nil {
+			return nil, err
+		}
+		reqOID[i] = intVar
+	}
+
+	if verified := verification.VerifyOID(reqOID, opts); !verified {
+		return nil, err
+	}
+
+	if verified := verification.VerifyLeafCertSubject(subject, opts); !verified {
+		return nil, err
+	}
+
+	if verified := VerifyTSRSignature(ts, opts); !verified {
 		return nil, err
 	}
 
