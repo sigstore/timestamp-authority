@@ -125,12 +125,19 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 
 func TestVerifyNonce(t *testing.T) {
 	type test struct {
-		nonceStr string
+		nonceStr            string
+		expectVerifySuccess bool
 	}
 
 	tests := []test{
-		{nonceStr: "312432523523431424141"},
-		{nonceStr: "9874325235234314241230"},
+		{
+			nonceStr:            "312432523523431424141",
+			expectVerifySuccess: true,
+		},
+		{
+			nonceStr:            "9874325235234314241230",
+			expectVerifySuccess: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -145,24 +152,24 @@ func TestVerifyNonce(t *testing.T) {
 
 		providedNonce, ok := new(big.Int).SetString(tc.nonceStr, 10)
 		if !ok {
-			t.Fatalf("unexpected failure to create big int from string: %s", optsBigIntStr)
+			t.Fatalf("unexpected failure to create big int from string: %s", tc.nonceStr)
 		}
 
 		err := VerifyNonce(providedNonce, opts)
-		if providedNonce == optsNonce && err != nil {
-			t.Errorf("expected VerifyNonce to return nil error")
+		if tc.expectVerifySuccess && err != nil {
+			t.Errorf("expected verification to fail \n provided nonce %s should not match opts nonce %s", tc.nonceStr, optsBigIntStr)
 		}
-		if providedNonce != optsNonce && err == nil {
-			t.Errorf("expected VerifyNonce to return non-nil error")
+		if !tc.expectVerifySuccess && err == nil {
+			t.Errorf("expected verification to pass \n provided nonce %s should match opts nonce %s", tc.nonceStr, optsBigIntStr)
 		}
 	}
 }
 
 func TestVerifyEmbeddedLeafCert(t *testing.T) {
 	type test struct {
-		optsCert     *x509.Certificate
-		providedCert *x509.Certificate
-		expectErr    bool
+		optsCert            *x509.Certificate
+		providedCert        *x509.Certificate
+		expectVerifySuccess bool
 	}
 
 	tests := []test{
@@ -172,7 +179,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 				Signature: []byte("abc"),
 				Version:   123,
 			},
-			expectErr: false,
+			expectVerifySuccess: true,
 		},
 		{
 			optsCert: &x509.Certificate{
@@ -183,7 +190,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 				Signature: []byte("abc"),
 				Version:   123,
 			},
-			expectErr: false,
+			expectVerifySuccess: true,
 		},
 		{
 			optsCert: &x509.Certificate{
@@ -194,7 +201,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 				Signature: []byte("abc"),
 				Version:   123,
 			},
-			expectErr: true,
+			expectVerifySuccess: false,
 		},
 	}
 
@@ -204,11 +211,11 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 		}
 
 		err := VerifyEmbeddedLeafCert(tc.providedCert, opts)
-		if err == nil && tc.expectErr {
-			t.Errorf("expected VerifyEmbeddedLeafCert to return non-nil error")
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail: provided cert unexpectedly matches opts cert")
 		}
-		if err != nil && !tc.expectErr {
-			t.Errorf("expected VerifyEmbeddedLeafCert to return nil error")
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verification to pass: provided cert does not match opts cert")
 		}
 	}
 }
@@ -217,7 +224,7 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 	type test struct {
 		optsSubject           pkix.Name
 		providedSubjectString string
-		expectErr             bool
+		expectVerifySuccess   bool
 	}
 
 	tests := []test{
@@ -226,16 +233,16 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 				CommonName:   "Sigstore TSA",
 				Organization: []string{"Sigstore"},
 			},
-			providedSubjectString: "CN=Sigstore TSA, O=Sigstore",
-			expectErr:             false,
+			providedSubjectString: "CN=Sigstore TSA,O=Sigstore",
+			expectVerifySuccess:   true,
 		},
 		{
 			optsSubject: pkix.Name{
 				CommonName:   "Sigstore TSA",
 				Organization: []string{"Sigstore"},
 			},
-			providedSubjectString: "CN=SomeOtherStore TSA, O=SomeOtherStore",
-			expectErr:             true,
+			providedSubjectString: "CN=SomeOtherStore TSA,O=SomeOtherStore",
+			expectVerifySuccess:   false,
 		},
 	}
 	for _, tc := range tests {
@@ -245,11 +252,11 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 			},
 		}
 		err := VerifyLeafCertSubject(tc.providedSubjectString, opts)
-		if err != nil && !tc.expectErr {
-			t.Errorf("expected VerifyLeafCertSubject to return nil error")
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verification to pass \n provided subject %s should match opts subject %s", tc.providedSubjectString, tc.optsSubject.String())
 		}
-		if err == nil && tc.expectErr {
-			t.Errorf("expected VerifyLeafCertSubject to return non-nil error")
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail \n provided subject %s should not match opts subject %s", tc.providedSubjectString, tc.optsSubject.String())
 		}
 	}
 }
@@ -260,7 +267,7 @@ func TestVerifyESSCertID(t *testing.T) {
 		optsSerialNumber     string
 		providedIssuer       pkix.Name
 		providedSerialNumber string
-		expectErr            bool
+		expectVerifySuccess  bool
 	}
 
 	tests := []test{
@@ -275,7 +282,7 @@ func TestVerifyESSCertID(t *testing.T) {
 				Organization: []string{"Sigstore"},
 			},
 			providedSerialNumber: "312432523523431424141",
-			expectErr:            false,
+			expectVerifySuccess:  true,
 		},
 		{
 			optsIssuer: pkix.Name{
@@ -288,7 +295,7 @@ func TestVerifyESSCertID(t *testing.T) {
 				Organization: []string{"Sigstore"},
 			},
 			providedSerialNumber: "4567523523431424141",
-			expectErr:            true,
+			expectVerifySuccess:  false,
 		},
 		{
 			optsIssuer: pkix.Name{
@@ -301,12 +308,12 @@ func TestVerifyESSCertID(t *testing.T) {
 				Organization: []string{"Sigstore"},
 			},
 			providedSerialNumber: "312432523523431424141",
-			expectErr:            true,
+			expectVerifySuccess:  false,
 		},
 	}
 
 	for _, tc := range tests {
-		optsNonce, ok := new(big.Int).SetString(tc.optsSerialNumber, 10)
+		optsSerialNumber, ok := new(big.Int).SetString(tc.optsSerialNumber, 10)
 		if !ok {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.optsSerialNumber)
 		}
@@ -314,46 +321,46 @@ func TestVerifyESSCertID(t *testing.T) {
 		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
-				SerialNumber: optsNonce,
+				SerialNumber: optsSerialNumber,
 			},
 		}
 
-		providedNonce, ok := new(big.Int).SetString(tc.providedSerialNumber, 10)
+		providedSerialNumber, ok := new(big.Int).SetString(tc.providedSerialNumber, 10)
 		if !ok {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.providedSerialNumber)
 		}
 		cert := x509.Certificate{
 			Issuer:       tc.providedIssuer,
-			SerialNumber: providedNonce,
+			SerialNumber: providedSerialNumber,
 		}
 		err := VerifyESSCertID(&cert, opts)
-		if err != nil && !tc.expectErr {
-			t.Errorf("expected VerifyESSCertID to return nil error")
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verifcation to pass: %s", err.Error())
 		}
-		if err == nil && tc.expectErr {
-			t.Errorf("expected VerifyESSCertID to return non-nil error")
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verifcation to fail")
 		}
 	}
 }
 
 func TestVerifyExtendedKeyUsage(t *testing.T) {
 	type test struct {
-		eku       []x509.ExtKeyUsage
-		expectErr bool
+		eku                 []x509.ExtKeyUsage
+		expectVerifySuccess bool
 	}
 
 	tests := []test{
 		{
-			eku:       []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
-			expectErr: false,
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			expectVerifySuccess: true,
 		},
 		{
-			eku:       []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping, x509.ExtKeyUsageIPSECTunnel},
-			expectErr: true,
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping, x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: false,
 		},
 		{
-			eku:       []x509.ExtKeyUsage{x509.ExtKeyUsageIPSECTunnel},
-			expectErr: true,
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: false,
 		},
 	}
 
@@ -363,11 +370,11 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 		}
 
 		err := verifyExtendedKeyUsage(&cert)
-		if err != nil && !tc.expectErr {
+		if err != nil && tc.expectVerifySuccess {
 			t.Errorf("expected verifyExtendedKeyUsage to return nil error")
 		}
-		if err == nil && tc.expectErr {
-			t.Errorf("expected verifyExtendedKeyUsage to return non-nil error")
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail")
 		}
 	}
 }

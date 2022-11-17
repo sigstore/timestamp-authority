@@ -75,14 +75,24 @@ func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
 func VerifyESSCertID(tsaCert *x509.Certificate, opt VerifyOpts) error {
-	var err error = nil
+	errMessage := ""
+
 	if opt.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
-		err = errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer")
+		errMessage += "TSR cert issuer does not match provided TSA cert issuer"
 	}
-	if opt.TsaCertificate.SerialNumber != tsaCert.SerialNumber {
-		errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer") //nolint:errcheck
+
+	if opt.TsaCertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
+		if errMessage != "" {
+			errMessage += ", TSR cert issuer does not match provided TSA cert issuer"
+		} else {
+			errMessage = "TSR cert issuer does not match provided TSA cert issuer"
+		}
 	}
-	return err
+
+	if errMessage != "" {
+		return errors.New(errMessage)
+	}
+	return nil
 }
 
 // Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
@@ -126,10 +136,8 @@ func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerifyOpts) error {
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
 func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TsaCertificate != nil {
-		if !opts.TsaCertificate.Equal(tsaCert) {
-			return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
-		}
+	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
+		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
 	return nil
 }
