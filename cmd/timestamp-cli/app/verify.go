@@ -50,7 +50,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional oid passed with the request")
 	cmd.Flags().String("subject", "", "expected leaf certificate subject")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "tsa-cert", "path to TSA cert")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert", "path to TSA cert")
 }
 
 var verifyCmd = &cobra.Command{
@@ -91,24 +91,6 @@ func runVerify() (interface{}, error) {
 		return nil, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
 	}
 
-	tsaCertPath := viper.GetString("tsa-cert")
-	pemBytes, err = os.ReadFile(filepath.Clean(tsaCertPath))
-	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
-	}
-	block, rest := pem.Decode(pemBytes)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to decode PEM block containing public key")
-	}
-	if rest != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("only expected one certificate")
-	}
-
-	tsaCert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
-	}
-
 	artifactPath := viper.GetString("artifact")
 	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
@@ -120,39 +102,55 @@ func runVerify() (interface{}, error) {
 		return nil, err
 	}
 
-	reqOIDStr := strings.Split(viper.GetString("oid"), ".")
-	reqOID := make([]int, len(reqOIDStr))
-	for i, el := range reqOIDStr {
-		intVar, err := strconv.Atoi(el)
-		if err != nil {
-			return nil, err
+	oidFlagVal := viper.GetString("oid")
+	if oidFlagVal != "" {
+		reqOIDStrSlice := strings.Split(oidFlagVal, ".")
+		reqOID := make([]int, len(reqOIDStrSlice))
+		for i, el := range reqOIDStrSlice {
+			intVar, err := strconv.Atoi(el)
+			if err != nil {
+				return nil, err
+			}
+			reqOID[i] = intVar
 		}
-		reqOID[i] = intVar
+
+		if err := verification.VerifyOID(reqOID, opts); err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
 	}
 
-	if err := verification.VerifyOID(reqOID, opts); err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
+	nonceFlagVal := viper.GetString("nonce")
+	if nonceFlagVal != "" {
+		nonce := new(big.Int)
+		nonce, ok = nonce.SetString(nonceFlagVal, 10)
+		if !ok {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to convert string to big.Int")
+		}
+		if err := verification.VerifyNonce(nonce, opts); err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
 	}
 
-	nonce := new(big.Int)
-	nonce, ok = nonce.SetString(viper.GetString("nonce"), 10)
-	if !ok {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("SetString: error")
-	}
-	if err := verification.VerifyNonce(nonce, opts); err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
+	subjectFlagVal := viper.GetString("subject")
+	if subjectFlagVal != "" {
+		if err := verification.VerifyLeafCertSubject(subjectFlagVal, opts); err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
 	}
 
-	if err := verification.VerifyLeafCertSubject(viper.GetString("subject"), opts); err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
-	}
+	certPathFlagVal := viper.GetString("cert")
+	if certPathFlagVal != "" {
+		cert, err := createCertFromPEMFile(certPathFlagVal)
+		if err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
+		if err := verification.VerifyEmbeddedLeafCert(cert, opts); err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
 
-	if err := verification.VerifyEmbeddedLeafCert(tsaCert, opts); err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
-	}
-
-	if err := verification.VerifyESSCertID(tsaCert, opts); err != nil {
-		return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		if err := verification.VerifyESSCertID(cert, opts); err != nil {
+			return &verifyCmdOutput{TimestampPath: tsrPath}, err
+		}
 	}
 
 	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool)
@@ -164,4 +162,25 @@ func init() {
 	initializePFlagMap()
 	addVerifyFlags(verifyCmd)
 	rootCmd.AddCommand(verifyCmd)
+}
+
+func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
+	pemBytes, err := os.ReadFile(filepath.Clean(certPath))
+	if err != nil {
+		return nil, fmt.Errorf("error reading request from file: %w", err)
+	}
+	block, rest := pem.Decode(pemBytes)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+	if rest != nil {
+		return nil, fmt.Errorf("only expected one certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }
