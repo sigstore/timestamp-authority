@@ -139,7 +139,7 @@ func TestVerifyNonce(t *testing.T) {
 		if !ok {
 			t.Fatalf("unexpected failure to create big int from string: %s", optsBigIntStr)
 		}
-		opts := VerificationOpts{
+		opts := VerifyOpts{
 			Nonce: optsNonce,
 		}
 
@@ -199,7 +199,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		opts := VerificationOpts{
+		opts := VerifyOpts{
 			TsaCertificate: tc.optsCert,
 		}
 
@@ -239,7 +239,7 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		opts := VerificationOpts{
+		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Subject: tc.optsSubject,
 			},
@@ -311,7 +311,7 @@ func TestVerifyESSCertID(t *testing.T) {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.optsSerialNumber)
 		}
 
-		opts := VerificationOpts{
+		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
 				SerialNumber: optsNonce,

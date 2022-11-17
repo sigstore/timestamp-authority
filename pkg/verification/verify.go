@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type VerificationOpts struct {
+type VerifyOpts struct {
 	Oid            asn1.ObjectIdentifier
 	TsaCertificate *x509.Certificate
 	Intermediates  []*x509.Certificate
@@ -41,7 +41,7 @@ type VerificationOpts struct {
 	HashedMessage  []byte
 }
 
-func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
+func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerifyOpts, error) {
 	intermediateCerts := []*x509.Certificate{}
 	rootCerts := []*x509.Certificate{}
 	for len(pemCerts) > 0 {
@@ -50,7 +50,7 @@ func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []
 		// which should be the root
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return VerificationOpts{}, fmt.Errorf("failed to parse certificate")
+			return VerifyOpts{}, fmt.Errorf("failed to parse certificate")
 		}
 		if rest == nil {
 			rootCerts = append(rootCerts, cert)
@@ -60,7 +60,7 @@ func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []
 		pemCerts = rest
 	}
 
-	opts := VerificationOpts{}
+	opts := VerifyOpts{}
 	opts.Oid = ts.Policy
 	opts.TsaCertificate = ts.Certificates[0]
 	opts.Intermediates = intermediateCerts
@@ -74,19 +74,19 @@ func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
-func VerifyESSCertID(tsaCert *x509.Certificate, opt VerificationOpts) error {
+func VerifyESSCertID(tsaCert *x509.Certificate, opt VerifyOpts) error {
 	var err error = nil
 	if opt.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
 		err = errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer")
 	}
 	if opt.TsaCertificate.SerialNumber != tsaCert.SerialNumber {
-		errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer")
+		errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer") //nolint:errcheck
 	}
 	return err
 }
 
 // Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
-func VerifyLeafCertSubject(subject string, opts VerificationOpts) error {
+func VerifyLeafCertSubject(subject string, opts VerifyOpts) error {
 	leafCertSubject := opts.TsaCertificate.Subject.String()
 	if leafCertSubject != subject {
 		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, subject)
@@ -108,7 +108,7 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 
 // Verify the TSA certificate and the intermediates (called "EKU chaining") all
 // have the extended key usage set to only time stamping usage
-func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerificationOpts) error {
+func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerifyOpts) error {
 	leafCert := opts.TsaCertificate
 	err := verifyExtendedKeyUsage(leafCert)
 	if err != nil {
@@ -125,7 +125,7 @@ func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerificationOpts) error 
 }
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
-func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerificationOpts) error {
+func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	if opts.TsaCertificate != nil {
 		if !opts.TsaCertificate.Equal(tsaCert) {
 			return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
@@ -135,7 +135,7 @@ func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerificationOpts) er
 }
 
 // Verify the OID of the TSR matches an expected OID
-func VerifyOID(oid []int, opts VerificationOpts) error {
+func VerifyOID(oid []int, opts VerifyOpts) error {
 	responseOid := opts.Oid
 	if len(oid) != len(responseOid) {
 		return fmt.Errorf("OID lengths do not match")
@@ -149,7 +149,7 @@ func VerifyOID(oid []int, opts VerificationOpts) error {
 }
 
 // Verify the nonce - Mostly important for when the response is first returned
-func VerifyNonce(requestNonce *big.Int, opts VerificationOpts) error {
+func VerifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 	if opts.Nonce.Cmp(requestNonce) != 0 {
 		return fmt.Errorf("incoming nonce %d does not match TSR nonce %d", requestNonce, opts.Nonce)
 	}
