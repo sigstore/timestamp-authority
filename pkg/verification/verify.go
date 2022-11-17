@@ -41,7 +41,7 @@ type VerificationOpts struct {
 	HashedMessage  []byte
 }
 
-func NewVerificationOpts(ts *timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
+func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
 	intermediateCerts := []*x509.Certificate{}
 	rootCerts := []*x509.Certificate{}
 	for len(pemCerts) > 0 {
@@ -71,14 +71,6 @@ func NewVerificationOpts(ts *timestamp.Timestamp, artifact io.Reader, pemCerts [
 	opts.HashedMessage = ts.HashedMessage
 
 	return opts, nil
-}
-
-func createCertPool(certBytes []byte) (*x509.CertPool, error) {
-	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM(certBytes); !ok {
-		return nil, fmt.Errorf("failed to append certs to cert pool")
-	}
-	return certPool, nil
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -214,4 +206,19 @@ func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReade
 	}
 
 	return nil
+}
+
+func CreateTimestampResponse(tsrBytes []byte) (timestamp.Timestamp, error) {
+	// Verify the status of the TSR does not contain an error
+	// when timestamp.ParseResponse tries to parse a TSR into a Timestamp
+	// struct, it will verify and exit with an error if the TSR has an error status
+	ts, err := timestamp.ParseResponse(tsrBytes)
+	if err != nil {
+		pe := timestamp.ParseError("")
+		if errors.As(err, &pe) {
+			return timestamp.Timestamp{}, fmt.Errorf("timestamp response is not valid: %w", err)
+		}
+		return timestamp.Timestamp{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
+	}
+	return *ts, nil
 }

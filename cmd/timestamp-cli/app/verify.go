@@ -25,8 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/digitorus/timestamp"
-
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
@@ -76,7 +74,7 @@ func runVerify() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
-	ts, err := timestamp.ParseResponse(tsrBytes)
+	ts, err := verification.CreateTimestampResponse(tsrBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +115,7 @@ func runVerify() (interface{}, error) {
 		return nil, err
 	}
 
-	opts, err := verification.NewVerificationOpts(tsrBytes, artifact, pemBytes)
+	opts, err := verification.NewVerificationOpts(ts, artifact, pemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +155,7 @@ func runVerify() (interface{}, error) {
 		return &verifyCmdOutput{TimestampPath: tsrPath}, err
 	}
 
-	if verified := verification.VerifyTSRSignature(ts, opts); !verified {
-		return nil, err
-	}
-
-	err = verification.VerifyTimestampResponse(opts, tsrBytes, artifact, certPool)
+	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool)
 
 	return &verifyCmdOutput{TimestampPath: tsrPath}, err
 }
