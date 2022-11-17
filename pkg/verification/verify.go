@@ -18,10 +18,8 @@ package verification
 import (
 	"bytes"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -29,6 +27,7 @@ import (
 
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
+	"github.com/pkg/errors"
 )
 
 type VerificationOpts struct {
@@ -38,18 +37,11 @@ type VerificationOpts struct {
 	Roots          []*x509.Certificate
 	Nonce          *big.Int
 	Subject        string
+	HashAlgorithm  hash.Hash
+	HashedMessage  []byte
 }
 
-func NewVerificationOpts(tsr []byte, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
-	ts, err := timestamp.ParseResponse(tsr)
-	if err != nil {
-		pe := timestamp.ParseError("")
-		if errors.As(err, &pe) {
-			return VerificationOpts{}, fmt.Errorf("timestamp response is not valid: %w", err)
-		}
-		return VerificationOpts{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
-	}
-
+func NewVerificationOpts(ts *timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerificationOpts, error) {
 	intermediateCerts := []*x509.Certificate{}
 	rootCerts := []*x509.Certificate{}
 	for len(pemCerts) > 0 {
@@ -75,6 +67,8 @@ func NewVerificationOpts(tsr []byte, artifact io.Reader, pemCerts []byte) (Verif
 	opts.Roots = rootCerts
 	opts.Nonce = ts.Nonce
 	opts.Subject = ts.Certificates[0].Subject.String()
+	opts.HashAlgorithm = ts.HashAlgorithm.New()
+	opts.HashedMessage = ts.HashedMessage
 
 	return opts, nil
 }
@@ -88,87 +82,86 @@ func createCertPool(certBytes []byte) (*x509.CertPool, error) {
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
-func VerifyESSCertID(tsrBytes []byte, tsaCert *x509.Certificate) (bool, error) {
-	// Verify the status of the TSR does not contain an error
-	// handled by the timestamp.ParseResponse function
-	ts, err := timestamp.ParseResponse(tsrBytes)
-	if err != nil {
-		pe := timestamp.ParseError("")
-		if errors.As(err, &pe) {
-			return false, fmt.Errorf("timestamp response is not valid: %w", err)
-		}
-		return false, fmt.Errorf("error parsing response into Timestamp: %w", err)
+func VerifyESSCertID(tsaCert *x509.Certificate, opt VerificationOpts) error {
+	var err error = nil
+	if opt.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
+		err = errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer")
 	}
-
-	return ts.Certificates[0].Issuer.String() == tsaCert.Issuer.String() && ts.Certificates[0].SerialNumber == tsaCert.SerialNumber, nil
+	if opt.TsaCertificate.SerialNumber != tsaCert.SerialNumber {
+		errors.Wrap(err, "TSR cert issuer does not match provided TSA cert issuer")
+	}
+	return err
 }
 
 // Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
-func VerifyLeafCertSubject(opts VerificationOpts, subject pkix.Name) bool {
-	return opts.TsaCertificate.Subject.String() == subject.String()
+func VerifyLeafCertSubject(subject string, opts VerificationOpts) error {
+	leafCertSubject := opts.TsaCertificate.Subject.String()
+	if leafCertSubject != subject {
+		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, subject)
+	}
+	return nil
 }
 
-// Verify the TSA certificate using a CA certificate chain
-func VerifyTSACertWithChain(opts VerificationOpts, certChain []x509.Certificate) bool {
-	opts.TsaCertificate.Equal(&certChain[0])
-	return false
+func verifyExtendedKeyUsage(cert *x509.Certificate) error {
+	certEKULen := len(cert.ExtKeyUsage)
+	if certEKULen != 1 {
+		return fmt.Errorf("cert has %d extended key usages, expected only one", certEKULen)
+	}
+
+	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
+		return fmt.Errorf("leaf cert EKU is not set to TimeStamping as required")
+	}
+	return nil
 }
 
 // Verify the TSA certificate and the intermediates (called "EKU chaining") all
-// have the extended key usage set to only extended key usage
-func VerifyExtendedKeyUsage(opts VerificationOpts) bool {
+// have the extended key usage set to only time stamping usage
+func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerificationOpts) error {
 	leafCert := opts.TsaCertificate
-	if len(leafCert.ExtKeyUsage) != 1 {
-		return false
+	err := verifyExtendedKeyUsage(leafCert)
+	if err != nil {
+		return fmt.Errorf("failed to verify EKU on leaf cert: %w", err)
 	}
-	return leafCert.ExtKeyUsage[0] == x509.ExtKeyUsageTimeStamping
 
 	for _, cert := range opts.Intermediates {
-		if len(cert.ExtKeyUsage) != 1 {
-			return false
+		err := verifyExtendedKeyUsage(cert)
+		if err != nil {
+			return fmt.Errorf("failed to verify EKU on intermediate cert: %w", err)
 		}
-		return cert.ExtKeyUsage[0] == x509.ExtKeyUsageTimeStamping
 	}
-	return true
+	return nil
 }
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
-func VerifyEmbeddedLeafCert(opts VerificationOpts, tsaCert *x509.Certificate) (bool, error) {
+func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerificationOpts) error {
 	if opts.TsaCertificate != nil {
-		leafCert := opts.TsaCertificate
-		return leafCert.Equal(tsaCert), nil
+		if !opts.TsaCertificate.Equal(tsaCert) {
+			return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
+		}
 	}
-	return true, nil
+	return nil
 }
 
-// Verify the signature of the TSR using the public key in the leaf certificate
-// func VerifyTSRSignature(data []byte, ts timestamp.Timestamp, opts VerificationOpts) bool {
-// 	leafCert := opts.TsaCertificate
-// 	signatureAlgo := x509.SignatureAlgorithm
-// 	err := leafCert.CheckSignature(ts.HashAlgorithm, data, ts.HashedMessage)
-// 	if err != nil {
-// 		return false
-// 	}
-// 	return true
-// }
-
 // Verify the OID of the TSR matches an expected OID
-func VerifyOID(oid []int, opts VerificationOpts) bool {
+func VerifyOID(oid []int, opts VerificationOpts) error {
 	responseOid := opts.Oid
 	if len(oid) != len(responseOid) {
-		return false
+		return fmt.Errorf("OID lengths do not match")
 	}
 	for i, v := range oid {
 		if v != responseOid[i] {
-			return false
+			return fmt.Errorf("OID content does not match")
 		}
 	}
-	return true
+	return nil
 }
 
 // Verify the nonce - Mostly important for when the response is first returned
-func VerifyNonce(requestNonce *big.Int, opts VerificationOpts) bool {
-	return opts.Nonce.Cmp(requestNonce) == 0
+func VerifyNonce(requestNonce *big.Int, opts VerificationOpts) error {
+	if opts.Nonce.Cmp(requestNonce) != 0 {
+		return fmt.Errorf("incoming nonce %d does not match TSR nonce %d", requestNonce, opts.Nonce)
+	}
+	return nil
 }
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
