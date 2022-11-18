@@ -24,10 +24,15 @@ import (
 	"hash"
 	"io"
 	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
 type VerifyOpts struct {
@@ -41,47 +46,91 @@ type VerifyOpts struct {
 	HashedMessage  []byte
 }
 
-func NewVerificationOpts(ts timestamp.Timestamp, artifact io.Reader, pemCerts []byte) (VerifyOpts, error) {
-	intermediateCerts := []*x509.Certificate{}
-	rootCerts := []*x509.Certificate{}
-	for len(pemCerts) > 0 {
-		block, rest := pem.Decode(pemCerts)
-		// if there is nothing left, we have found the last block
-		// which should be the root
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return VerifyOpts{}, fmt.Errorf("failed to parse certificate")
+func NewVerifyOpts() (VerifyOpts, error) {
+	opts := VerifyOpts{}
+
+	oidFlagVal := viper.GetString("oid")
+	if oidFlagVal != "" {
+		oidStrSlice := strings.Split(oidFlagVal, ".")
+		oid := make([]int, len(oidStrSlice))
+		for i, el := range oidStrSlice {
+			intVar, err := strconv.Atoi(el)
+			if err != nil {
+				return VerifyOpts{}, err
+			}
+			oid[i] = intVar
 		}
-		if rest == nil {
-			rootCerts = append(rootCerts, cert)
-		} else {
-			intermediateCerts = append(intermediateCerts, cert)
-		}
-		pemCerts = rest
+
+		opts.Oid = oid
 	}
 
-	opts := VerifyOpts{}
-	opts.Oid = ts.Policy
-	opts.TsaCertificate = ts.Certificates[0]
-	opts.Intermediates = intermediateCerts
-	opts.Roots = rootCerts
-	opts.Nonce = ts.Nonce
-	opts.Subject = ts.Certificates[0].Subject.String()
-	opts.HashAlgorithm = ts.HashAlgorithm.New()
-	opts.HashedMessage = ts.HashedMessage
+	certPathFlagVal := viper.GetString("cert")
+	if certPathFlagVal != "" {
+		cert, err := createCertFromPEMFile(certPathFlagVal)
+		if err != nil {
+			return VerifyOpts{}, err
+		}
+		opts.TsaCertificate = cert
+	}
+
+	certChainPEM := viper.GetString("cert-chain")
+	if certChainPEM != "" {
+		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
+		if err != nil {
+			return VerifyOpts{}, fmt.Errorf("error reading request from file: %w", err)
+		}
+		intermediateCerts := []*x509.Certificate{}
+		rootCerts := []*x509.Certificate{}
+		for len(pemBytes) > 0 {
+			block, rest := pem.Decode(pemBytes)
+			// if there is nothing left, we have found the last block
+			// which should be the root
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return VerifyOpts{}, fmt.Errorf("failed to parse certificate")
+			}
+			if rest == nil {
+				rootCerts = append(rootCerts, cert)
+			} else {
+				intermediateCerts = append(intermediateCerts, cert)
+			}
+			pemBytes = rest
+		}
+		opts.Intermediates = intermediateCerts
+		opts.Roots = rootCerts
+	}
+
+	nonceFlagVal := viper.GetString("nonce")
+	if nonceFlagVal != "" {
+		nonce := new(big.Int)
+		nonce, ok := nonce.SetString(nonceFlagVal, 10)
+		if !ok {
+			return VerifyOpts{}, fmt.Errorf("failed to convert string to big.Int")
+		}
+		opts.Nonce = nonce
+	}
+
+	subjectFlagVal := viper.GetString("subject")
+	if subjectFlagVal != "" {
+		opts.Subject = subjectFlagVal
+	}
 
 	return opts, nil
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
-func VerifyESSCertID(tsaCert *x509.Certificate, opt VerifyOpts) error {
+func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
+	if opts.TsaCertificate == nil {
+		return nil
+	}
+
 	errMessage := ""
 
-	if opt.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
+	if opts.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
 		errMessage += "TSR cert issuer does not match provided TSA cert issuer"
 	}
 
-	if opt.TsaCertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
+	if opts.TsaCertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
 		if errMessage != "" {
 			errMessage += ", TSR cert issuer does not match provided TSA cert issuer"
 		} else {
@@ -96,7 +145,10 @@ func VerifyESSCertID(tsaCert *x509.Certificate, opt VerifyOpts) error {
 }
 
 // Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
-func VerifyLeafCertSubject(subject string, opts VerifyOpts) error {
+func verifyLeafCertSubject(subject string, opts VerifyOpts) error {
+	if opts.TsaCertificate == nil {
+		return nil
+	}
 	leafCertSubject := opts.TsaCertificate.Subject.String()
 	if leafCertSubject != subject {
 		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, subject)
@@ -118,7 +170,10 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 
 // Verify the TSA certificate and the intermediates (called "EKU chaining") all
 // have the extended key usage set to only time stamping usage
-func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerifyOpts) error {
+func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
+	if opts.TsaCertificate == nil || opts.Intermediates == nil {
+		return nil
+	}
 	leafCert := opts.TsaCertificate
 	err := verifyExtendedKeyUsage(leafCert)
 	if err != nil {
@@ -135,7 +190,10 @@ func VerifyExtendedKeyUsageForLeafAndIntermediates(opts VerifyOpts) error {
 }
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
-func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
+func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
+	if opts.TsaCertificate == nil {
+		return nil
+	}
 	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
 		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
@@ -143,7 +201,10 @@ func VerifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 }
 
 // Verify the OID of the TSR matches an expected OID
-func VerifyOID(oid []int, opts VerifyOpts) error {
+func verifyOID(oid []int, opts VerifyOpts) error {
+	if opts.Oid == nil {
+		return nil
+	}
 	responseOid := opts.Oid
 	if len(oid) != len(responseOid) {
 		return fmt.Errorf("OID lengths do not match")
@@ -157,7 +218,10 @@ func VerifyOID(oid []int, opts VerifyOpts) error {
 }
 
 // Verify the nonce - Mostly important for when the response is first returned
-func VerifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
+func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
+	if opts.Nonce == nil {
+		return nil
+	}
 	if opts.Nonce.Cmp(requestNonce) != 0 {
 		return fmt.Errorf("incoming nonce %d does not match TSR nonce %d", requestNonce, opts.Nonce)
 	}
@@ -165,7 +229,7 @@ func VerifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 }
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
-func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool) error {
+func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool, opts VerifyOpts) error {
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
 	ts, err := timestamp.ParseResponse(tsrBytes)
@@ -179,6 +243,36 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 
 	// verify the timestamp response signature using the provided certificate pool
 	err = verifyTSRWithChain(ts, certPool)
+	if err != nil {
+		return err
+	}
+
+	err = verifyNonce(ts.Nonce, opts)
+	if err != nil {
+		return err
+	}
+
+	err = verifyOID(ts.Policy, opts)
+	if err != nil {
+		return err
+	}
+
+	err = verifyEmbeddedLeafCert(ts.Certificates[0], opts)
+	if err != nil {
+		return err
+	}
+
+	err = verifyLeafAndIntermediatesEKU(opts)
+	if err != nil {
+		return err
+	}
+
+	err = verifyLeafCertSubject(ts.Certificates[0].Subject.String(), opts)
+	if err != nil {
+		return err
+	}
+
+	err = verifyESSCertID(ts.Certificates[0], opts)
 	if err != nil {
 		return err
 	}
@@ -229,4 +323,25 @@ func CreateTimestampResponse(tsrBytes []byte) (timestamp.Timestamp, error) {
 		return timestamp.Timestamp{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 	return *ts, nil
+}
+
+func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
+	pemBytes, err := os.ReadFile(filepath.Clean(certPath))
+	if err != nil {
+		return nil, fmt.Errorf("error reading request from file: %w", err)
+	}
+	block, rest := pem.Decode(pemBytes)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+	if rest != nil {
+		return nil, fmt.Errorf("only expected one certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }

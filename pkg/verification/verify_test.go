@@ -105,14 +105,19 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			t.Fatalf("error parsing response into Timestamp while appending certs from PEM")
 		}
 
-		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool); err != nil {
+		opts, err := NewVerifyOpts()
+		if err != nil {
+			t.Fatalf("unexpected error building verify opts: %v", err)
+		}
+
+		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool, opts); err != nil {
 			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
 		}
 
 		if tc.forceError {
 			// Force hashed message error mismatch
 			msg := tc.message + "XXX"
-			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), certPool)
+			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), certPool, opts)
 			if err == nil {
 				t.Error("expected error message when verifying the timestamp response")
 			}
@@ -155,7 +160,7 @@ func TestVerifyNonce(t *testing.T) {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.nonceStr)
 		}
 
-		err := VerifyNonce(providedNonce, opts)
+		err := verifyNonce(providedNonce, opts)
 		if tc.expectVerifySuccess && err != nil {
 			t.Errorf("expected verification to fail \n provided nonce %s should not match opts nonce %s", tc.nonceStr, optsBigIntStr)
 		}
@@ -210,7 +215,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 			TsaCertificate: tc.optsCert,
 		}
 
-		err := VerifyEmbeddedLeafCert(tc.providedCert, opts)
+		err := verifyEmbeddedLeafCert(tc.providedCert, opts)
 		if err == nil && !tc.expectVerifySuccess {
 			t.Errorf("expected verification to fail: provided cert unexpectedly matches opts cert")
 		}
@@ -251,7 +256,7 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 				Subject: tc.optsSubject,
 			},
 		}
-		err := VerifyLeafCertSubject(tc.providedSubjectString, opts)
+		err := verifyLeafCertSubject(tc.providedSubjectString, opts)
 		if err != nil && tc.expectVerifySuccess {
 			t.Errorf("expected verification to pass \n provided subject %s should match opts subject %s", tc.providedSubjectString, tc.optsSubject.String())
 		}
@@ -333,7 +338,7 @@ func TestVerifyESSCertID(t *testing.T) {
 			Issuer:       tc.providedIssuer,
 			SerialNumber: providedSerialNumber,
 		}
-		err := VerifyESSCertID(&cert, opts)
+		err := verifyESSCertID(&cert, opts)
 		if err != nil && tc.expectVerifySuccess {
 			t.Errorf("expected verifcation to pass: %s", err.Error())
 		}

@@ -17,13 +17,9 @@ package app
 
 import (
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
@@ -74,10 +70,6 @@ func runVerify() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
-	ts, err := verification.CreateTimestampResponse(tsrBytes)
-	if err != nil {
-		return nil, err
-	}
 
 	certChainPEM := viper.GetString("cert-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
@@ -97,63 +89,12 @@ func runVerify() (interface{}, error) {
 		return nil, err
 	}
 
-	opts, err := verification.NewVerificationOpts(ts, artifact, pemBytes)
+	opts, err := verification.NewVerifyOpts()
 	if err != nil {
 		return nil, err
 	}
 
-	oidFlagVal := viper.GetString("oid")
-	if oidFlagVal != "" {
-		reqOIDStrSlice := strings.Split(oidFlagVal, ".")
-		reqOID := make([]int, len(reqOIDStrSlice))
-		for i, el := range reqOIDStrSlice {
-			intVar, err := strconv.Atoi(el)
-			if err != nil {
-				return nil, err
-			}
-			reqOID[i] = intVar
-		}
-
-		if err := verification.VerifyOID(reqOID, opts); err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-	}
-
-	nonceFlagVal := viper.GetString("nonce")
-	if nonceFlagVal != "" {
-		nonce := new(big.Int)
-		nonce, ok = nonce.SetString(nonceFlagVal, 10)
-		if !ok {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to convert string to big.Int")
-		}
-		if err := verification.VerifyNonce(nonce, opts); err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-	}
-
-	subjectFlagVal := viper.GetString("subject")
-	if subjectFlagVal != "" {
-		if err := verification.VerifyLeafCertSubject(subjectFlagVal, opts); err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-	}
-
-	certPathFlagVal := viper.GetString("cert")
-	if certPathFlagVal != "" {
-		cert, err := createCertFromPEMFile(certPathFlagVal)
-		if err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-		if err := verification.VerifyEmbeddedLeafCert(cert, opts); err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-
-		if err := verification.VerifyESSCertID(cert, opts); err != nil {
-			return &verifyCmdOutput{TimestampPath: tsrPath}, err
-		}
-	}
-
-	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool)
+	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool, opts)
 
 	return &verifyCmdOutput{TimestampPath: tsrPath}, err
 }
@@ -162,25 +103,4 @@ func init() {
 	initializePFlagMap()
 	addVerifyFlags(verifyCmd)
 	rootCmd.AddCommand(verifyCmd)
-}
-
-func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
-	pemBytes, err := os.ReadFile(filepath.Clean(certPath))
-	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
-	}
-	block, rest := pem.Decode(pemBytes)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to decode PEM block containing public key")
-	}
-	if rest != nil {
-		return nil, fmt.Errorf("only expected one certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return cert, nil
 }
