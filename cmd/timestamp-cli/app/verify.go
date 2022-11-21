@@ -165,7 +165,7 @@ func getNonce() (*big.Int, error) {
 func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	certChainPEM := viper.GetString("cert-chain")
 	if certChainPEM == "" {
-		g nil, nil, nil
+		return nil, nil, nil
 	}
 
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
