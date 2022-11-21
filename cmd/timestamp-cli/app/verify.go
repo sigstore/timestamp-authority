@@ -130,7 +130,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 	if roots != nil && intermediates != nil {
 		opts.Roots = roots
 		opts.Intermediates = intermediates
-	} 
+	}
 
 	nonce, err := getNonce()
 	if err != nil {
