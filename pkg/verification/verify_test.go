@@ -176,30 +176,25 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 		{
 			optsCert: nil,
 			providedCert: &x509.Certificate{
-				Signature: []byte("abc"),
-				Version:   123,
+				Raw: []byte("abc123"),
 			},
 			expectVerifySuccess: true,
 		},
 		{
 			optsCert: &x509.Certificate{
-				Signature: []byte("abc"),
-				Version:   123,
+				Raw: []byte("abc123"),
 			},
 			providedCert: &x509.Certificate{
-				Signature: []byte("abc"),
-				Version:   123,
+				Raw: []byte("abc123"),
 			},
 			expectVerifySuccess: true,
 		},
 		{
 			optsCert: &x509.Certificate{
-				Signature: []byte("abcdef"),
-				Version:   456,
+				Raw: []byte("abc123"),
 			},
 			providedCert: &x509.Certificate{
-				Signature: []byte("abc"),
-				Version:   123,
+				Raw: []byte("def456"),
 			},
 			expectVerifySuccess: false,
 		},

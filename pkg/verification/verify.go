@@ -113,9 +113,6 @@ func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
 func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TsaCertificate == nil {
-		return nil
-	}
 	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
 		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
