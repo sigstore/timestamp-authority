@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"io"
 	"math/big"
 	"net/http/httptest"
@@ -313,9 +314,14 @@ func TestVerifyESSCertID(t *testing.T) {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.optsSerialNumber)
 		}
 
+		rawIssuer, err := json.Marshal(tc.providedIssuer)
+		if err != nil {
+			t.Fatalf("unexpected failure while marshalling issuer object")
+		}
 		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
+				RawIssuer: rawIssuer,
 				SerialNumber: optsSerialNumber,
 			},
 		}
@@ -324,11 +330,17 @@ func TestVerifyESSCertID(t *testing.T) {
 		if !ok {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.providedSerialNumber)
 		}
+
+		rawIssuer, err = json.Marshal(tc.providedIssuer)
+		if err != nil {
+			t.Fatalf("unexpected failure while marshalling issuer object")
+		}
 		cert := x509.Certificate{
 			Issuer:       tc.providedIssuer,
+			RawIssuer: rawIssuer,
 			SerialNumber: providedSerialNumber,
 		}
-		err := verifyESSCertID(&cert, opts)
+		err = verifyESSCertID(&cert, opts)
 		if err != nil && tc.expectVerifySuccess {
 			t.Errorf("expected verifcation to pass: %s", err.Error())
 		}

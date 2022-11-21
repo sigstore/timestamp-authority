@@ -48,7 +48,7 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 
 	errMessage := ""
 
-	if opts.TsaCertificate.Issuer.String() != tsaCert.Issuer.String() {
+	if !bytes.Equal(opts.TsaCertificate.RawIssuer, tsaCert.RawIssuer) {
 		errMessage += "TSR cert issuer does not match provided TSA cert issuer"
 	}
 
