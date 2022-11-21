@@ -105,10 +105,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			t.Fatalf("error parsing response into Timestamp while appending certs from PEM")
 		}
 
-		opts, err := NewVerifyOpts()
-		if err != nil {
-			t.Fatalf("unexpected error building verify opts: %v", err)
-		}
+		opts := VerifyOpts{}
 
 		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool, opts); err != nil {
 			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)

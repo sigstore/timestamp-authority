@@ -19,20 +19,14 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/asn1"
-	"encoding/pem"
 	"fmt"
 	"hash"
 	"io"
 	"math/big"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
+	
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 )
 
 type VerifyOpts struct {
@@ -44,78 +38,6 @@ type VerifyOpts struct {
 	Subject        string
 	HashAlgorithm  hash.Hash
 	HashedMessage  []byte
-}
-
-func NewVerifyOpts() (VerifyOpts, error) {
-	opts := VerifyOpts{}
-
-	oidFlagVal := viper.GetString("oid")
-	if oidFlagVal != "" {
-		oidStrSlice := strings.Split(oidFlagVal, ".")
-		oid := make([]int, len(oidStrSlice))
-		for i, el := range oidStrSlice {
-			intVar, err := strconv.Atoi(el)
-			if err != nil {
-				return VerifyOpts{}, err
-			}
-			oid[i] = intVar
-		}
-
-		opts.Oid = oid
-	}
-
-	certPathFlagVal := viper.GetString("cert")
-	if certPathFlagVal != "" {
-		cert, err := createCertFromPEMFile(certPathFlagVal)
-		if err != nil {
-			return VerifyOpts{}, err
-		}
-		opts.TsaCertificate = cert
-	}
-
-	certChainPEM := viper.GetString("cert-chain")
-	if certChainPEM != "" {
-		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
-		if err != nil {
-			return VerifyOpts{}, fmt.Errorf("error reading request from file: %w", err)
-		}
-		intermediateCerts := []*x509.Certificate{}
-		rootCerts := []*x509.Certificate{}
-		for len(pemBytes) > 0 {
-			block, rest := pem.Decode(pemBytes)
-			// if there is nothing left, we have found the last block
-			// which should be the root
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return VerifyOpts{}, fmt.Errorf("failed to parse certificate")
-			}
-			if rest == nil {
-				rootCerts = append(rootCerts, cert)
-			} else {
-				intermediateCerts = append(intermediateCerts, cert)
-			}
-			pemBytes = rest
-		}
-		opts.Intermediates = intermediateCerts
-		opts.Roots = rootCerts
-	}
-
-	nonceFlagVal := viper.GetString("nonce")
-	if nonceFlagVal != "" {
-		nonce := new(big.Int)
-		nonce, ok := nonce.SetString(nonceFlagVal, 10)
-		if !ok {
-			return VerifyOpts{}, fmt.Errorf("failed to convert string to big.Int")
-		}
-		opts.Nonce = nonce
-	}
-
-	subjectFlagVal := viper.GetString("subject")
-	if subjectFlagVal != "" {
-		opts.Subject = subjectFlagVal
-	}
-
-	return opts, nil
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -323,25 +245,4 @@ func CreateTimestampResponse(tsrBytes []byte) (timestamp.Timestamp, error) {
 		return timestamp.Timestamp{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 	return *ts, nil
-}
-
-func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
-	pemBytes, err := os.ReadFile(filepath.Clean(certPath))
-	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
-	}
-	block, rest := pem.Decode(pemBytes)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to decode PEM block containing public key")
-	}
-	if rest != nil {
-		return nil, fmt.Errorf("only expected one certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return cert, nil
 }
