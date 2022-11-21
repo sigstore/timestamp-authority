@@ -34,8 +34,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-func CreateTSR() {}
-
 func TestVerifyArtifactHashedMessages(t *testing.T) {
 	viper.Set("timestamp-signer", "memory")
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
