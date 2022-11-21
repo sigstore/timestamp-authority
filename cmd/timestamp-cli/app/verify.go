@@ -93,6 +93,17 @@ func runVerify() (interface{}, error) {
 		return nil, err
 	}
 
+	opts, err := newVerifyOpts()
+	if err != nil {
+		return verifyCmdOutput{TimestampPath: tsrPath}, err
+	}
+
+	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool, opts)
+
+	return &verifyCmdOutput{TimestampPath: tsrPath}, err
+}
+
+func newVerifyOpts() (verification.VerifyOpts, error) {
 	opts := verification.VerifyOpts{}
 
 	oid, err := getOid()
@@ -134,9 +145,7 @@ func runVerify() (interface{}, error) {
 		opts.Subject = subjectFlagVal
 	}
 
-	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool, opts)
-
-	return &verifyCmdOutput{TimestampPath: tsrPath}, err
+	return opts, nil
 }
 
 func getNonce() (*big.Int, error) {
