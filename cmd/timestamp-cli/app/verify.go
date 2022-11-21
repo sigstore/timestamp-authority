@@ -95,7 +95,7 @@ func runVerify() (interface{}, error) {
 
 	opts, err := newVerifyOpts()
 	if err != nil {
-		return verifyCmdOutput{TimestampPath: tsrPath}, err
+		return verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to created VerifyOpts: %w", err)
 	}
 
 	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool, opts)
@@ -108,7 +108,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 	oid, err := getOid()
 	if err != nil {
-		return verification.VerifyOpts{}, err
+		return verification.VerifyOpts{}, fmt.Errorf("failed to parse value from oid flag: %w", err)
 	}
 	if oid != nil {
 		opts.Oid = oid
@@ -118,14 +118,14 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 	if certPathFlagVal != "" {
 		cert, err := createCertFromPEMFile(certPathFlagVal)
 		if err != nil {
-			return verification.VerifyOpts{}, err
+			return verification.VerifyOpts{}, fmt.Errorf("failed to parse cert flag value from PEM file: %w", err)
 		}
 		opts.TsaCertificate = cert
 	}
 
 	roots, intermediates, err := getCerts()
 	if err != nil {
-		return verification.VerifyOpts{}, err
+		return verification.VerifyOpts{}, fmt.Errorf("failed to parse root and intermediate certs from cert-chain flag: %w", err)
 	}
 	if roots != nil && intermediates != nil {
 		opts.Roots = roots
@@ -134,7 +134,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 	nonce, err := getNonce()
 	if err != nil {
-		return verification.VerifyOpts{}, err
+		return verification.VerifyOpts{}, fmt.Errorf("failed to parse value from nonce flag: %w", err)
 	}
 	if nonce != nil {
 		opts.Nonce = nonce
@@ -150,62 +150,65 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 func getNonce() (*big.Int, error) {
 	nonceFlagVal := viper.GetString("nonce")
-	if nonceFlagVal != "" {
-		nonce := new(big.Int)
-		nonce, ok := nonce.SetString(nonceFlagVal, 10)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert string to big.Int")
-		}
-		return nonce, nil
+	if nonceFlagVal == "" {
+		return nil, nil
 	}
-	return nil, nil
+
+	nonce := new(big.Int)
+	nonce, ok := nonce.SetString(nonceFlagVal, 10)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert string to big.Int")
+	}
+	return nonce, nil
 }
 
 func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	certChainPEM := viper.GetString("cert-chain")
-	if certChainPEM != "" {
-		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
-		if err != nil {
-			return nil, nil, fmt.Errorf("error reading request from file: %w", err)
-		}
-		intermediateCerts := []*x509.Certificate{}
-		rootCerts := []*x509.Certificate{}
-		for len(pemBytes) > 0 {
-			block, rest := pem.Decode(pemBytes)
-			// if there is nothing left, we have found the last block
-			// which should be the root
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to parse certificate")
-			}
-			if rest == nil {
-				rootCerts = append(rootCerts, cert)
-			} else {
-				intermediateCerts = append(intermediateCerts, cert)
-			}
-			pemBytes = rest
-		}
-		return rootCerts, intermediateCerts, nil
+	if certChainPEM == "" {
+		return nil, nil
 	}
-	return nil, nil, nil
+
+	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
+	if err != nil {
+		return nil, nil, fmt.Errorf("error reading request from file: %w", err)
+	}
+	intermediateCerts := []*x509.Certificate{}
+	rootCerts := []*x509.Certificate{}
+	for len(pemBytes) > 0 {
+		block, rest := pem.Decode(pemBytes)
+		// if there is nothing left, we have found the last block
+		// which should be the root
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse certificate")
+		}
+		if rest == nil {
+			rootCerts = append(rootCerts, cert)
+		} else {
+			intermediateCerts = append(intermediateCerts, cert)
+		}
+		pemBytes = rest
+	}
+	return rootCerts, intermediateCerts, nil
 }
 
 func getOid() ([]int, error) {
 	oidFlagVal := viper.GetString("oid")
-	if oidFlagVal != "" {
-		oidStrSlice := strings.Split(oidFlagVal, ".")
-		oid := make([]int, len(oidStrSlice))
-		for i, el := range oidStrSlice {
-			intVar, err := strconv.Atoi(el)
-			if err != nil {
-				return nil, err
-			}
-			oid[i] = intVar
-		}
-
-		return oid, nil
+	if oidFlagVal == "" {
+		return nil, nil
 	}
-	return nil, nil
+
+	oidStrSlice := strings.Split(oidFlagVal, ".")
+	oid := make([]int, len(oidStrSlice))
+	for i, el := range oidStrSlice {
+		intVar, err := strconv.Atoi(el)
+		if err != nil {
+			return nil, err
+		}
+		oid[i] = intVar
+	}
+
+	return oid, nil
 }
 
 func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
@@ -214,8 +217,11 @@ func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 	block, rest := pem.Decode(pemBytes)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	if block == nil {
+		return nil, fmt.Errorf("PEM block is unexpectedly empty")
+	}
+	if block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("PEM block type is not 'PUBLIC KEY'")
 	}
 	if rest != nil {
 		return nil, fmt.Errorf("only expected one certificate")

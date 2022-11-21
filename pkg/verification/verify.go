@@ -23,7 +23,7 @@ import (
 	"hash"
 	"io"
 	"math/big"
-	
+
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/pkg/errors"
