@@ -30,7 +30,6 @@ import (
 func addInspectFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to inspect")
 	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
-	cmd.Flags().Var(NewFlagValue(formatFlag, "default"), "format", "output format")
 }
 
 type inspectCmdOutput struct {
