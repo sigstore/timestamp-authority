@@ -106,7 +106,7 @@ func runVerify() (interface{}, error) {
 func newVerifyOpts() (verification.VerifyOpts, error) {
 	opts := verification.VerifyOpts{}
 
-	oid, err := getOid()
+	oid, err := getOID()
 	if err != nil {
 		return verification.VerifyOpts{}, fmt.Errorf("failed to parse value from oid flag: %w", err)
 	}
@@ -116,7 +116,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 	certPathFlagVal := viper.GetString("cert")
 	if certPathFlagVal != "" {
-		cert, err := createCertFromPEMFile(certPathFlagVal)
+		cert, err := parseTSACertificate(certPathFlagVal)
 		if err != nil {
 			return verification.VerifyOpts{}, fmt.Errorf("failed to parse cert flag value from PEM file: %w", err)
 		}
