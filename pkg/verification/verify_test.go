@@ -1,4 +1,3 @@
-//
 // Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +18,15 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"fmt"
+	"hash"
 	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	client2 "github.com/sigstore/timestamp-authority/pkg/generated/client"
 
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/client"
@@ -72,39 +75,10 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tsq, err := timestamp.CreateRequest(strings.NewReader(tc.message), &timestamp.RequestOptions{
-			Hash:         crypto.SHA256,
-			Certificates: true,
-		})
+		respBytes, certPool, err := getTimestampData(tc.message, c)
 		if err != nil {
-			t.Fatalf("unexpected error creating request: %v", err)
+			t.Fatalf("unexpected error getting timestamp data: %v", err)
 		}
-
-		chain, err := c.Timestamp.GetTimestampCertChain(nil)
-		if err != nil {
-			t.Fatalf("unexpected error getting timestamp chain: %v", err)
-		}
-
-		params := tsatimestamp.NewGetTimestampResponseParams()
-		params.SetTimeout(5 * time.Second)
-		params.Request = io.NopCloser(bytes.NewReader(tsq))
-
-		var respBytes bytes.Buffer
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
-		if err != nil {
-			t.Fatalf("unexpected error getting timestamp response: %v", err)
-		}
-
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(chain.Payload))
-		if !ok {
-			t.Fatalf("error parsing response into Timestamp while appending certs from PEM")
-		}
-
-		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool); err != nil {
-			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
-		}
-
 		if tc.forceError {
 			// Force hashed message error mismatch
 			msg := tc.message + "XXX"
@@ -117,4 +91,243 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			}
 		}
 	}
+}
+
+func Test_verifyTSRWithChain(t *testing.T) {
+	type args struct {
+		tsmessage          string
+		wantEmptyCertPool  bool
+		wantNilCertPool    bool
+		wantNilTimestamp   bool
+		wantEmptyTimestamp bool
+	}
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	c, err := client.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "cert pool is nil",
+			args: args{
+				wantNilCertPool: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "timestamp is nil",
+
+			args: args{
+				wantNilTimestamp: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "timestamp is empty",
+			args: args{
+				wantEmptyTimestamp: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "certPool is empty",
+			args: args{
+				tsmessage:         "test",
+				wantEmptyCertPool: true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid timestamp and certPool",
+			args: args{
+				tsmessage: "test",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// creating a valid timestamp and certPool
+			respBytes, certPool, err := getTimestampData(tt.args.tsmessage, c)
+			ts, err := timestamp.ParseResponse(respBytes.Bytes())
+			if err != nil {
+				t.Fatalf("unexpected error getting timestamp data: %v", err)
+			}
+			// reassigning the certPool and timestamp based on the test case
+			if tt.args.wantNilCertPool {
+				certPool = nil
+			} else if tt.args.wantEmptyCertPool {
+				certPool = x509.NewCertPool()
+			}
+			if tt.args.wantNilTimestamp {
+				ts = nil
+			} else if tt.args.wantEmptyTimestamp {
+				ts = &timestamp.Timestamp{}
+			}
+
+			if err := verifyTSRWithChain(ts, certPool); (err != nil) != tt.wantErr {
+				t.Errorf("verifyTSRWithChain() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+func Test_verifyHashedMessages(t *testing.T) {
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	c, err := client.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+	respBytes, _, err := getTimestampData("test", c)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp data: %v", err)
+	}
+	ts, err := timestamp.ParseResponse(respBytes.Bytes())
+	if err != nil {
+		t.Fatalf("unexpected error parsing timestamp data: %v", err)
+	}
+	type args struct {
+		hashAlg        hash.Hash
+		hashedMessage  []byte
+		artifactReader io.Reader
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "no artifact reader",
+			args: args{
+				hashAlg:        ts.HashAlgorithm.New(),
+				hashedMessage:  ts.HashedMessage,
+				artifactReader: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "no hash algorithm",
+			args: args{
+				hashAlg:        nil,
+				hashedMessage:  ts.HashedMessage,
+				artifactReader: strings.NewReader("test"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "no hashed message",
+			args: args{
+				hashAlg:        ts.HashAlgorithm.New(),
+				hashedMessage:  nil,
+				artifactReader: strings.NewReader("test"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := verifyHashedMessages(tt.args.hashAlg, tt.args.hashedMessage, tt.args.artifactReader); (err != nil) != tt.wantErr {
+				t.Errorf("verifyHashedMessages() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+func TestVerifyTimestampResponse(t *testing.T) {
+
+	viper.Set("timestamp-signer", "memory")
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	server := httptest.NewServer(apiServer.GetHandler())
+	t.Cleanup(server.Close)
+
+	c, err := client.GetTimestampClient(server.URL)
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+	respBytes, certPool, err := getTimestampData("test", c)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp data: %v", err)
+	}
+	type args struct {
+		tsrBytes []byte
+		artifact io.Reader
+		certPool *x509.CertPool
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "no timestamp response bytes",
+			args: args{
+				tsrBytes: nil,
+				artifact: strings.NewReader("test"),
+				certPool: certPool,
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil cert pool",
+			args: args{
+				tsrBytes: respBytes.Bytes(),
+				artifact: strings.NewReader("test"),
+				certPool: nil,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := VerifyTimestampResponse(tt.args.tsrBytes, tt.args.artifact, tt.args.certPool); (err != nil) != tt.wantErr {
+				t.Errorf("VerifyTimestampResponse() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+func getTimestampData(message string, c *client2.TimestampAuthority) (bytes.Buffer, *x509.CertPool, error) {
+	tsq, err := timestamp.CreateRequest(strings.NewReader(message), &timestamp.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+	})
+	if err != nil {
+		return bytes.Buffer{}, nil, fmt.Errorf("unexpected error creating request: %v", err)
+	}
+
+	chain, err := c.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		return bytes.Buffer{}, nil, fmt.Errorf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	params := tsatimestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(5 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+	var respBytes bytes.Buffer
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
+	if err != nil {
+		return bytes.Buffer{}, nil, fmt.Errorf("unexpected error getting timestamp response: %v", err)
+	}
+
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM([]byte(chain.Payload))
+	if !ok {
+		return bytes.Buffer{}, nil, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
+	}
+
+	if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(message), certPool); err != nil {
+		return bytes.Buffer{}, nil, fmt.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
+	}
+	return respBytes, certPool, nil
 }
