@@ -48,9 +48,9 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert-chain", "path to certificate chain PEM file")
 	cmd.MarkFlagRequired("cert-chain") //nolint:errcheck
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
-	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional oid passed with the request")
+	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional TSA policy OID passed with the request")
 	cmd.Flags().String("subject", "", "expected leaf certificate subject")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert", "path to TSA cert")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert", "path to a TSA's certificate")
 }
 
 var verifyCmd = &cobra.Command{
@@ -192,7 +192,7 @@ func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	return rootCerts, intermediateCerts, nil
 }
 
-func getOid() ([]int, error) {
+func getOID() ([]int, error) {
 	oidFlagVal := viper.GetString("oid")
 	if oidFlagVal == "" {
 		return nil, nil
@@ -211,10 +211,10 @@ func getOid() ([]int, error) {
 	return oid, nil
 }
 
-func createCertFromPEMFile(certPath string) (*x509.Certificate, error) {
+func parseTSACertificate(certPath string) (*x509.Certificate, error) {
 	pemBytes, err := os.ReadFile(filepath.Clean(certPath))
 	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
+		return nil, fmt.Errorf("error reading TSA's certificate file: %w", err)
 	}
 	block, rest := pem.Decode(pemBytes)
 	if block == nil {

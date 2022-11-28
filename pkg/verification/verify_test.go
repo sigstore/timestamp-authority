@@ -321,7 +321,7 @@ func TestVerifyESSCertID(t *testing.T) {
 		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
-				RawIssuer: rawIssuer,
+				RawIssuer:    rawIssuer,
 				SerialNumber: optsSerialNumber,
 			},
 		}
@@ -337,7 +337,7 @@ func TestVerifyESSCertID(t *testing.T) {
 		}
 		cert := x509.Certificate{
 			Issuer:       tc.providedIssuer,
-			RawIssuer: rawIssuer,
+			RawIssuer:    rawIssuer,
 			SerialNumber: providedSerialNumber,
 		}
 		err = verifyESSCertID(&cert, opts)
