@@ -314,14 +314,14 @@ func TestVerifyESSCertID(t *testing.T) {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.optsSerialNumber)
 		}
 
-		rawIssuer, err := json.Marshal(tc.providedIssuer)
+		optsRawIssuer, err := json.Marshal(tc.optsIssuer)
 		if err != nil {
 			t.Fatalf("unexpected failure while marshalling issuer object")
 		}
 		opts := VerifyOpts{
 			TsaCertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
-				RawIssuer:    rawIssuer,
+				RawIssuer:    optsRawIssuer,
 				SerialNumber: optsSerialNumber,
 			},
 		}
@@ -331,13 +331,13 @@ func TestVerifyESSCertID(t *testing.T) {
 			t.Fatalf("unexpected failure to create big int from string: %s", tc.providedSerialNumber)
 		}
 
-		rawIssuer, err = json.Marshal(tc.providedIssuer)
+		providedRawIssuer, err := json.Marshal(tc.providedIssuer)
 		if err != nil {
 			t.Fatalf("unexpected failure while marshalling issuer object")
 		}
 		cert := x509.Certificate{
 			Issuer:       tc.providedIssuer,
-			RawIssuer:    rawIssuer,
+			RawIssuer:    providedRawIssuer,
 			SerialNumber: providedSerialNumber,
 		}
 		err = verifyESSCertID(&cert, opts)
