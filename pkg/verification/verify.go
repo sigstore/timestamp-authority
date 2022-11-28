@@ -90,17 +90,17 @@ func verifyLeafCert(cert *x509.Certificate, opts VerifyOpts) error {
 	errMsg := "failed to verify leaf cert"
 	err := verifyESSCertID(cert, opts)
 	if err != nil {
-		fmt.Errorf("%s: %w", errMsg, err)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	err = verifyLeafCertSubject(cert.Subject.String(), opts)
 	if err != nil {
-		fmt.Errorf("%s: %w", errMsg, err)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	err = verifyEmbeddedLeafCert(cert, opts)
 	if err != nil {
-		fmt.Errorf("%s: %w", errMsg, err)
+		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	return nil
