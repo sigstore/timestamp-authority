@@ -78,6 +78,34 @@ func verifyLeafCertSubject(subject string, opts VerifyOpts) error {
 	return nil
 }
 
+// If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
+func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
+	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
+		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
+	}
+	return nil
+}
+
+func verifyLeafCert(cert *x509.Certificate, opts VerifyOpts) error {
+	errMsg := "failed to verify leaf cert"
+	err := verifyESSCertID(cert, opts)
+	if err != nil {
+		fmt.Errorf("%s: %w", errMsg, err)
+	}
+
+	err = verifyLeafCertSubject(cert.Subject.String(), opts)
+	if err != nil {
+		fmt.Errorf("%s: %w", errMsg, err)
+	}
+
+	err = verifyEmbeddedLeafCert(cert, opts)
+	if err != nil {
+		fmt.Errorf("%s: %w", errMsg, err)
+	}
+
+	return nil
+}
+
 func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 	certEKULen := len(cert.ExtKeyUsage)
 	if certEKULen != 1 {
@@ -107,14 +135,6 @@ func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
 		if err != nil {
 			return fmt.Errorf("failed to verify EKU on intermediate cert: %w", err)
 		}
-	}
-	return nil
-}
-
-// If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
-func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
-		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
 	return nil
 }
@@ -176,22 +196,12 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 		return err
 	}
 
-	err = verifyEmbeddedLeafCert(ts.Certificates[0], opts)
-	if err != nil {
-		return err
-	}
-
 	err = verifyLeafAndIntermediatesEKU(opts)
 	if err != nil {
 		return err
 	}
 
-	err = verifyLeafCertSubject(ts.Certificates[0].Subject.String(), opts)
-	if err != nil {
-		return err
-	}
-
-	err = verifyESSCertID(ts.Certificates[0], opts)
+	err = verifyLeafCert(ts.Certificates[0], opts)
 	if err != nil {
 		return err
 	}
