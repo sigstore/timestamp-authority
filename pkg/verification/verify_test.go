@@ -219,7 +219,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 func TestVerifyLeafCertSubject(t *testing.T) {
 	type test struct {
 		optsSubject           pkix.Name
-		providedSubjectString string
+		providedSubject pkix.Name
 		expectVerifySuccess   bool
 	}
 
@@ -229,7 +229,10 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 				CommonName:   "Sigstore TSA",
 				Organization: []string{"Sigstore"},
 			},
-			providedSubjectString: "CN=Sigstore TSA,O=Sigstore",
+			providedSubject: pkix.Name{
+				CommonName: "Sigstore TSA",
+				Organization: []string{"Sigstore"},
+			},
 			expectVerifySuccess:   true,
 		},
 		{
@@ -237,22 +240,27 @@ func TestVerifyLeafCertSubject(t *testing.T) {
 				CommonName:   "Sigstore TSA",
 				Organization: []string{"Sigstore"},
 			},
-			providedSubjectString: "CN=SomeOtherStore TSA,O=SomeOtherStore",
+			providedSubject: pkix.Name{
+				CommonName: "SomeOtherStore",
+				Organization: []string{"SomeOtherStore"},
+			},
 			expectVerifySuccess:   false,
 		},
 	}
 	for _, tc := range tests {
 		opts := VerifyOpts{
-			TsaCertificate: &x509.Certificate{
-				Subject: tc.optsSubject,
-			},
+			Subject: tc.optsSubject.String(),
 		}
-		err := verifyLeafCertSubject(tc.providedSubjectString, opts)
+
+		cert := x509.Certificate{
+			Subject: tc.providedSubject,
+		}
+		err := verifyLeafCertSubject(&cert, opts)
 		if err != nil && tc.expectVerifySuccess {
-			t.Errorf("expected verification to pass \n provided subject %s should match opts subject %s", tc.providedSubjectString, tc.optsSubject.String())
+			t.Errorf("expected verification to pass \n provided subject %s should match opts subject %s", tc.providedSubject.String(), tc.optsSubject.String())
 		}
 		if err == nil && !tc.expectVerifySuccess {
-			t.Errorf("expected verification to fail \n provided subject %s should not match opts subject %s", tc.providedSubjectString, tc.optsSubject.String())
+			t.Errorf("expected verification to fail \n provided subject %s should not match opts subject %s", tc.providedSubject.String(), tc.optsSubject.String())
 		}
 	}
 }
