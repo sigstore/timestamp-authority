@@ -67,13 +67,14 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 }
 
 // Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
-func verifyLeafCertSubject(subject string, opts VerifyOpts) error {
-	if opts.TsaCertificate == nil {
+func verifyLeafCertSubject(cert *x509.Certificate, opts VerifyOpts) error {
+	if opts.Subject == "" {
 		return nil
 	}
-	leafCertSubject := opts.TsaCertificate.Subject.String()
-	if leafCertSubject != subject {
-		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, subject)
+	
+	leafCertSubject := cert.Subject.String()
+	if leafCertSubject != opts.Subject {
+		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, opts.Subject)
 	}
 	return nil
 }
@@ -86,19 +87,34 @@ func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	return nil
 }
 
-func verifyLeafCert(cert *x509.Certificate, opts VerifyOpts) error {
+func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
+	if len(ts.Certificates) == 0 && opts.TsaCertificate == nil {
+		return fmt.Errorf("A leaf certificate must be present the in TSR or as a verify command argument")
+	}
+
 	errMsg := "failed to verify leaf cert"
-	err := verifyESSCertID(cert, opts)
+
+	var leafCert *x509.Certificate
+	if len(ts.Certificates) != 0 {
+		leafCert = ts.Certificates[0]
+		if opts.TsaCertificate != nil && !leafCert.Equal(opts.TsaCertificate) {
+			return fmt.Errorf("The leaf certificate included in the TSR does not match the one provied as a verify command argument")
+		}
+
+		err := verifyEmbeddedLeafCert(leafCert, opts)
+		if err != nil {
+			return fmt.Errorf("%s: %w", errMsg, err)
+		}
+	} else {
+		leafCert = opts.TsaCertificate
+	}
+
+	err := verifyESSCertID(leafCert, opts)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
-	err = verifyLeafCertSubject(cert.Subject.String(), opts)
-	if err != nil {
-		return fmt.Errorf("%s: %w", errMsg, err)
-	}
-
-	err = verifyEmbeddedLeafCert(cert, opts)
+	err = verifyLeafCertSubject(leafCert, opts)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
@@ -201,7 +217,7 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 		return err
 	}
 
-	err = verifyLeafCert(ts.Certificates[0], opts)
+	err = verifyLeafCert(*ts, opts)
 	if err != nil {
 		return err
 	}
