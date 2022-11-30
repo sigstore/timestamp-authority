@@ -98,7 +98,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 	if len(ts.Certificates) != 0 {
 		leafCert = ts.Certificates[0]
 		if opts.TsaCertificate != nil && !leafCert.Equal(opts.TsaCertificate) {
-			return fmt.Errorf("The leaf certificate included in the TSR does not match the one provied as a verify command argument")
+			return fmt.Errorf("leaf certificate included in the TSR does not match the one provided as a verify option")
 		}
 
 		err := verifyEmbeddedLeafCert(leafCert, opts)
