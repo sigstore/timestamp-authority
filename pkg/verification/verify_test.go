@@ -203,7 +203,7 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 
 	for _, tc := range tests {
 		opts := VerifyOpts{
-			TsaCertificate: tc.optsCert,
+			TSACertificate: tc.optsCert,
 		}
 
 		err := verifyEmbeddedLeafCert(tc.providedCert, opts)
@@ -327,7 +327,7 @@ func TestVerifyESSCertID(t *testing.T) {
 			t.Fatalf("unexpected failure while marshalling issuer object")
 		}
 		opts := VerifyOpts{
-			TsaCertificate: &x509.Certificate{
+			TSACertificate: &x509.Certificate{
 				Issuer:       tc.optsIssuer,
 				RawIssuer:    optsRawIssuer,
 				SerialNumber: optsSerialNumber,

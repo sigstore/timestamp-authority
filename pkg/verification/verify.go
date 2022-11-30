@@ -29,30 +29,37 @@ import (
 	"github.com/pkg/errors"
 )
 
+// VerifyOpts contains verification options passed via the CLI vefify command
+// These fields are then used to verify the TSR
 type VerifyOpts struct {
-	Oid            asn1.ObjectIdentifier
-	TsaCertificate *x509.Certificate
+	// verifies that the TSR's OID has an expected value
+	OID            asn1.ObjectIdentifier
+	// verifies that the TSR uses the TSACertificate as expected
+	TSACertificate *x509.Certificate
+	// verifies the TSR's certificate chain with the root certificates
 	Intermediates  []*x509.Certificate
+	// verifies the TSR's certificate chain with the intermediate certificates
 	Roots          []*x509.Certificate
+	// verifies that the TSR contains the expected nonce that was optionally 
+	// passed to the TSA when requesting a timestamp
 	Nonce          *big.Int
+	// verifies that the leaf certificate subject matches an expected value
 	Subject        string
-	HashAlgorithm  hash.Hash
-	HashedMessage  []byte
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
 func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TsaCertificate == nil {
+	if opts.TSACertificate == nil {
 		return nil
 	}
 
 	errMessage := ""
 
-	if !bytes.Equal(opts.TsaCertificate.RawIssuer, tsaCert.RawIssuer) {
+	if !bytes.Equal(opts.TSACertificate.RawIssuer, tsaCert.RawIssuer) {
 		errMessage += "TSR cert issuer does not match provided TSA cert issuer"
 	}
 
-	if opts.TsaCertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
+	if opts.TSACertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
 		if errMessage != "" {
 			errMessage += ", TSR cert issuer does not match provided TSA cert issuer"
 		} else {
@@ -81,14 +88,14 @@ func verifyLeafCertSubject(cert *x509.Certificate, opts VerifyOpts) error {
 
 // If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
 func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TsaCertificate != nil && !opts.TsaCertificate.Equal(tsaCert) {
+	if opts.TSACertificate != nil && !opts.TSACertificate.Equal(tsaCert) {
 		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
 	return nil
 }
 
 func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
-	if len(ts.Certificates) == 0 && opts.TsaCertificate == nil {
+	if len(ts.Certificates) == 0 && opts.TSACertificate == nil {
 		return fmt.Errorf("leaf certificate must be present the in TSR or as a verify option")
 	}
 
@@ -97,7 +104,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 	var leafCert *x509.Certificate
 	if len(ts.Certificates) != 0 {
 		leafCert = ts.Certificates[0]
-		if opts.TsaCertificate != nil && !leafCert.Equal(opts.TsaCertificate) {
+		if opts.TSACertificate != nil && !leafCert.Equal(opts.TSACertificate) {
 			return fmt.Errorf("leaf certificate included in the TSR does not match the one provided as a verify option")
 		}
 
@@ -106,7 +113,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 			return fmt.Errorf("%s: %w", errMsg, err)
 		}
 	} else {
-		leafCert = opts.TsaCertificate
+		leafCert = opts.TSACertificate
 	}
 
 	err := verifyESSCertID(leafCert, opts)
@@ -137,10 +144,10 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 // Verify the TSA certificate and the intermediates (called "EKU chaining") all
 // have the extended key usage set to only time stamping usage
 func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
-	if opts.TsaCertificate == nil || opts.Intermediates == nil {
+	if opts.TSACertificate == nil || opts.Intermediates == nil {
 		return nil
 	}
-	leafCert := opts.TsaCertificate
+	leafCert := opts.TSACertificate
 	err := verifyExtendedKeyUsage(leafCert)
 	if err != nil {
 		return fmt.Errorf("failed to verify EKU on leaf cert: %w", err)
@@ -157,15 +164,15 @@ func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
 
 // Verify the OID of the TSR matches an expected OID
 func verifyOID(oid []int, opts VerifyOpts) error {
-	if opts.Oid == nil {
+	if opts.OID == nil {
 		return nil
 	}
-	responseOid := opts.Oid
-	if len(oid) != len(responseOid) {
+	responseOID := opts.OID
+	if len(oid) != len(responseOID) {
 		return fmt.Errorf("OID lengths do not match")
 	}
 	for i, v := range oid {
-		if v != responseOid[i] {
+		if v != responseOID[i] {
 			return fmt.Errorf("OID content does not match")
 		}
 	}

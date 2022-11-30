@@ -85,7 +85,7 @@ func TestVerify(t *testing.T) {
 	pemPath := getCertChainPEM(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", pemPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -104,7 +104,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--cert-chain", pemPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemPath)
 	outputContains(t, out, "error parsing response into Timestamp")
 }
 
@@ -123,7 +123,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", invalidPEMPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", invalidPEMPath)
 	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
 }
 
@@ -211,7 +211,8 @@ func getTimestamp(t *testing.T, url string, artifactContent string) string {
 	return path
 }
 
-// getCertChainPEM returns the CA certificates to verify a signed timestamp
+// getCertChainPEM returns the path of a pem file containaing
+// root and intermediate certificates. Used to verify a signed timestamp
 func getCertChainPEM(t *testing.T, restapiURL string) string {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
