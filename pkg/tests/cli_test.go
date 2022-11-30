@@ -82,7 +82,7 @@ func TestVerify(t *testing.T) {
 	tsrPath := getTimestamp(t, restapiURL, artifactContent)
 
 	// write the cert chain to a PEM file
-	pemPath := getCertChainPEM(t, restapiURL)
+	pemPath := writeCertChainToPEMFile(t, restapiURL)
 
 	// It should verify timestamp successfully.
 	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath)
@@ -92,7 +92,7 @@ func TestVerify(t *testing.T) {
 func TestVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
-	pemPath := getCertChainPEM(t, restapiURL)
+	pemPath := writeCertChainToPEMFile(t, restapiURL)
 
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
@@ -117,7 +117,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 	tsrPath := getTimestamp(t, restapiURL, artifactContent)
 
 	// Create invalid pem
-	invalidPEMPath := filepath.Join(t.TempDir(), "ts_chain.pem")
+	invalidPEMPath := filepath.Join(t.TempDir(), "invalid_pem_path")
 	if err := os.WriteFile(invalidPEMPath, []byte("invalid PEM"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func getTimestamp(t *testing.T, url string, artifactContent string) string {
 
 // getCertChainPEM returns the path of a pem file containaing
 // root and intermediate certificates. Used to verify a signed timestamp
-func getCertChainPEM(t *testing.T, restapiURL string) string {
+func writeCertChainToPEMFile(t *testing.T, restapiURL string) string {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
@@ -224,7 +224,7 @@ func getCertChainPEM(t *testing.T, restapiURL string) string {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	path := filepath.Join(t.TempDir(), "artifact")
+	path := filepath.Join(t.TempDir(), "ts_certchain.pem")
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
