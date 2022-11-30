@@ -89,7 +89,7 @@ func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 
 func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 	if len(ts.Certificates) == 0 && opts.TsaCertificate == nil {
-		return fmt.Errorf("A leaf certificate must be present the in TSR or as a verify command argument")
+		return fmt.Errorf("leaf certificate must be present the in TSR or as a verify option")
 	}
 
 	errMsg := "failed to verify leaf cert"
