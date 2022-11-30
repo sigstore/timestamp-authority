@@ -17,7 +17,6 @@ package app
 
 import (
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"math/big"
 	"os"
@@ -173,23 +172,17 @@ func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request from file: %w", err)
 	}
-	intermediateCerts := []*x509.Certificate{}
-	rootCerts := []*x509.Certificate{}
-	for len(pemBytes) > 0 {
-		block, rest := pem.Decode(pemBytes)
-		// if there is nothing left, we have found the last block
-		// which should be the root
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse certificate")
-		}
-		if rest == nil {
-			rootCerts = append(rootCerts, cert)
-		} else {
-			intermediateCerts = append(intermediateCerts, cert)
-		}
-		pemBytes = rest
+
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
+	if err != nil {
+		fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 	}
+
+	// intermediate certs are above the root certificate in the PEM file
+	intermediateCerts := certs[0:len(certs)-1]
+	// the root certificate is last in the PEM file
+	rootCerts := []*x509.Certificate{certs[len(certs)-1]}
+	
 	return rootCerts, intermediateCerts, nil
 }
 
