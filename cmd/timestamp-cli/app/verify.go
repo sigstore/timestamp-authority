@@ -50,7 +50,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional TSA policy OID passed with the request")
 	cmd.Flags().String("subject", "", "expected leaf certificate subject")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert", "path to a TSA's certificate")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to a TSA's certificate")
 }
 
 var verifyCmd = &cobra.Command{
