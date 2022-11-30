@@ -75,7 +75,7 @@ func runVerify() (interface{}, error) {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
-	certChainPEM := viper.GetString("cert-chain")
+	certChainPEM := viper.GetString("certificate-chain")
 	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 	if err != nil {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
