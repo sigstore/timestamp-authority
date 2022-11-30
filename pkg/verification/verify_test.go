@@ -216,51 +216,42 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 	}
 }
 
-func TestVerifyLeafCertSubject(t *testing.T) {
+func TestVerifySubjectCommonName(t *testing.T) {
 	type test struct {
-		optsSubject           pkix.Name
-		providedSubject pkix.Name
+		optsCommonName           string
+		providedCommonName string
 		expectVerifySuccess   bool
 	}
 
 	tests := []test{
 		{
-			optsSubject: pkix.Name{
-				CommonName:   "Sigstore TSA",
-				Organization: []string{"Sigstore"},
-			},
-			providedSubject: pkix.Name{
-				CommonName: "Sigstore TSA",
-				Organization: []string{"Sigstore"},
-			},
+			optsCommonName: "Sigstore TSA",
+			providedCommonName: "Sigstore TSA",
 			expectVerifySuccess:   true,
 		},
 		{
-			optsSubject: pkix.Name{
-				CommonName:   "Sigstore TSA",
-				Organization: []string{"Sigstore"},
-			},
-			providedSubject: pkix.Name{
-				CommonName: "SomeOtherStore",
-				Organization: []string{"SomeOtherStore"},
-			},
+			optsCommonName: "Sigstore TSA",
+			providedCommonName: "SomeOtherStore",
 			expectVerifySuccess:   false,
 		},
 	}
 	for _, tc := range tests {
 		opts := VerifyOpts{
-			Subject: tc.optsSubject.String(),
+			CommonName: tc.optsCommonName,
 		}
 
 		cert := x509.Certificate{
-			Subject: tc.providedSubject,
+			Subject: pkix.Name{
+				CommonName: tc.providedCommonName,
+				Organization: []string{"Sigstore"},
+			},
 		}
-		err := verifyLeafCertSubject(&cert, opts)
+		err := verifySubjectCommonName(&cert, opts)
 		if err != nil && tc.expectVerifySuccess {
-			t.Errorf("expected verification to pass \n provided subject %s should match opts subject %s", tc.providedSubject.String(), tc.optsSubject.String())
+			t.Errorf("expected verification to pass \n provided common name %s should match opts common name %s", tc.providedCommonName, tc.optsCommonName)
 		}
 		if err == nil && !tc.expectVerifySuccess {
-			t.Errorf("expected verification to fail \n provided subject %s should not match opts subject %s", tc.providedSubject.String(), tc.optsSubject.String())
+			t.Errorf("expected verification to fail \n provided common name %s should not match opts common name %s", tc.providedCommonName, tc.optsCommonName)
 		}
 	}
 }

@@ -48,8 +48,8 @@ type VerifyOpts struct {
 	// verifies that the TSR contains the expected nonce that was optionally 
 	// passed to the TSA when requesting a timestamp
 	Nonce          *big.Int
-	// verifies that the leaf certificate subject matches an expected value
-	Subject        string
+	// verifies that the leaf certificate subject Common Name an expected value
+	CommonName        string
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -69,15 +69,14 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	return nil
 }
 
-// Verify the leaf certificate's subject and/or subject alternative name matches a provided subject
-func verifyLeafCertSubject(cert *x509.Certificate, opts VerifyOpts) error {
-	if opts.Subject == "" {
+// Verify the leaf certificate's subject Common Name name matches a provided Common Name
+func verifySubjectCommonName(cert *x509.Certificate, opts VerifyOpts) error {
+	if opts.CommonName == "" {
 		return nil
 	}
 	
-	leafCertSubject := cert.Subject.String()
-	if leafCertSubject != opts.Subject {
-		return fmt.Errorf("Leaf cert subject %s does not match provided subject %s", leafCertSubject, opts.Subject)
+	if cert.Subject.CommonName != opts.CommonName {
+		return fmt.Errorf("the certificate's subject Common Name %s does not match the provided Common Name %s", cert.Subject.CommonName, opts.CommonName)
 	}
 	return nil
 }
@@ -136,7 +135,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
-	err = verifyLeafCertSubject(leafCert, opts)
+	err = verifySubjectCommonName(leafCert, opts)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}

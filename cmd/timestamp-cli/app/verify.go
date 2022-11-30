@@ -49,7 +49,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("certificate-chain") //nolint:errcheck
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional TSA policy OID passed with the request")
-	cmd.Flags().String("subject", "", "expected leaf certificate subject")
+	cmd.Flags().String("common-name", "", "expected leaf certificate subject common name")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to file with PEM-encoded leaf certificate")
 }
 
@@ -140,9 +140,9 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 		opts.Nonce = nonce
 	}
 
-	subjectFlagVal := viper.GetString("subject")
-	if subjectFlagVal != "" {
-		opts.Subject = subjectFlagVal
+	commonNameFlagVal := viper.GetString("common-name")
+	if commonNameFlagVal != "" {
+		opts.CommonName = commonNameFlagVal
 	}
 
 	return opts, nil
