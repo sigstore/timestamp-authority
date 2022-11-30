@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
@@ -216,23 +217,16 @@ func parseTSACertificate(certPath string) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading TSA's certificate file: %w", err)
 	}
-	block, rest := pem.Decode(pemBytes)
-	if block == nil {
-		return nil, fmt.Errorf("PEM block is unexpectedly empty")
-	}
-	if block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("PEM block type is not 'PUBLIC KEY'")
-	}
-	if rest != nil {
-		return nil, fmt.Errorf("only expected one certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	
+	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse TSA certificate during verification: %w", err)
+	}
+	if len(certs) != 1 {
+		return nil, fmt.Errorf("expected one certificate, received %d instead", len(certs)) 
 	}
 
-	return cert, nil
+	return certs[0], nil
 }
 
 func init() {
