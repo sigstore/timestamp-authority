@@ -218,21 +218,21 @@ func TestVerifyEmbeddedLeafCert(t *testing.T) {
 
 func TestVerifySubjectCommonName(t *testing.T) {
 	type test struct {
-		optsCommonName           string
-		providedCommonName string
-		expectVerifySuccess   bool
+		optsCommonName      string
+		providedCommonName  string
+		expectVerifySuccess bool
 	}
 
 	tests := []test{
 		{
-			optsCommonName: "Sigstore TSA",
-			providedCommonName: "Sigstore TSA",
-			expectVerifySuccess:   true,
+			optsCommonName:      "Sigstore TSA",
+			providedCommonName:  "Sigstore TSA",
+			expectVerifySuccess: true,
 		},
 		{
-			optsCommonName: "Sigstore TSA",
-			providedCommonName: "SomeOtherStore",
-			expectVerifySuccess:   false,
+			optsCommonName:      "Sigstore TSA",
+			providedCommonName:  "SomeOtherStore",
+			expectVerifySuccess: false,
 		},
 	}
 	for _, tc := range tests {
@@ -242,7 +242,7 @@ func TestVerifySubjectCommonName(t *testing.T) {
 
 		cert := x509.Certificate{
 			Subject: pkix.Name{
-				CommonName: tc.providedCommonName,
+				CommonName:   tc.providedCommonName,
 				Organization: []string{"Sigstore"},
 			},
 		}

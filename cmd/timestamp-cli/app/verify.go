@@ -175,14 +175,14 @@ func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 
 	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
 	if err != nil {
-		fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 	}
 
 	// intermediate certs are above the root certificate in the PEM file
-	intermediateCerts := certs[0:len(certs)-1]
+	intermediateCerts := certs[0 : len(certs)-1]
 	// the root certificate is last in the PEM file
 	rootCerts := []*x509.Certificate{certs[len(certs)-1]}
-	
+
 	return rootCerts, intermediateCerts, nil
 }
 
@@ -210,13 +210,13 @@ func parseTSACertificate(certPath string) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error reading TSA's certificate file: %w", err)
 	}
-	
+
 	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse TSA certificate during verification: %w", err)
 	}
 	if len(certs) != 1 {
-		return nil, fmt.Errorf("expected one certificate, received %d instead", len(certs)) 
+		return nil, fmt.Errorf("expected one certificate, received %d instead", len(certs))
 	}
 
 	return certs[0], nil

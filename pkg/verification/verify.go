@@ -38,18 +38,18 @@ var (
 // These fields are then used to verify the TSR
 type VerifyOpts struct {
 	// verifies that the TSR's OID has an expected value
-	OID            asn1.ObjectIdentifier
+	OID asn1.ObjectIdentifier
 	// verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
 	// verifies the TSR's certificate chain with the root certificates
-	Intermediates  []*x509.Certificate
+	Intermediates []*x509.Certificate
 	// verifies the TSR's certificate chain with the intermediate certificates
-	Roots          []*x509.Certificate
-	// verifies that the TSR contains the expected nonce that was optionally 
+	Roots []*x509.Certificate
+	// verifies that the TSR contains the expected nonce that was optionally
 	// passed to the TSA when requesting a timestamp
-	Nonce          *big.Int
+	Nonce *big.Int
 	// verifies that the leaf certificate subject Common Name an expected value
-	CommonName        string
+	CommonName string
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -74,7 +74,7 @@ func verifySubjectCommonName(cert *x509.Certificate, opts VerifyOpts) error {
 	if opts.CommonName == "" {
 		return nil
 	}
-	
+
 	if cert.Subject.CommonName != opts.CommonName {
 		return fmt.Errorf("the certificate's subject Common Name %s does not match the provided Common Name %s", cert.Subject.CommonName, opts.CommonName)
 	}
