@@ -45,7 +45,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.MarkFlagRequired("artifact") //nolint:errcheck
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to verify")
 	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "cert-chain", "path to certificate chain PEM file")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate-chain", "path to file with PEM-encoded certificate chain. Ordered from intermediate CA certificate that issued the TSA certificate, ending with the root CA certificate.")
 	cmd.MarkFlagRequired("cert-chain") //nolint:errcheck
 	cmd.Flags().String("nonce", "", "optional nonce passed with the request")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "oid", "optional TSA policy OID passed with the request")
