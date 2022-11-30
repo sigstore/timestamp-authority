@@ -29,6 +29,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	// EKUOID is the Extended Key Usage OID, per RFC 5280
+	EKUOID = asn1.ObjectIdentifier{2, 5, 29, 37}
+)
+
 // VerifyOpts contains verification options passed via the CLI vefify command
 // These fields are then used to verify the TSR
 type VerifyOpts struct {
@@ -53,23 +58,14 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 		return nil
 	}
 
-	errMessage := ""
-
 	if !bytes.Equal(opts.TSACertificate.RawIssuer, tsaCert.RawIssuer) {
-		errMessage += "TSR cert issuer does not match provided TSA cert issuer"
+		return fmt.Errorf("TSR cert issuer does not match provided TSA cert issuer")
 	}
 
 	if opts.TSACertificate.SerialNumber.Cmp(tsaCert.SerialNumber) != 0 {
-		if errMessage != "" {
-			errMessage += ", TSR cert issuer does not match provided TSA cert issuer"
-		} else {
-			errMessage = "TSR cert issuer does not match provided TSA cert issuer"
-		}
+		return fmt.Errorf("TSR cert serial number does not match provided TSA cert serial number")
 	}
 
-	if errMessage != "" {
-		return errors.New(errMessage)
-	}
 	return nil
 }
 
@@ -90,6 +86,20 @@ func verifyLeafCertSubject(cert *x509.Certificate, opts VerifyOpts) error {
 func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	if opts.TSACertificate != nil && !opts.TSACertificate.Equal(tsaCert) {
 		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
+	}
+	return nil
+}
+
+// Verify the leaf's EKU is set to critical, per RFC 3161 2.3
+func verifyLeafCertEKU(cert *x509.Certificate) error {
+	var criticalEKU bool
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(EKUOID) {
+			criticalEKU = ext.Critical
+		}
+	}
+	if !criticalEKU {
+		return errors.New("certificate must set EKU to critical")
 	}
 	return nil
 }
@@ -116,7 +126,12 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		leafCert = opts.TSACertificate
 	}
 
-	err := verifyESSCertID(leafCert, opts)
+	err := verifyLeafCertEKU(leafCert)
+	if err != nil {
+		return fmt.Errorf("%s: %w", errMsg, err)
+	}
+
+	err = verifyESSCertID(leafCert, opts)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
