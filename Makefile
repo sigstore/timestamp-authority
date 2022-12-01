@@ -71,7 +71,7 @@ gosec:
 	$(GOBIN)/gosec ./...
 
 gen: $(GENSRC)
-
+.PHONY : timestamp-cli
 timestamp-cli: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/timestamp-cli ./cmd/timestamp-cli
 

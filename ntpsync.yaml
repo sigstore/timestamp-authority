@@ -1,0 +1,82 @@
+#
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Number of attempts to contact a ntp server before giving up.
+request_attempts: 3
+# The timeout in seconds for a request to respond. This value must be
+# smaller than max_time_delta.
+request_timeout: 5
+# Number of randomly selected ntp servers to interrogate.
+num_servers: 4
+# Number of servers who must agree with local time.
+server_threshold: 3
+# Maximum number of seconds the local time is allowed to drift from the
+# response of a ntp server
+max_time_delta: 6
+# Period (in seconds) for polling ntp servers
+period: 60
+# List of servers to contact. Many DNS names resolves to multiple A records.
+servers:
+  #
+  # stratum 1 servers:
+  #
+  # Apple AS6185
+  - "time.apple.com"
+
+  # Google AS15169
+  - "time.google.com"
+  - "time1.google.com"
+  - "time2.google.com"
+  - "time3.google.com"
+  - "time4.google.com"
+
+  # Nist AS49 AS104
+  - "time-a-b.nist.gov"
+  - "time-b-b.nist.gov"
+  - "time-c-b.nist.gov"
+  - "time-d-b.nist.gov"
+  # time-*-g.nist.gov times out a lot
+  # "time-a-g.nist.gov"
+  # "time-b-g.nist.gov"
+  # "time-c-g.nist.gov"
+  # "time-d-g.nist.gov"
+
+  # Netnod AS57021
+  - "gbg1.ntp.se"
+  - "gbg2.ntp.se"
+  - "mmo1.ntp.se"
+  - "mmo2.ntp.se"
+  - "sth1.ntp.se"
+  - "sth2.ntp.se"
+  - "svl1.ntp.se"
+  - "svl2.ntp.se"
+
+  # Berkely AS25
+  - "ntp1.net.berkeley.edu"
+  - "ntp2.net.berkeley.edu"
+
+  #
+  # stratum 3 servers:
+  #
+  # Cloudflare AS13335
+  - "time.cloudflare.com"
+  # Microsoft AS8075
+  - "time.windows.com"
+
+  #
+  # stratum 4 servers:
+  #
+  # AWS AS16509
+  - "time.aws.com"

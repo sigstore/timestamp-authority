@@ -23,6 +23,12 @@ import (
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+
+	// Register the provider-specific plugins
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 const KMSScheme = "kms"
@@ -31,20 +37,20 @@ const MemoryScheme = "memory"
 const FileScheme = "file"
 
 func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
-	switch {
-	case signer == MemoryScheme:
+	switch signer {
+	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 		return sv, err
-	case signer == FileScheme:
+	case FileScheme:
 		return NewFileSigner(fileSignerPath, fileSignerPasswd)
-	case signer == KMSScheme:
+	case KMSScheme:
 		signer, err := kms.Get(ctx, kmsKey, crypto.SHA256)
 		if err != nil {
 			return nil, err
 		}
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
-	case signer == TinkScheme:
+	case TinkScheme:
 		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey, hcVaultToken)
 		if err != nil {
 			return nil, err

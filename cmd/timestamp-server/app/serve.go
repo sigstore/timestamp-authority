@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/pkg/ntpmonitor"
 	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
@@ -80,10 +81,27 @@ var serveCmd = &cobra.Command{
 		port := int(viper.GetUint("port"))
 		scheme := viper.GetStringSlice("scheme")
 
+		ntpMonitoring := viper.GetString("ntp-monitoring")
+		var ntpm *ntpmonitor.NTPMonitor
+		if ntpMonitoring != "" {
+			log.Logger.Infof("ntp monitoring: %s", ntpMonitoring)
+			go func() {
+				ntpm, err = ntpmonitor.New(ntpMonitoring)
+				if err != nil {
+					log.Logger.Fatalf("error initializing ntp monitor %s", err)
+				}
+
+				ntpm.Start()
+			}()
+		}
+
 		server := server.NewRestAPIServer(host, port, scheme, readTimeout, writeTimeout)
 		defer func() {
 			if err := server.Shutdown(); err != nil {
 				log.Logger.Error(err)
+			}
+			if ntpm != nil {
+				ntpm.Stop()
 			}
 		}()
 		if err := server.Serve(); err != nil {
