@@ -1,3 +1,28 @@
+# 0.1.3
+
+## Changes
+
+### Enhancements
+
+* Added an optional feature to compare the local time with a set of trusted ntp servers (https://github.com/sigstore/timestamp-authority/pull/143)
+
+### Bug fixes
+
+* Register KMS providers
+  (https://github.com/sigstore/timestamp-authority/pull/160)
+* Added .PHONY target for CLI rebuilding (https://github.com/sigstore/timestamp-authority/pull/159)
+
+### Misc
+
+* inspect: remove format flag (https://github.com/sigstore/timestamp-authority/pull/155)
+
+## Contributors
+
+* Fredrik Skogman
+* Hector Fernandez
+* Meredith Lancaster
+* neilnaveen
+
 # 0.1.2
 
 ## Changes
