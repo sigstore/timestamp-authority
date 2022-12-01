@@ -275,18 +275,3 @@ func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReade
 
 	return nil
 }
-
-func CreateTimestampResponse(tsrBytes []byte) (timestamp.Timestamp, error) {
-	// Verify the status of the TSR does not contain an error
-	// when timestamp.ParseResponse tries to parse a TSR into a Timestamp
-	// struct, it will verify and exit with an error if the TSR has an error status
-	ts, err := timestamp.ParseResponse(tsrBytes)
-	if err != nil {
-		pe := timestamp.ParseError("")
-		if errors.As(err, &pe) {
-			return timestamp.Timestamp{}, fmt.Errorf("timestamp response is not valid: %w", err)
-		}
-		return timestamp.Timestamp{}, fmt.Errorf("error parsing response into Timestamp: %w", err)
-	}
-	return *ts, nil
-}
