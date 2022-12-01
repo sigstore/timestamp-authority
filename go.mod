@@ -29,7 +29,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/urfave/negroni v1.0.0
 	go.step.sm/crypto v0.23.1
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.2.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v3 v3.0.1
