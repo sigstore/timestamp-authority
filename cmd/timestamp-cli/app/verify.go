@@ -123,7 +123,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 		opts.TSACertificate = cert
 	}
 
-	roots, intermediates, err := getCerts()
+	roots, intermediates, err := getRootAndIntermediateCerts()
 	if err != nil {
 		return verification.VerifyOpts{}, fmt.Errorf("failed to parse root and intermediate certs from cert-chain flag: %w", err)
 	}
@@ -162,7 +162,7 @@ func getNonce() (*big.Int, error) {
 	return nonce, nil
 }
 
-func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
+func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	certChainPEM := viper.GetString("cert-chain")
 	if certChainPEM == "" {
 		return nil, nil, nil
@@ -176,6 +176,10 @@ func getCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
+	}
+
+	if len(certs) < 2 {
+		return nil, nil, fmt.Errorf("expected at least two certificates (one root and one intermediate)")
 	}
 
 	// intermediate certs are above the root certificate in the PEM file
