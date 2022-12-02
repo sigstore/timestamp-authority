@@ -12,17 +12,17 @@ to make via an [issue](https://github.com/sigstore/timestamp-authority/issues).
 4. Update the README.md with details of changes to any interface, this includes new environment
    variables, exposed ports, useful file locations, CLI parameters and
    new or changed configuration values.
-5. Correctly format your commit message see [Commit Messages](#Commit Message Guidelines)
+5. Correctly format your commit message see [Commit Messages](#Commit-Message-Guidelines)
    below.
 6. Ensure that CI passes, if it fails, fix the failures.
 7. Every pull request requires a review from the [core timestamp-authority team](https://github.com/orgs/github.com/sigstore/teams/tsa-codeowners)
    before merging.
 8. If your pull request consists of more than one commit, please squash your
-   commits as described in [Squash Commits](#Squash Commits)
+   commits as described in [Squash Commits](#Squash-Commits)
 
 ## Commit Message Guidelines
 
-We follow the commit formatting recommendations found on [Chris Beams' How to Write a Git Commit Message article]((https://chris.beams.io/posts/git-commit/).
+We follow the commit formatting recommendations found on [Chris Beams' How to Write a Git Commit Message article](https://chris.beams.io/posts/git-commit/).
 
 Well formed commit messages not only help reviewers understand the nature of
 the Pull Request, but also assists the release process where commit messages
