@@ -49,12 +49,6 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 }
 
 func verifyTSRWithChain(ts *timestamp.Timestamp, certPool *x509.CertPool) error {
-	if ts == nil {
-		return errors.New("timestamp is nil")
-	}
-	if certPool == nil {
-		return errors.New("certPool is nil")
-	}
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
 		return fmt.Errorf("error parsing hashed message: %w", err)
@@ -70,12 +64,6 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, certPool *x509.CertPool) error 
 
 func verifyHashedMessages(hashAlg hash.Hash, hashedMessage []byte, artifactReader io.Reader) error {
 	h := hashAlg
-	if artifactReader == nil {
-		return errors.New("artifactReader is nil")
-	}
-	if hashAlg == nil {
-		return errors.New("hashAlg is nil")
-	}
 	if _, err := io.Copy(h, artifactReader); err != nil {
 		return fmt.Errorf("failed to create hash %w", err)
 	}
