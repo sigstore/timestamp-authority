@@ -114,7 +114,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 		opts.OID = oid
 	}
 
-	certPathFlagVal := viper.GetString("cert")
+	certPathFlagVal := viper.GetString("certificate")
 	if certPathFlagVal != "" {
 		cert, err := parseTSACertificate(certPathFlagVal)
 		if err != nil {
