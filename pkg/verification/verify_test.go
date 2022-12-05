@@ -173,6 +173,77 @@ func TestVerifyNonce(t *testing.T) {
 	}
 }
 
+func TestVerifyLeafCert(t *testing.T) {
+	type test struct {
+		useOptsCert bool
+		useTSCert bool
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			useOptsCert: false,
+			useTSCert: false,
+			expectVerifySuccess: false,
+		},
+		{
+			useOptsCert: true,
+			useTSCert: false,
+			expectVerifySuccess: true,
+		},
+		{
+			useOptsCert: false,
+			useTSCert: true,
+			expectVerifySuccess: true,
+		},
+		{
+			useOptsCert: true,
+			useTSCert: true,
+			expectVerifySuccess: true,
+		},
+	}
+
+	for _, tc := range tests {
+		sampleCert := &x509.Certificate{
+			Raw: []byte("abc123"),
+			RawIssuer: []byte("abc123"),
+			SerialNumber: big.NewInt(int64(123)),
+			Extensions: []pkix.Extension{
+				pkix.Extension{
+					Id: EKUOID,
+					Critical: true,
+				},
+			},
+			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			Subject: pkix.Name{
+				CommonName: "TSA-Service",
+			},
+		}
+
+		opts := VerifyOpts{}
+		ts := timestamp.Timestamp{}
+
+		if tc.useOptsCert {
+			opts.TSACertificate = sampleCert
+			opts.CommonName = sampleCert.Subject.CommonName
+		}
+
+		if tc.useTSCert {
+			ts.Certificates = []*x509.Certificate{sampleCert}
+		}
+
+		err := verifyLeafCert(ts, opts)
+
+		if err != nil && tc.expectVerifySuccess {
+			t.Fatalf("expected error to be nil, actual error: %v", err)
+		}
+
+		if err == nil && !tc.expectVerifySuccess {
+			t.Fatal("expected error not to be nil")
+		}
+	}
+}
+
 func TestVerifyEmbeddedLeafCert(t *testing.T) {
 	type test struct {
 		optsCert            *x509.Certificate
