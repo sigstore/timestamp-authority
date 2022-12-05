@@ -149,7 +149,7 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 	}
 
 	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
-		return fmt.Errorf("leaf cert EKU is not set to TimeStamping as required")
+		return fmt.Errorf("leaf certificate EKU is not set to TimeStamping as required")
 	}
 	return nil
 }
