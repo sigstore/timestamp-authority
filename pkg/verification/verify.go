@@ -95,6 +95,7 @@ func verifyLeafCertEKU(cert *x509.Certificate) error {
 	for _, ext := range cert.Extensions {
 		if ext.Id.Equal(EKUOID) {
 			criticalEKU = ext.Critical
+			break
 		}
 	}
 	if !criticalEKU {

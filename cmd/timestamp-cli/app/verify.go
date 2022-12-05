@@ -166,8 +166,8 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 	}
 
-	if len(certs) < 2 {
-		return nil, nil, fmt.Errorf("expected at least two certificates (one root and one intermediate)")
+	if len(certs) == 0 {
+		return nil, nil, fmt.Errorf("expected at least one certificate to represent the root")
 	}
 
 	// intermediate certs are above the root certificate in the PEM file
