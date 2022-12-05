@@ -145,7 +145,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 	certEKULen := len(cert.ExtKeyUsage)
 	if certEKULen != 1 {
-		return fmt.Errorf("cert has %d extended key usages, expected only one", certEKULen)
+		return fmt.Errorf("certificate has %d extended key usages, expected only one", certEKULen)
 	}
 
 	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
