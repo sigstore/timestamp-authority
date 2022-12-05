@@ -36,7 +36,7 @@ var (
 
 // VerifyOpts contains verification options for a RFC3161 timestamp
 type VerifyOpts struct {
-	// OID verifies that the TSR's OID has an expected value. Optional, used when 
+	// OID verifies that the TSR's OID has an expected value. Optional, used when
 	// an alternative OID was passed with a request to the TSA
 	OID asn1.ObjectIdentifier
 	// TSACertificate verifies that the TSR uses the TSACertificate as expected
@@ -45,7 +45,7 @@ type VerifyOpts struct {
 	Intermediates []*x509.Certificate
 	// Roots is the set of trusted root certificates that verifies the TSR's certificate
 	Roots []*x509.Certificate
-	// Nonce verifies that the TSR contains the expected nonce. Optional, used when 
+	// Nonce verifies that the TSR contains the expected nonce. Optional, used when
 	// an optional nonce was passed with a request to the TSA
 	Nonce *big.Int
 	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value

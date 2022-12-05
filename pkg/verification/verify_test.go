@@ -175,42 +175,42 @@ func TestVerifyNonce(t *testing.T) {
 
 func TestVerifyLeafCert(t *testing.T) {
 	type test struct {
-		useOptsCert bool
-		useTSCert bool
+		useOptsCert         bool
+		useTSCert           bool
 		expectVerifySuccess bool
 	}
 
 	tests := []test{
 		{
-			useOptsCert: false,
-			useTSCert: false,
+			useOptsCert:         false,
+			useTSCert:           false,
 			expectVerifySuccess: false,
 		},
 		{
-			useOptsCert: true,
-			useTSCert: false,
+			useOptsCert:         true,
+			useTSCert:           false,
 			expectVerifySuccess: true,
 		},
 		{
-			useOptsCert: false,
-			useTSCert: true,
+			useOptsCert:         false,
+			useTSCert:           true,
 			expectVerifySuccess: true,
 		},
 		{
-			useOptsCert: true,
-			useTSCert: true,
+			useOptsCert:         true,
+			useTSCert:           true,
 			expectVerifySuccess: true,
 		},
 	}
 
 	for _, tc := range tests {
 		sampleCert := &x509.Certificate{
-			Raw: []byte("abc123"),
-			RawIssuer: []byte("abc123"),
+			Raw:          []byte("abc123"),
+			RawIssuer:    []byte("abc123"),
 			SerialNumber: big.NewInt(int64(123)),
 			Extensions: []pkix.Extension{
 				pkix.Extension{
-					Id: EKUOID,
+					Id:       EKUOID,
 					Critical: true,
 				},
 			},
