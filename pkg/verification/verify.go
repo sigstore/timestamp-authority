@@ -36,7 +36,7 @@ var (
 
 // VerifyOpts contains verification options for a RFC3161 timestamp
 type VerifyOpts struct {
-	// verifies that the TSR's OID has an expected value
+	// OID verifies that the TSR's OID has an expected value
 	OID asn1.ObjectIdentifier
 	// verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
