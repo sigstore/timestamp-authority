@@ -40,7 +40,7 @@ type VerifyOpts struct {
 	OID asn1.ObjectIdentifier
 	// TSACertificate verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
-	// verifies the TSR's certificate chain with the root certificates
+	// Intermediates verifies the TSR's certificate. Optional, used for chain building
 	Intermediates []*x509.Certificate
 	// verifies the TSR's certificate chain with the intermediate certificates
 	Roots []*x509.Certificate
