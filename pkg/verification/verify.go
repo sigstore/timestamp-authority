@@ -114,9 +114,6 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 	var leafCert *x509.Certificate
 	if len(ts.Certificates) != 0 {
 		leafCert = ts.Certificates[0]
-		if opts.TSACertificate != nil && !leafCert.Equal(opts.TSACertificate) {
-			return fmt.Errorf("leaf certificate included in the TSR does not match the one provided as a verify option")
-		}
 
 		err := verifyEmbeddedLeafCert(leafCert, opts)
 		if err != nil {
@@ -141,6 +138,13 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
 
+	// verifies that the leaf certificate and any intermediate certificates
+	// have EKU set to only time stamping usage
+	err := verifyLeafAndIntermediatesEKU(leafCert, opts)
+	if err != nil {
+		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
+	}
+
 	return nil
 }
 
@@ -156,22 +160,18 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 	return nil
 }
 
-// Verify the TSA certificate and the intermediates (called "EKU chaining") all
+// Verify the leaf and intermediate certificates (called "EKU chaining") all
 // have the extended key usage set to only time stamping usage
-func verifyLeafAndIntermediatesEKU(opts VerifyOpts) error {
-	if opts.TSACertificate == nil || opts.Intermediates == nil {
-		return nil
-	}
-	leafCert := opts.TSACertificate
+func verifyLeafAndIntermediatesEKU(leafCert *x509.Certificate, opts VerifyOpts) error {
 	err := verifyExtendedKeyUsage(leafCert)
 	if err != nil {
-		return fmt.Errorf("failed to verify EKU on leaf cert: %w", err)
+		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
 	}
 
 	for _, cert := range opts.Intermediates {
 		err := verifyExtendedKeyUsage(cert)
 		if err != nil {
-			return fmt.Errorf("failed to verify EKU on intermediate cert: %w", err)
+			return fmt.Errorf("failed to verify EKU on intermediate certificate: %w", err)
 		}
 	}
 	return nil
