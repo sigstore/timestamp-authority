@@ -38,7 +38,7 @@ var (
 type VerifyOpts struct {
 	// OID verifies that the TSR's OID has an expected value
 	OID asn1.ObjectIdentifier
-	// verifies that the TSR uses the TSACertificate as expected
+	// TSACertificate verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
 	// verifies the TSR's certificate chain with the root certificates
 	Intermediates []*x509.Certificate
