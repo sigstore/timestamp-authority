@@ -34,21 +34,20 @@ var (
 	EKUOID = asn1.ObjectIdentifier{2, 5, 29, 37}
 )
 
-// VerifyOpts contains verification options passed via the CLI vefify command
-// These fields are then used to verify the TSR
+// VerifyOpts contains verification options for a RFC3161 timestamp
 type VerifyOpts struct {
-	// verifies that the TSR's OID has an expected value
+	// OID verifies that the TSR's OID has an expected value
 	OID asn1.ObjectIdentifier
-	// verifies that the TSR uses the TSACertificate as expected
+	// TSACertificate verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
-	// verifies the TSR's certificate chain with the root certificates
+	// Intermediates verifies the TSR's certificate. Optional, used for chain building
 	Intermediates []*x509.Certificate
-	// verifies the TSR's certificate chain with the intermediate certificates
+	// Roots is the set of trusted root certificates that verifies the TSR's certificate
 	Roots []*x509.Certificate
 	// verifies that the TSR contains the expected nonce that was optionally
 	// passed to the TSA when requesting a timestamp
 	Nonce *big.Int
-	// verifies that the leaf certificate subject Common Name an expected value
+	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value
 	CommonName string
 }
 
@@ -109,7 +108,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		return fmt.Errorf("leaf certificate must be present the in TSR or as a verify option")
 	}
 
-	errMsg := "failed to verify leaf cert"
+	errMsg := "failed to verify TSA certificate"
 
 	var leafCert *x509.Certificate
 	if len(ts.Certificates) != 0 {
@@ -147,11 +146,11 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 	certEKULen := len(cert.ExtKeyUsage)
 	if certEKULen != 1 {
-		return fmt.Errorf("cert has %d extended key usages, expected only one", certEKULen)
+		return fmt.Errorf("certificate has %d extended key usages, expected only one", certEKULen)
 	}
 
 	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
-		return fmt.Errorf("leaf cert EKU is not set to TimeStamping as required")
+		return fmt.Errorf("leaf certificate EKU is not set to TimeStamping as required")
 	}
 	return nil
 }
