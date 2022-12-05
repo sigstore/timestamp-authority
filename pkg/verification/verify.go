@@ -42,7 +42,7 @@ type VerifyOpts struct {
 	TSACertificate *x509.Certificate
 	// Intermediates verifies the TSR's certificate. Optional, used for chain building
 	Intermediates []*x509.Certificate
-	// verifies the TSR's certificate chain with the intermediate certificates
+	// Roots is the set of trusted root certificates that verifies the TSR's certificate
 	Roots []*x509.Certificate
 	// verifies that the TSR contains the expected nonce that was optionally
 	// passed to the TSA when requesting a timestamp
