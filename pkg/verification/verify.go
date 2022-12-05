@@ -47,7 +47,7 @@ type VerifyOpts struct {
 	// verifies that the TSR contains the expected nonce that was optionally
 	// passed to the TSA when requesting a timestamp
 	Nonce *big.Int
-	// verifies that the leaf certificate subject Common Name an expected value
+	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value
 	CommonName string
 }
 
