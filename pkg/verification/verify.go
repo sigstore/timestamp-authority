@@ -90,7 +90,7 @@ func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
 }
 
 // Verify the leaf's EKU is set to critical, per RFC 3161 2.3
-func verifyLeafCertEKU(cert *x509.Certificate) error {
+func verifyLeafCertCriticalEKU(cert *x509.Certificate) error {
 	var criticalEKU bool
 	for _, ext := range cert.Extensions {
 		if ext.Id.Equal(EKUOID) {
@@ -123,7 +123,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		leafCert = opts.TSACertificate
 	}
 
-	err := verifyLeafCertEKU(leafCert)
+	err := verifyLeafCertCriticalEKU(leafCert)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
@@ -140,7 +140,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 
 	// verifies that the leaf certificate and any intermediate certificates
 	// have EKU set to only time stamping usage
-	err := verifyLeafAndIntermediatesEKU(leafCert, opts)
+	err = verifyLeafAndIntermediatesTimestampingEKU(leafCert, opts)
 	if err != nil {
 		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
 	}
@@ -162,7 +162,7 @@ func verifyExtendedKeyUsage(cert *x509.Certificate) error {
 
 // Verify the leaf and intermediate certificates (called "EKU chaining") all
 // have the extended key usage set to only time stamping usage
-func verifyLeafAndIntermediatesEKU(leafCert *x509.Certificate, opts VerifyOpts) error {
+func verifyLeafAndIntermediatesTimestampingEKU(leafCert *x509.Certificate, opts VerifyOpts) error {
 	err := verifyExtendedKeyUsage(leafCert)
 	if err != nil {
 		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
@@ -230,11 +230,6 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	}
 
 	err = verifyOID(ts.Policy, opts)
-	if err != nil {
-		return err
-	}
-
-	err = verifyLeafAndIntermediatesEKU(opts)
 	if err != nil {
 		return err
 	}
