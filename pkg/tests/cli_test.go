@@ -80,6 +80,9 @@ func TestVerify(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
+	// this is the common name for the in-memory leaf certificate, copied 
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
 	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
 
@@ -89,7 +92,7 @@ func TestVerify(t *testing.T) {
 	pemPath := writeCertChainToPEMFile(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath, "--nonce", nonce.String(), "--oid", policyOID.String())
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
