@@ -107,7 +107,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 		return fmt.Errorf("leaf certificate must be present the in TSR or as a verify option")
 	}
 
-	errMsg := "failed to verify leaf cert"
+	errMsg := "failed to verify TSA certificate"
 
 	var leafCert *x509.Certificate
 	if len(ts.Certificates) != 0 {
