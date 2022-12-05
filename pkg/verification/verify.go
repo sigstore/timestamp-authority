@@ -36,7 +36,8 @@ var (
 
 // VerifyOpts contains verification options for a RFC3161 timestamp
 type VerifyOpts struct {
-	// OID verifies that the TSR's OID has an expected value
+	// OID verifies that the TSR's OID has an expected value. Optional, used when 
+	// an alternative OID was passed with a request to the TSA
 	OID asn1.ObjectIdentifier
 	// TSACertificate verifies that the TSR uses the TSACertificate as expected
 	TSACertificate *x509.Certificate
@@ -44,8 +45,8 @@ type VerifyOpts struct {
 	Intermediates []*x509.Certificate
 	// Roots is the set of trusted root certificates that verifies the TSR's certificate
 	Roots []*x509.Certificate
-	// verifies that the TSR contains the expected nonce that was optionally
-	// passed to the TSA when requesting a timestamp
+	// Nonce verifies that the TSR contains the expected nonce. Optional, used when 
+	// an optional nonce was passed with a request to the TSA
 	Nonce *big.Int
 	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value
 	CommonName string
@@ -255,10 +256,10 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 
 	// build cert pool containing both intermediate and root certificates
 	certPool := x509.NewCertPool()
-	for _, cert := range(opts.Intermediates) {
+	for _, cert := range opts.Intermediates {
 		certPool.AddCert(cert)
 	}
-	for _, cert := range(opts.Roots) {
+	for _, cert := range opts.Roots {
 		certPool.AddCert(cert)
 	}
 
