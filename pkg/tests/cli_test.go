@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto"
 	"encoding/json"
+	"encoding/asn1"
 	"errors"
 	"io"
 	"math/big"
@@ -41,7 +42,7 @@ const (
 func TestInspect(t *testing.T) {
 	serverURL := createServer(t)
 
-	tsrPath := getTimestamp(t, serverURL, "blob")
+	tsrPath := getTimestamp(t, serverURL, "blob", big.NewInt(0), nil)
 
 	// It should create timestamp successfully.
 	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
@@ -79,13 +80,16 @@ func TestVerify(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	tsrPath := getTimestamp(t, restapiURL, artifactContent)
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID)
 
 	// write the cert chain to a PEM file
 	pemPath := writeCertChainToPEMFile(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemPath, "--nonce", nonce.String(), "--oid", policyOID.String())
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -114,7 +118,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	tsrPath := getTimestamp(t, restapiURL, artifactContent)
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, big.NewInt(0), nil)
 
 	// Create invalid pem
 	invalidPEMPath := filepath.Join(t.TempDir(), "invalid_pem_path")
@@ -178,17 +182,27 @@ func outputContains(t *testing.T, output, sub string) {
 	}
 }
 
-func getTimestamp(t *testing.T, url string, artifactContent string) string {
+func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.Int, policyOID asn1.ObjectIdentifier) string {
 	c, err := client.GetTimestampClient(url)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}
 
 	tsNonce := big.NewInt(1234)
+	if nonce != nil {
+		tsNonce = nonce
+	}
+
+	tsPolicyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	if policyOID != nil {
+		tsPolicyOID = policyOID
+	}
+
 	tsq, err := ts.CreateRequest(strings.NewReader(artifactContent), &ts.RequestOptions{
 		Hash:         crypto.SHA256,
 		Certificates: true,
 		Nonce:        tsNonce,
+		TSAPolicyOID: tsPolicyOID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)
