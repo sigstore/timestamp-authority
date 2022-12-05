@@ -124,7 +124,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 
 	// It should return a message that the PEM is not valid
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", invalidPEMPath)
-	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
+	outputContains(t, out, "failed to parse intermediate and root certs from PEM file")
 }
 
 func runCliErr(t *testing.T, arg ...string) string {

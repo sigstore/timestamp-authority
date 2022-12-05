@@ -75,18 +75,6 @@ func runVerify() (interface{}, error) {
 		return nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
-	certChainPEM := viper.GetString("certificate-chain")
-	pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
-	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
-	}
-
-	certPool := x509.NewCertPool()
-	ok := certPool.AppendCertsFromPEM(pemBytes)
-	if !ok {
-		return nil, fmt.Errorf("error parsing response into Timestamp while appending certs from PEM")
-	}
-
 	artifactPath := viper.GetString("artifact")
 	artifact, err := os.Open(filepath.Clean(artifactPath))
 	if err != nil {
@@ -98,7 +86,7 @@ func runVerify() (interface{}, error) {
 		return verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to created VerifyOpts: %w", err)
 	}
 
-	err = verification.VerifyTimestampResponse(tsrBytes, artifact, certPool, opts)
+	err = verification.VerifyTimestampResponse(tsrBytes, artifact, opts)
 
 	return &verifyCmdOutput{TimestampPath: tsrPath}, err
 }
@@ -125,7 +113,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 	roots, intermediates, err := getRootAndIntermediateCerts()
 	if err != nil {
-		return verification.VerifyOpts{}, fmt.Errorf("failed to parse root and intermediate certs from cert-chain flag: %w", err)
+		return verification.VerifyOpts{}, fmt.Errorf("failed to parse root and intermediate certs from certificate-chain flag: %w", err)
 	}
 	if roots != nil && intermediates != nil {
 		opts.Roots = roots
@@ -163,7 +151,7 @@ func getNonce() (*big.Int, error) {
 }
 
 func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
-	certChainPEM := viper.GetString("cert-chain")
+	certChainPEM := viper.GetString("certificate-chain")
 	if certChainPEM == "" {
 		return nil, nil, nil
 	}

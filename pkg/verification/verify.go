@@ -205,7 +205,7 @@ func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 }
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
-func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509.CertPool, opts VerifyOpts) error {
+func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpts) error {
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
 	ts, err := timestamp.ParseResponse(tsrBytes)
@@ -218,7 +218,7 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 	}
 
 	// verify the timestamp response signature using the provided certificate pool
-	err = verifyTSRWithChain(ts, certPool)
+	err = verifyTSRWithChain(ts, opts)
 	if err != nil {
 		return err
 	}
@@ -247,10 +247,19 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, certPool *x509
 	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
 }
 
-func verifyTSRWithChain(ts *timestamp.Timestamp, certPool *x509.CertPool) error {
+func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
 		return fmt.Errorf("error parsing hashed message: %w", err)
+	}
+
+	// build cert pool containing both intermediate and root certificates
+	certPool := x509.NewCertPool()
+	for _, cert := range(opts.Intermediates) {
+		certPool.AddCert(cert)
+	}
+	for _, cert := range(opts.Roots) {
+		certPool.AddCert(cert)
 	}
 
 	err = p7Message.VerifyWithChain(certPool)

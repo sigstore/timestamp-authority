@@ -27,7 +27,7 @@ To fetch a timestamp with the provided `timestamp-cli`:
 1. Create test blob to sign: `echo "myblob" > myblob`
 1. Build client: `make timestamp-cli`
 1. Fetch timestamp: `./bin/timestamp-cli --timestamp_server http://localhost:3000 timestamp --hash sha256 --artifact myblob --out response.tsr`
-1. Verify timestamp: `./bin/timestamp-cli verify --timestamp response.tsr --artifact "myblob" --cert-chain ts_chain.pem`
+1. Verify timestamp: `./bin/timestamp-cli verify --timestamp response.tsr --artifact "myblob" --certificate-chain ts_chain.pem`
 1. Inspect timestamp: `./bin/timestamp-cli inspect --timestamp response.tsr --format json`
 
 To fetch a timestamp with `openssl` and `curl`:

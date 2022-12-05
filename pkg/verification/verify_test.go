@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -98,22 +99,28 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}
 
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(chain.Payload))
-		if !ok {
-			t.Fatalf("error parsing response into Timestamp while appending certs from PEM")
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(chain.Payload))
+		if err != nil {
+			t.Fatal("unexpected error while parsing test certificates from PEM file")
 		}
 
-		opts := VerifyOpts{}
+		if len(certs) != 3 {
+			t.Fatalf("expected three certificates (one leaf, one intermediate, and one root), received %d", len(certs))
+		}
 
-		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool, opts); err != nil {
+		opts := VerifyOpts{
+			Intermediates: certs[1:2],
+			Roots: certs[2:],
+		}
+
+		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts); err != nil {
 			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
 		}
 
 		if tc.forceError {
 			// Force hashed message error mismatch
 			msg := tc.message + "XXX"
-			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), certPool, opts)
+			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), opts)
 			if err == nil {
 				t.Error("expected error message when verifying the timestamp response")
 			}
