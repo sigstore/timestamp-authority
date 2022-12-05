@@ -34,7 +34,7 @@ var (
 	EKUOID = asn1.ObjectIdentifier{2, 5, 29, 37}
 )
 
-// VerifyOpts contains verification options passed via the CLI vefify command
+// VerifyOpts contains verification options for a RFC3161 timestamp
 // These fields are then used to verify the TSR
 type VerifyOpts struct {
 	// verifies that the TSR's OID has an expected value
