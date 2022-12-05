@@ -110,7 +110,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 
 		opts := VerifyOpts{
 			Intermediates: certs[1:2],
-			Roots: certs[2:],
+			Roots:         certs[2:],
 		}
 
 		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts); err != nil {
