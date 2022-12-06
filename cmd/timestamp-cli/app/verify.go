@@ -98,9 +98,7 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 	if err != nil {
 		return verification.VerifyOpts{}, fmt.Errorf("failed to parse value from oid flag: %w", err)
 	}
-	if oid != nil {
-		opts.OID = oid
-	}
+	opts.OID = oid
 
 	certPathFlagVal := viper.GetString("certificate")
 	if certPathFlagVal != "" {
@@ -115,23 +113,17 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 	if err != nil {
 		return verification.VerifyOpts{}, fmt.Errorf("failed to parse root and intermediate certs from certificate-chain flag: %w", err)
 	}
-	if roots != nil && intermediates != nil {
-		opts.Roots = roots
-		opts.Intermediates = intermediates
-	}
+	opts.Roots = roots
+	opts.Intermediates = intermediates
 
 	nonce, err := getNonce()
 	if err != nil {
 		return verification.VerifyOpts{}, fmt.Errorf("failed to parse value from nonce flag: %w", err)
 	}
-	if nonce != nil {
-		opts.Nonce = nonce
-	}
+	opts.Nonce = nonce
 
 	commonNameFlagVal := viper.GetString("common-name")
-	if commonNameFlagVal != "" {
-		opts.CommonName = commonNameFlagVal
-	}
+	opts.CommonName = commonNameFlagVal
 
 	return opts, nil
 }
