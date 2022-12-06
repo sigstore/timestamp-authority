@@ -39,7 +39,7 @@ type VerifyOpts struct {
 	// OID verifies that the TSR's OID has an expected value. Optional, used when
 	// an alternative OID was passed with a request to the TSA
 	OID asn1.ObjectIdentifier
-	// TSACertificate verifies that the TSR uses the TSACertificate as expected
+	// TSACertificate verifies that the TSR uses the TSACertificate as expected. Optional if the TSR contains the TSA certificate
 	TSACertificate *x509.Certificate
 	// Intermediates verifies the TSR's certificate. Optional, used for chain building
 	Intermediates []*x509.Certificate
@@ -48,7 +48,7 @@ type VerifyOpts struct {
 	// Nonce verifies that the TSR contains the expected nonce. Optional, used when
 	// an optional nonce was passed with a request to the TSA
 	Nonce *big.Int
-	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value
+	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value. Optional
 	CommonName string
 }
 
@@ -69,7 +69,7 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	return nil
 }
 
-// Verify the leaf certificate's subject Common Name name matches a provided Common Name
+// Verify the leaf certificate's subject Common Name matches a provided Common Name
 func verifySubjectCommonName(cert *x509.Certificate, opts VerifyOpts) error {
 	if opts.CommonName == "" {
 		return nil
