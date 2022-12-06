@@ -18,8 +18,8 @@ package tests
 import (
 	"bytes"
 	"crypto"
-	"encoding/json"
 	"encoding/asn1"
+	"encoding/json"
 	"errors"
 	"io"
 	"math/big"
@@ -80,7 +80,7 @@ func TestVerify(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	// this is the common name for the in-memory leaf certificate, copied 
+	// this is the common name for the in-memory leaf certificate, copied
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
@@ -101,13 +101,13 @@ func TestVerifyPassLeafCertificate(t *testing.T) {
 	// this skip statement will be removed after
 	// https://github.com/haydentherapper/pkcs7/pull/2 is merged
 	t.Skip("skip for now until the pkcs7 package is updated")
-	
+
 	restapiURL := createServer(t)
 
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	// this is the common name for the in-memory leaf certificate, copied 
+	// this is the common name for the in-memory leaf certificate, copied
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
