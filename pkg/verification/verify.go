@@ -69,7 +69,7 @@ func verifyESSCertID(tsaCert *x509.Certificate, opts VerifyOpts) error {
 	return nil
 }
 
-// Verify the leaf certificate's subject Common Name name matches a provided Common Name
+// Verify the leaf certificate's subject Common Name matches a provided Common Name
 func verifySubjectCommonName(cert *x509.Certificate, opts VerifyOpts) error {
 	if opts.CommonName == "" {
 		return nil
