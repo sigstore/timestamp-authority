@@ -48,7 +48,7 @@ type VerifyOpts struct {
 	// Nonce verifies that the TSR contains the expected nonce. Optional, used when
 	// an optional nonce was passed with a request to the TSA
 	Nonce *big.Int
-	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value
+	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value. Optional
 	CommonName string
 }
 
