@@ -39,7 +39,7 @@ type VerifyOpts struct {
 	// OID verifies that the TSR's OID has an expected value. Optional, used when
 	// an alternative OID was passed with a request to the TSA
 	OID asn1.ObjectIdentifier
-	// TSACertificate verifies that the TSR uses the TSACertificate as expected
+	// TSACertificate verifies that the TSR uses the TSACertificate as expected. Optional if the TSR contains the TSA certificate
 	TSACertificate *x509.Certificate
 	// Intermediates verifies the TSR's certificate. Optional, used for chain building
 	Intermediates []*x509.Certificate
