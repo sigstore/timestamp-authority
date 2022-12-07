@@ -204,17 +204,17 @@ func TestVerifyLeafCert(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		criticalExtension := pkix.Extension{
+			Id:       EKUOID,
+			Critical: true,
+		}
+
 		sampleCert := &x509.Certificate{
 			Raw:          []byte("abc123"),
 			RawIssuer:    []byte("abc123"),
 			SerialNumber: big.NewInt(int64(123)),
-			Extensions: []pkix.Extension{
-				pkix.Extension{
-					Id:       EKUOID,
-					Critical: true,
-				},
-			},
-			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			Extensions:   []pkix.Extension{criticalExtension},
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
 			Subject: pkix.Name{
 				CommonName: "TSA-Service",
 			},
