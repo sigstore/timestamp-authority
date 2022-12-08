@@ -34,7 +34,7 @@ import (
 )
 
 type verifyCmdOutput struct {
-	TimestampPath string
+	TimestampPath   string
 	ParsedTimestamp timestamp.Timestamp
 }
 
