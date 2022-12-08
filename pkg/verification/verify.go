@@ -258,12 +258,12 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		certPool.AddCert(cert)
 	}
 
-	// if the PCKS7 object does not have any certificates set in the 
-	// Certificates field, the VerifyWithChain method will because it will be 
-	// unable to find a leaf certificate associated with a signer. Since the 
-	// leaf certificate issuer and serial number information is already part of 
-	// the PKCS7 object, adding the leaf certificate to the Certificates field 
-	// will allow verification to pass 
+	// if the PCKS7 object does not have any certificates set in the
+	// Certificates field, the VerifyWithChain method will because it will be
+	// unable to find a leaf certificate associated with a signer. Since the
+	// leaf certificate issuer and serial number information is already part of
+	// the PKCS7 object, adding the leaf certificate to the Certificates field
+	// will allow verification to pass
 	if p7Message.Certificates == nil {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
