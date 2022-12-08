@@ -206,41 +206,47 @@ func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 }
 
 // VerifyTimestampResponse the timestamp response using a timestamp certificate chain.
-func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpts) error {
+func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpts) (*timestamp.Timestamp, error) {
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
 	ts, err := timestamp.ParseResponse(tsrBytes)
 	if err != nil {
 		pe := timestamp.ParseError("")
 		if errors.As(err, &pe) {
-			return fmt.Errorf("timestamp response is not valid: %w", err)
+			return nil, fmt.Errorf("timestamp response is not valid: %w", err)
 		}
-		return fmt.Errorf("error parsing response into Timestamp: %w", err)
+		return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 
 	// verify the timestamp response signature using the provided certificate pool
 	err = verifyTSRWithChain(ts, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = verifyNonce(ts.Nonce, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = verifyOID(ts.Policy, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = verifyLeafCert(*ts, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// verify the hash in the timestamp response matches the artifact hash
-	return verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
+	err = verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
+	if err != nil {
+		return nil, err
+	}
+
+	// if the parsed timestamp is verified, return the timestamp
+	return ts, nil
 }
 
 func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
