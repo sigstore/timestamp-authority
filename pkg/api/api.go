@@ -69,7 +69,7 @@ func NewAPI() (*API, error) {
 		}
 	} else {
 		// Generate an in-memory TSA certificate chain
-		certChain, err = signer.NewTimestampingCertWithChain(ctx, tsaSigner)
+		certChain, err = signer.NewTimestampingCertWithChain(tsaSigner)
 		if err != nil {
 			return nil, errors.Wrap(err, "generating timestamping cert chain")
 		}
