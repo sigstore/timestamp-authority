@@ -19,13 +19,17 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
 	"io"
+	"math/big"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/digitorus/timestamp"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/server"
@@ -95,26 +99,366 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}
 
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(chain.Payload))
-		if !ok {
-			t.Fatalf("error parsing response into Timestamp while appending certs from PEM")
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(chain.Payload))
+		if err != nil {
+			t.Fatal("unexpected error while parsing test certificates from PEM file")
 		}
 
-		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), certPool); err != nil {
+		if len(certs) != 3 {
+			t.Fatalf("expected three certificates (one leaf, one intermediate, and one root), received %d", len(certs))
+		}
+
+		opts := VerifyOpts{
+			Intermediates: certs[1:2],
+			Roots:         certs[2:],
+		}
+
+		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts); err != nil {
 			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
 		}
 
 		if tc.forceError {
 			// Force hashed message error mismatch
 			msg := tc.message + "XXX"
-			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), certPool)
+			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), opts)
 			if err == nil {
 				t.Error("expected error message when verifying the timestamp response")
 			}
 			if err != nil && err.Error() != tc.expectedErrorMessage {
 				t.Errorf("expected error message when verifying the timestamp response: %s got %s", tc.expectedErrorMessage, err.Error())
 			}
+		}
+	}
+}
+
+func TestVerifyNonce(t *testing.T) {
+	type test struct {
+		nonceStr            string
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			nonceStr:            "312432523523431424141",
+			expectVerifySuccess: true,
+		},
+		{
+			nonceStr:            "9874325235234314241230",
+			expectVerifySuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		optsBigIntStr := "312432523523431424141"
+		optsNonce, ok := new(big.Int).SetString(optsBigIntStr, 10)
+		if !ok {
+			t.Fatalf("unexpected failure to create big int from string: %s", optsBigIntStr)
+		}
+		opts := VerifyOpts{
+			Nonce: optsNonce,
+		}
+
+		providedNonce, ok := new(big.Int).SetString(tc.nonceStr, 10)
+		if !ok {
+			t.Fatalf("unexpected failure to create big int from string: %s", tc.nonceStr)
+		}
+
+		err := verifyNonce(providedNonce, opts)
+		if tc.expectVerifySuccess && err != nil {
+			t.Errorf("expected verification to fail \n provided nonce %s should not match opts nonce %s", tc.nonceStr, optsBigIntStr)
+		}
+		if !tc.expectVerifySuccess && err == nil {
+			t.Errorf("expected verification to pass \n provided nonce %s should match opts nonce %s", tc.nonceStr, optsBigIntStr)
+		}
+	}
+}
+
+func TestVerifyLeafCert(t *testing.T) {
+	type test struct {
+		useOptsCert         bool
+		useTSCert           bool
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			useOptsCert:         false,
+			useTSCert:           false,
+			expectVerifySuccess: false,
+		},
+		{
+			useOptsCert:         true,
+			useTSCert:           false,
+			expectVerifySuccess: true,
+		},
+		{
+			useOptsCert:         false,
+			useTSCert:           true,
+			expectVerifySuccess: true,
+		},
+		{
+			useOptsCert:         true,
+			useTSCert:           true,
+			expectVerifySuccess: true,
+		},
+	}
+
+	for _, tc := range tests {
+		criticalExtension := pkix.Extension{
+			Id:       EKUOID,
+			Critical: true,
+		}
+
+		sampleCert := &x509.Certificate{
+			Raw:          []byte("abc123"),
+			RawIssuer:    []byte("abc123"),
+			SerialNumber: big.NewInt(int64(123)),
+			Extensions:   []pkix.Extension{criticalExtension},
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			Subject: pkix.Name{
+				CommonName: "TSA-Service",
+			},
+		}
+
+		opts := VerifyOpts{}
+		ts := timestamp.Timestamp{}
+
+		if tc.useOptsCert {
+			opts.TSACertificate = sampleCert
+			opts.CommonName = sampleCert.Subject.CommonName
+		}
+
+		if tc.useTSCert {
+			ts.Certificates = []*x509.Certificate{sampleCert}
+		}
+
+		err := verifyLeafCert(ts, opts)
+
+		if err != nil && tc.expectVerifySuccess {
+			t.Fatalf("expected error to be nil, actual error: %v", err)
+		}
+
+		if err == nil && !tc.expectVerifySuccess {
+			t.Fatal("expected error not to be nil")
+		}
+	}
+}
+
+func TestVerifyEmbeddedLeafCert(t *testing.T) {
+	type test struct {
+		optsCert            *x509.Certificate
+		providedCert        *x509.Certificate
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			optsCert: nil,
+			providedCert: &x509.Certificate{
+				Raw: []byte("abc123"),
+			},
+			expectVerifySuccess: true,
+		},
+		{
+			optsCert: &x509.Certificate{
+				Raw: []byte("abc123"),
+			},
+			providedCert: &x509.Certificate{
+				Raw: []byte("abc123"),
+			},
+			expectVerifySuccess: true,
+		},
+		{
+			optsCert: &x509.Certificate{
+				Raw: []byte("abc123"),
+			},
+			providedCert: &x509.Certificate{
+				Raw: []byte("def456"),
+			},
+			expectVerifySuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		opts := VerifyOpts{
+			TSACertificate: tc.optsCert,
+		}
+
+		err := verifyEmbeddedLeafCert(tc.providedCert, opts)
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail: provided cert unexpectedly matches opts cert")
+		}
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verification to pass: provided cert does not match opts cert")
+		}
+	}
+}
+
+func TestVerifySubjectCommonName(t *testing.T) {
+	type test struct {
+		optsCommonName      string
+		providedCommonName  string
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			optsCommonName:      "Sigstore TSA",
+			providedCommonName:  "Sigstore TSA",
+			expectVerifySuccess: true,
+		},
+		{
+			optsCommonName:      "Sigstore TSA",
+			providedCommonName:  "SomeOtherStore",
+			expectVerifySuccess: false,
+		},
+	}
+	for _, tc := range tests {
+		opts := VerifyOpts{
+			CommonName: tc.optsCommonName,
+		}
+
+		cert := x509.Certificate{
+			Subject: pkix.Name{
+				CommonName:   tc.providedCommonName,
+				Organization: []string{"Sigstore"},
+			},
+		}
+		err := verifySubjectCommonName(&cert, opts)
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verification to pass \n provided common name %s should match opts common name %s", tc.providedCommonName, tc.optsCommonName)
+		}
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail \n provided common name %s should not match opts common name %s", tc.providedCommonName, tc.optsCommonName)
+		}
+	}
+}
+
+func TestVerifyESSCertID(t *testing.T) {
+	type test struct {
+		optsIssuer           pkix.Name
+		optsSerialNumber     string
+		providedIssuer       pkix.Name
+		providedSerialNumber string
+		expectVerifySuccess  bool
+	}
+
+	tests := []test{
+		{
+			optsIssuer: pkix.Name{
+				CommonName:   "Sigstore CA",
+				Organization: []string{"Sigstore"},
+			},
+			optsSerialNumber: "312432523523431424141",
+			providedIssuer: pkix.Name{
+				CommonName:   "Sigstore CA",
+				Organization: []string{"Sigstore"},
+			},
+			providedSerialNumber: "312432523523431424141",
+			expectVerifySuccess:  true,
+		},
+		{
+			optsIssuer: pkix.Name{
+				CommonName:   "Sigstore CA",
+				Organization: []string{"Sigstore"},
+			},
+			optsSerialNumber: "312432523523431424141",
+			providedIssuer: pkix.Name{
+				CommonName:   "Sigstore CA",
+				Organization: []string{"Sigstore"},
+			},
+			providedSerialNumber: "4567523523431424141",
+			expectVerifySuccess:  false,
+		},
+		{
+			optsIssuer: pkix.Name{
+				CommonName:   "Sigstore CA",
+				Organization: []string{"Sigstore"},
+			},
+			optsSerialNumber: "312432523523431424141",
+			providedIssuer: pkix.Name{
+				CommonName:   "Another CA",
+				Organization: []string{"Sigstore"},
+			},
+			providedSerialNumber: "312432523523431424141",
+			expectVerifySuccess:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		optsSerialNumber, ok := new(big.Int).SetString(tc.optsSerialNumber, 10)
+		if !ok {
+			t.Fatalf("unexpected failure to create big int from string: %s", tc.optsSerialNumber)
+		}
+
+		optsRawIssuer, err := json.Marshal(tc.optsIssuer)
+		if err != nil {
+			t.Fatalf("unexpected failure while marshalling issuer object")
+		}
+		opts := VerifyOpts{
+			TSACertificate: &x509.Certificate{
+				Issuer:       tc.optsIssuer,
+				RawIssuer:    optsRawIssuer,
+				SerialNumber: optsSerialNumber,
+			},
+		}
+
+		providedSerialNumber, ok := new(big.Int).SetString(tc.providedSerialNumber, 10)
+		if !ok {
+			t.Fatalf("unexpected failure to create big int from string: %s", tc.providedSerialNumber)
+		}
+
+		providedRawIssuer, err := json.Marshal(tc.providedIssuer)
+		if err != nil {
+			t.Fatalf("unexpected failure while marshalling issuer object")
+		}
+		cert := x509.Certificate{
+			Issuer:       tc.providedIssuer,
+			RawIssuer:    providedRawIssuer,
+			SerialNumber: providedSerialNumber,
+		}
+		err = verifyESSCertID(&cert, opts)
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verifcation to pass: %s", err.Error())
+		}
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verifcation to fail")
+		}
+	}
+}
+
+func TestVerifyExtendedKeyUsage(t *testing.T) {
+	type test struct {
+		eku                 []x509.ExtKeyUsage
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			expectVerifySuccess: true,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping, x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: false,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		cert := x509.Certificate{
+			ExtKeyUsage: tc.eku,
+		}
+
+		err := verifyExtendedKeyUsage(&cert)
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verifyExtendedKeyUsage to return nil error")
+		}
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail")
 		}
 	}
 }

@@ -18,6 +18,7 @@ package tests
 import (
 	"bytes"
 	"crypto"
+	"encoding/asn1"
 	"encoding/json"
 	"errors"
 	"io"
@@ -41,7 +42,7 @@ const (
 func TestInspect(t *testing.T) {
 	serverURL := createServer(t)
 
-	tsrPath := getTimestamp(t, serverURL, "blob")
+	tsrPath := getTimestamp(t, serverURL, "blob", big.NewInt(0), nil, true)
 
 	// It should create timestamp successfully.
 	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
@@ -79,20 +80,50 @@ func TestVerify(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	tsrPath := getTimestamp(t, restapiURL, artifactContent)
+	// this is the common name for the in-memory leaf certificate, copied
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsrContainsCerts := true
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
 
 	// write the cert chain to a PEM file
-	pemPath := getCertChainPEM(t, restapiURL)
+	_, certChainPemPath := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", pemPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", certChainPemPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	outputContains(t, out, "Successfully verified timestamp")
+}
+
+func TestVerifyPassLeafCertificate(t *testing.T) {
+	restapiURL := createServer(t)
+
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
+
+	// this is the common name for the in-memory leaf certificate, copied
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsrContainsCerts := false
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
+
+	// write the cert chain to a PEM file
+	leafCertPemPath, certChainPemPath := writeCertChainToPEMFiles(t, restapiURL)
+
+	// It should verify timestamp successfully.
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", certChainPemPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", leafCertPemPath)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
 func TestVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
-	pemPath := getCertChainPEM(t, restapiURL)
+	_, pemPath := writeCertChainToPEMFiles(t, restapiURL)
 
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
@@ -104,7 +135,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--cert-chain", pemPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemPath)
 	outputContains(t, out, "error parsing response into Timestamp")
 }
 
@@ -114,17 +145,17 @@ func TestVerify_InvalidPEM(t *testing.T) {
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
 
-	tsrPath := getTimestamp(t, restapiURL, artifactContent)
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, big.NewInt(0), nil, true)
 
 	// Create invalid pem
-	invalidPEMPath := filepath.Join(t.TempDir(), "ts_chain.pem")
+	invalidPEMPath := filepath.Join(t.TempDir(), "invalid_pem_path")
 	if err := os.WriteFile(invalidPEMPath, []byte("invalid PEM"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--cert-chain", invalidPEMPath)
-	outputContains(t, out, "error parsing response into Timestamp while appending certs from PEM")
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", invalidPEMPath)
+	outputContains(t, out, "failed to parse intermediate and root certs from PEM file")
 }
 
 func runCliErr(t *testing.T, arg ...string) string {
@@ -178,17 +209,27 @@ func outputContains(t *testing.T, output, sub string) {
 	}
 }
 
-func getTimestamp(t *testing.T, url string, artifactContent string) string {
+func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.Int, policyOID asn1.ObjectIdentifier, tsrContainsCerts bool) string {
 	c, err := client.GetTimestampClient(url)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}
 
 	tsNonce := big.NewInt(1234)
+	if nonce != nil {
+		tsNonce = nonce
+	}
+
+	tsPolicyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	if policyOID != nil {
+		tsPolicyOID = policyOID
+	}
+
 	tsq, err := ts.CreateRequest(strings.NewReader(artifactContent), &ts.RequestOptions{
 		Hash:         crypto.SHA256,
-		Certificates: true,
+		Certificates: tsrContainsCerts,
 		Nonce:        tsNonce,
+		TSAPolicyOID: tsPolicyOID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)
@@ -211,8 +252,10 @@ func getTimestamp(t *testing.T, url string, artifactContent string) string {
 	return path
 }
 
-// getCertChainPEM returns the CA certificates to verify a signed timestamp
-func getCertChainPEM(t *testing.T, restapiURL string) string {
+// getCertChainPEM returns the path of a pem file containaing
+// the leaf certificate and the path of a pem file containing the
+// root and intermediate certificates. Used to verify a signed timestamp
+func writeCertChainToPEMFiles(t *testing.T, restapiURL string) (string, string) {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
@@ -223,8 +266,9 @@ func getCertChainPEM(t *testing.T, restapiURL string) string {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
 
-	path := filepath.Join(t.TempDir(), "artifact")
-	file, err := os.Create(path)
+	// create PEM file containing intermediate and root certificates
+	certChainPath := filepath.Join(t.TempDir(), "ts_certchain.pem")
+	file, err := os.Create(certChainPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +287,23 @@ func getCertChainPEM(t *testing.T, restapiURL string) string {
 	reader := bytes.NewReader(caCertsPEM)
 	file.ReadFrom(reader)
 
-	return path
+	// create PEM file containing the leaf certificate
+	leafCertPath := filepath.Join(t.TempDir(), "ts_leafcert.pem")
+	file, err = os.Create(leafCertPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	leafCertPEM, err := cryptoutils.MarshalCertificatesToPEM(certs[0:1])
+	if err != nil {
+		t.Fatalf("unexpected error marshalling leaf cert: %v", err)
+	}
+
+	reader = bytes.NewReader(leafCertPEM)
+	file.ReadFrom(reader)
+
+	return leafCertPath, certChainPath
 }
 
 // Create a random artifact to sign
