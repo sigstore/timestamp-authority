@@ -15,7 +15,6 @@
 package signer
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -32,7 +31,7 @@ import (
 )
 
 // NewTimestampingCertWithChain generates an in-memory certificate chain.
-func NewTimestampingCertWithChain(ctx context.Context, signer crypto.Signer) ([]*x509.Certificate, error) {
+func NewTimestampingCertWithChain(signer crypto.Signer) ([]*x509.Certificate, error) {
 	now := time.Now()
 
 	// generate root

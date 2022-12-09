@@ -43,7 +43,7 @@ func TestNewTimestampingCertWithChain(t *testing.T) {
 		t.Fatalf("signing payload: %v", err)
 	}
 	// create and verify the certificate chain
-	certChain, err := NewTimestampingCertWithChain(ctx, signer)
+	certChain, err := NewTimestampingCertWithChain(signer)
 	if err != nil {
 		t.Fatalf("generating timestamping cert: %v", err)
 	}
