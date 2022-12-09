@@ -140,7 +140,7 @@ func TestVerify_AllCertFlagsIncluded(t *testing.T) {
 
 	// It should fail to verify.
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
-	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificate and --intermediate-certificates flags")
+	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
 }
 
 func TestVerify_NoCertFlagsIncluded(t *testing.T) {
@@ -160,7 +160,7 @@ func TestVerify_NoCertFlagsIncluded(t *testing.T) {
 
 	// It should fail to verify.
 	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
-	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificate and --intermediate-certificates flags")
+	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
 }
 
 func TestVerify_PassLeafCertificate(t *testing.T) {
