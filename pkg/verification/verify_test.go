@@ -18,8 +18,11 @@ package verification
 import (
 	"bytes"
 	"crypto"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/json"
 	"io"
 	"math/big"
@@ -30,9 +33,11 @@ import (
 
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/sigstore/timestamp-authority/pkg/signer"
 	"github.com/spf13/viper"
 )
 
@@ -471,8 +476,65 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 }
 
 func TestVerifyTSRWithChain_Failure(t *testing.T) {
-	ts := timestamp.Timestamp{}
-	opts := VerifyOpts{}
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Errorf("expected NewECDSASignerVerifier to return a signer verifier")
+	}
 
-	err := verifyTSRWithChain()
+	certChain, err := signer.NewTimestampingCertWithChain(sv)
+	if err != nil {
+		t.Errorf("expected NewTimestampingCertWithChain to return a certificate chain")
+	}
+	if len(certChain) != 3 {
+		t.Errorf("expected the certificate chain to have three certificates")
+	}
+
+	tsq, err := timestamp.CreateRequest(strings.NewReader("TestRequest"), &timestamp.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+	})
+	if err != nil {
+		t.Errorf("unexpectedly failed to create timestamp request: %v", err)
+	}
+
+	req, err := timestamp.ParseRequest([]byte(tsq))
+	if err != nil {
+		t.Errorf("unexpectedly failed to parse timestamp request: %v", err)
+	}
+
+	tsTemplate := timestamp.Timestamp{
+		HashAlgorithm:     req.HashAlgorithm,
+		HashedMessage:     req.HashedMessage,
+		Time:              time.Now(),
+		Policy:            asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2},
+		Ordering:          false,
+		Qualified:         false,
+		AddTSACertificate: req.Certificates,
+		ExtraExtensions:   req.Extensions,
+	}
+
+	resp, err := tsTemplate.CreateResponse(certChain[0], sv)
+	if err != nil {
+		t.Errorf("unexpectedly failed to create timestamp response: %v", err)
+	}
+
+	ts, err := timestamp.ParseResponse(resp)
+	if err != nil {
+		t.Errorf("unexpectedly failed to parse timestamp response: %v", err)
+	}
+
+	// invalidate the intermediate certificate
+	intermediate := certChain[1]
+	intermediate.RawIssuer = nil
+	intermediate.Issuer = pkix.Name{}
+
+	opts := VerifyOpts{
+		Roots:         []*x509.Certificate{certChain[2]},
+		Intermediates: []*x509.Certificate{intermediate},
+	}
+
+	err = verifyTSRWithChain(ts, opts)
+	if err == nil {
+		t.Error("expected verifyTSRWithChain to fail verifying the chain")
+	}
 }
