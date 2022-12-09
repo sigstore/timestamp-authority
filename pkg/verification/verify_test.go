@@ -24,6 +24,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http/httptest"
@@ -475,31 +476,35 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 	}
 }
 
-func TestVerifyTSRWithChain_Failure(t *testing.T) {
+func createCertChain() ([]*x509.Certificate, *signature.ECDSASignerVerifier, error) {
 	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 	if err != nil {
-		t.Errorf("expected NewECDSASignerVerifier to return a signer verifier")
+		return nil, nil, fmt.Errorf("expected NewECDSASignerVerifier to return a signer verifier: %v", err)
 	}
 
 	certChain, err := signer.NewTimestampingCertWithChain(sv)
 	if err != nil {
-		t.Errorf("expected NewTimestampingCertWithChain to return a certificate chain")
+		return nil, nil, fmt.Errorf("expected NewTimestampingCertWithChain to return a certificate chain: %v", err)
 	}
 	if len(certChain) != 3 {
-		t.Errorf("expected the certificate chain to have three certificates")
+		return nil, nil, fmt.Errorf("expected the certificate chain to have three certificates: %v", err)
 	}
 
+	return certChain, sv, nil
+}
+
+func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASignerVerifier) (*timestamp.Timestamp, error) {
 	tsq, err := timestamp.CreateRequest(strings.NewReader("TestRequest"), &timestamp.RequestOptions{
 		Hash:         crypto.SHA256,
 		Certificates: true,
 	})
 	if err != nil {
-		t.Errorf("unexpectedly failed to create timestamp request: %v", err)
+		return nil, fmt.Errorf("unexpectedly failed to create timestamp request: %v", err)
 	}
 
 	req, err := timestamp.ParseRequest([]byte(tsq))
 	if err != nil {
-		t.Errorf("unexpectedly failed to parse timestamp request: %v", err)
+		return nil, fmt.Errorf("unexpectedly failed to parse timestamp request: %v", err)
 	}
 
 	tsTemplate := timestamp.Timestamp{
@@ -515,12 +520,48 @@ func TestVerifyTSRWithChain_Failure(t *testing.T) {
 
 	resp, err := tsTemplate.CreateResponse(certChain[0], sv)
 	if err != nil {
-		t.Errorf("unexpectedly failed to create timestamp response: %v", err)
+		return nil, fmt.Errorf("unexpectedly failed to create timestamp response: %v", err)
 	}
 
 	ts, err := timestamp.ParseResponse(resp)
 	if err != nil {
-		t.Errorf("unexpectedly failed to parse timestamp response: %v", err)
+		return nil, fmt.Errorf("unexpectedly failed to parse timestamp response: %v", err)
+	}
+
+	return ts, nil
+}
+
+func TestVerifyTSRWithChain(t *testing.T) {
+	certChain, sv, err := createCertChain()
+	if err != nil {
+		t.Errorf("failed to create certificate chain: %v", err)
+	}
+
+	ts, err := createSignedTimestamp(certChain, sv)
+	if err != nil {
+		t.Errorf("failed to create signed certificate: %v", err)
+	}
+
+	opts := VerifyOpts{
+		Roots:         []*x509.Certificate{certChain[2]},
+		Intermediates: []*x509.Certificate{certChain[1]},
+	}
+
+	err = verifyTSRWithChain(ts, opts)
+	if err != nil {
+		t.Error("expected verifyTSRWithChain to successfully verify certificate chain")
+	}
+}
+
+func TestVerifyTSRWithChain_Failure(t *testing.T) {
+	certChain, sv, err := createCertChain()
+	if err != nil {
+		t.Errorf("failed to create certificate chain: %v", err)
+	}
+
+	ts, err := createSignedTimestamp(certChain, sv)
+	if err != nil {
+		t.Errorf("failed to create signed certificate: %v", err)
 	}
 
 	// invalidate the intermediate certificate
