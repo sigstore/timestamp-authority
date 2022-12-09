@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
 	"github.com/sigstore/timestamp-authority/pkg/log"
@@ -33,7 +34,8 @@ import (
 )
 
 type verifyCmdOutput struct {
-	TimestampPath string
+	TimestampPath   string
+	ParsedTimestamp timestamp.Timestamp
 }
 
 func (v *verifyCmdOutput) String() string {
@@ -86,9 +88,12 @@ func runVerify() (interface{}, error) {
 		return verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to created VerifyOpts: %w", err)
 	}
 
-	err = verification.VerifyTimestampResponse(tsrBytes, artifact, opts)
+	ts, err := verification.VerifyTimestampResponse(tsrBytes, artifact, opts)
+	if err != nil {
+		return verifyCmdOutput{TimestampPath: tsrPath}, fmt.Errorf("failed to verify timestamp: %w", err)
+	}
 
-	return &verifyCmdOutput{TimestampPath: tsrPath}, err
+	return &verifyCmdOutput{TimestampPath: tsrPath, ParsedTimestamp: *ts}, nil
 }
 
 func newVerifyOpts() (verification.VerifyOpts, error) {

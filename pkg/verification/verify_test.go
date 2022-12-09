@@ -113,19 +113,26 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			Roots:         certs[2:],
 		}
 
-		if err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts); err != nil {
-			t.Errorf("verifyHashedMessages failed comparing hashes: %v", err)
+		ts, err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts)
+		if err != nil {
+			t.Errorf("VerifyTimestampResponse failed to verify the timestamp: %v", err)
+		}
+		if ts == nil {
+			t.Error("VerifyTimestampResponse did not return the parsed timestamp as expected")
 		}
 
 		if tc.forceError {
 			// Force hashed message error mismatch
 			msg := tc.message + "XXX"
-			err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), opts)
+			ts, err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(msg), opts)
 			if err == nil {
 				t.Error("expected error message when verifying the timestamp response")
 			}
 			if err != nil && err.Error() != tc.expectedErrorMessage {
 				t.Errorf("expected error message when verifying the timestamp response: %s got %s", tc.expectedErrorMessage, err.Error())
+			}
+			if ts != nil {
+				t.Errorf("expected VerifyTimestampResponse to return a nil Timestamp object")
 			}
 		}
 	}
