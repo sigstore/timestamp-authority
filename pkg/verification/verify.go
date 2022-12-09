@@ -266,9 +266,7 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
 
-	for _, cert := range opts.Intermediates {
-		p7Message.Certificates = append(p7Message.Certificates, cert)
-	}
+	p7Message.Certificates = append(p7Message.Certificates, opts.Intermediates...)
 
 	err = p7Message.VerifyWithChain(rootCertPool)
 	if err != nil {
