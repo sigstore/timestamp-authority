@@ -219,29 +219,24 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	}
 
 	// verify the timestamp response signature using the provided certificate pool
-	err = verifyTSRWithChain(ts, opts)
-	if err != nil {
+	if err = verifyTSRWithChain(ts, opts); err != nil {
 		return nil, err
 	}
 
-	err = verifyNonce(ts.Nonce, opts)
-	if err != nil {
+	if err = verifyNonce(ts.Nonce, opts); err != nil {
 		return nil, err
 	}
 
-	err = verifyOID(ts.Policy, opts)
-	if err != nil {
+	if err = verifyOID(ts.Policy, opts); err != nil {
 		return nil, err
 	}
 
-	err = verifyLeafCert(*ts, opts)
-	if err != nil {
+	if err = verifyLeafCert(*ts, opts); err != nil {
 		return nil, err
 	}
 
 	// verify the hash in the timestamp response matches the artifact hash
-	err = verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact)
-	if err != nil {
+	if err = verifyHashedMessages(ts.HashAlgorithm.New(), ts.HashedMessage, artifact); err != nil {
 		return nil, err
 	}
 
