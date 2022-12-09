@@ -469,3 +469,10 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifyTSRWithChain_Failure(t *testing.T) {
+	ts := timestamp.Timestamp{}
+	opts := VerifyOpts{}
+
+	err := verifyTSRWithChain()
+}
