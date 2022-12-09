@@ -251,12 +251,9 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	}
 
 	// build cert pool containing both intermediate and root certificates
-	certPool := x509.NewCertPool()
-	for _, cert := range opts.Intermediates {
-		certPool.AddCert(cert)
-	}
+	rootCertPool := x509.NewCertPool()
 	for _, cert := range opts.Roots {
-		certPool.AddCert(cert)
+		rootCertPool.AddCert(cert)
 	}
 
 	// if the PCKS7 object does not have any certificates set in the
@@ -269,7 +266,11 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
 
-	err = p7Message.VerifyWithChain(certPool)
+	for _, cert := range opts.Intermediates {
+		p7Message.Certificates = append(p7Message.Certificates, cert)
+	}
+
+	err = p7Message.VerifyWithChain(rootCertPool)
 	if err != nil {
 		return fmt.Errorf("error while verifying with chain: %w", err)
 	}
