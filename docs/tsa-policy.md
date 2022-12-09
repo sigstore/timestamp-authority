@@ -585,7 +585,7 @@ In particular:
    with a set of trusted UTC sources. The recorded accuracy should be included 
    in the returned time-stamp token.
 
-1. The time-stamp provider SHOULD monitor for accu.racy and alert if it's found 
+1. The time-stamp provider SHOULD monitor for accuracy and alert if it's found 
    to be out of sync.
 
 1. The time-stamp token shall include a representation (e.g., hash value) of
