@@ -51,7 +51,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("common-name", "", "expected leaf certificate subject common name")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to file with PEM-encoded leaf certificate")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "intermediate-certificates", "path to file with PEM-encoded intermediate certificates. Must be called with the root-certificate flag.")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificates", "path to file with a PEM-encoded root certificates. Must be called with the intermediate-certificates flag.")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificates", "path to file with a PEM-encoded root certificates. Optionally can be called with the intermediate-certificates flag.")
 }
 
 var verifyCmd = &cobra.Command{
