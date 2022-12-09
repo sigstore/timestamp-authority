@@ -476,7 +476,7 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 	}
 }
 
-func createCertChain() ([]*x509.Certificate, *signature.ECDSASignerVerifier, error) {
+func createCertChainAndSigner() ([]*x509.Certificate, *signature.ECDSASignerVerifier, error) {
 	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 	if err != nil {
 		return nil, nil, fmt.Errorf("expected NewECDSASignerVerifier to return a signer verifier: %v", err)
@@ -532,7 +532,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 }
 
 func TestVerifyTSRWithChain(t *testing.T) {
-	certChain, sv, err := createCertChain()
+	certChain, sv, err := createCertChainAndSigner()
 	if err != nil {
 		t.Errorf("failed to create certificate chain: %v", err)
 	}
@@ -554,7 +554,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 }
 
 func TestVerifyTSRWithChain_Failure(t *testing.T) {
-	certChain, sv, err := createCertChain()
+	certChain, sv, err := createCertChainAndSigner()
 	if err != nil {
 		t.Errorf("failed to create certificate chain: %v", err)
 	}
