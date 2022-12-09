@@ -74,7 +74,7 @@ func TestTimestamp(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestVerify_CertificateChainFlag(t *testing.T) {
 	restapiURL := createServer(t)
 
 	artifactContent := "blob"
@@ -90,14 +90,80 @@ func TestVerify(t *testing.T) {
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
 
 	// write the cert chain to a PEM file
-	_, certChainPemPath := writeCertChainToPEMFiles(t, restapiURL)
+	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", certChainPemPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
-func TestVerifyPassLeafCertificate(t *testing.T) {
+func TestVerify_RootAndIntermediateCertificateFlags(t *testing.T) {
+	restapiURL := createServer(t)
+
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
+
+	// this is the common name for the in-memory leaf certificate, copied
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsrContainsCerts := true
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
+
+	// write the cert chain to a PEM file
+	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
+
+	// It should verify timestamp successfully.
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	outputContains(t, out, "Successfully verified timestamp")
+}
+
+func TestVerify_AllCertFlagsIncluded(t *testing.T) {
+	restapiURL := createServer(t)
+
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
+
+	// this is the common name for the in-memory leaf certificate, copied
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsrContainsCerts := true
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
+
+	// write the cert chain to a PEM file
+	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
+
+	// It should fail to verify.
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
+}
+
+func TestVerify_NoCertFlagsIncluded(t *testing.T) {
+	restapiURL := createServer(t)
+
+	artifactContent := "blob"
+	artifactPath := makeArtifact(t, artifactContent)
+
+	// this is the common name for the in-memory leaf certificate, copied
+	// from pkg/signer/memory.go
+	commonName := "Test TSA Timestamping"
+	nonce := big.NewInt(456)
+	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsrContainsCerts := true
+
+	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
+
+	// It should fail to verify.
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
+}
+
+func TestVerify_PassLeafCertificate(t *testing.T) {
 	restapiURL := createServer(t)
 
 	artifactContent := "blob"
@@ -113,17 +179,17 @@ func TestVerifyPassLeafCertificate(t *testing.T) {
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
 
 	// write the cert chain to a PEM file
-	leafCertPemPath, certChainPemPath := writeCertChainToPEMFiles(t, restapiURL)
+	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", certChainPemPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", leafCertPemPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", pemFiles.leafCertPath)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
 func TestVerify_InvalidTSR(t *testing.T) {
 	restapiURL := createServer(t)
 
-	_, pemPath := writeCertChainToPEMFiles(t, restapiURL)
+	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	artifactContent := "blob"
 	artifactPath := makeArtifact(t, artifactContent)
@@ -135,7 +201,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath)
 	outputContains(t, out, "error parsing response into Timestamp")
 }
 
@@ -252,10 +318,17 @@ func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.I
 	return path
 }
 
+type certChainPEMFiles struct {
+	leafCertPath          string
+	intermediateCertsPath string
+	rootCertsPath         string
+	certChainPath         string
+}
+
 // getCertChainPEM returns the path of a pem file containaing
 // the leaf certificate and the path of a pem file containing the
 // root and intermediate certificates. Used to verify a signed timestamp
-func writeCertChainToPEMFiles(t *testing.T, restapiURL string) (string, string) {
+func writeCertChainToPEMFiles(t *testing.T, restapiURL string) certChainPEMFiles {
 	c, err := client.GetTimestampClient(restapiURL)
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
@@ -287,6 +360,39 @@ func writeCertChainToPEMFiles(t *testing.T, restapiURL string) (string, string) 
 	reader := bytes.NewReader(caCertsPEM)
 	file.ReadFrom(reader)
 
+	// create intermediates certificate PEM file
+	intermediateCertsPath := filepath.Join(t.TempDir(), "ts_intermediates.pem")
+	file, err = os.Create(intermediateCertsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	lastCertIndex := len(certs) - 1
+	intermediatesPEM, err := cryptoutils.MarshalCertificatesToPEM(certs[1:lastCertIndex])
+	if err != nil {
+		t.Fatalf("unexpected error marshalling intermediate certificates: %v", err)
+	}
+
+	reader = bytes.NewReader(intermediatesPEM)
+	file.ReadFrom(reader)
+
+	// create roots certificate PEM file
+	rootCertsPath := filepath.Join(t.TempDir(), "ts_roots.pem")
+	file, err = os.Create(rootCertsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	rootsPEM, err := cryptoutils.MarshalCertificatesToPEM(certs[lastCertIndex:])
+	if err != nil {
+		t.Fatalf("unexpected error marshalling root certificates: %v", err)
+	}
+
+	reader = bytes.NewReader(rootsPEM)
+	file.ReadFrom(reader)
+
 	// create PEM file containing the leaf certificate
 	leafCertPath := filepath.Join(t.TempDir(), "ts_leafcert.pem")
 	file, err = os.Create(leafCertPath)
@@ -303,7 +409,12 @@ func writeCertChainToPEMFiles(t *testing.T, restapiURL string) (string, string) 
 	reader = bytes.NewReader(leafCertPEM)
 	file.ReadFrom(reader)
 
-	return leafCertPath, certChainPath
+	return certChainPEMFiles{
+		leafCertPath:          leafCertPath,
+		intermediateCertsPath: intermediateCertsPath,
+		rootCertsPath:         rootCertsPath,
+		certChainPath:         certChainPath,
+	}
 }
 
 // Create a random artifact to sign
