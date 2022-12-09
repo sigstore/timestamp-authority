@@ -574,24 +574,22 @@ The TSA shall ensure that time-stamp tokens are issued securely and include the 
 
 In particular:
 
-1. The time-stamp token shall include an identifier for the time-stamp policy;
+1. The time-stamp token shall include an identifier for the time-stamp policy.
 
-1. Each time-stamp token shall have a unique identifier;
+1. Each time-stamp token shall have a unique identifier.
 
 1. The time values the TSU uses in the time-stamp token shall be traceable to
    at least one of the real time values distributed by a UTC(k) laboratory.
 
-1. The time included in the time-stamp token shall be synchronized with UTC
-   within the accuracy defined in this policy and, if present, within the
-   accuracy defined in the time-stamp token itself;
+1. The time-stamp provider should periodically monitor its correctness of time 
+   with a set of trusted UTC sources. The recorded accuracy should be included 
+   in the returned time-stamp token.
 
-1. If the time-stamp provider's clock is detected
-   (see section [7.3.2c](#732-clock-synchronization-with-utc)) as being out of
-   the stated accuracy (see section [7.1.2e](#712-tsa-disclosure-statement)))
-   then time-stamp tokens shall not be issued.
+1. The time-stamp provider SHOULD monitor for accuracy and alert if it's found 
+   to be out of sync.
 
 1. The time-stamp token shall include a representation (e.g., hash value) of
-   the datum being time-stamped as provided by the requestor;
+   the datum being time-stamped as provided by the requestor.
 
 1. The time-stamp token shall be signed using a key generated exclusively
    for this purpose.
