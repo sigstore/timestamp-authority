@@ -149,12 +149,12 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 	intermediatePEM := viper.GetString("intermediate-certificates")
 
 	// the verify flag must be called with either one of the two flag combinations:
-	// 1. Called with both the --root-certificates flag and the --intermediate-certificates flag
+	// 1. Called with the --root-certificates flag and optionally the --intermediate-certificates flag
 	// 2. Called with only the --certificate-chain flag
 
 	// this early exit if statement is only entered if neither of those combinations is valid
-	if !((intermediatePEM != "" && rootPEM != "" && certChainPEM == "") || (intermediatePEM == "" && rootPEM == "" && certChainPEM != "")) {
-		return nil, nil, fmt.Errorf("the verify command must be called with either only the --certificate-chain flag or with both the --root-certificate and --intermediate-certificates flags")
+	if !((rootPEM != "" && certChainPEM == "") || (intermediatePEM == "" && rootPEM == "" && certChainPEM != "")) {
+		return nil, nil, fmt.Errorf("the verify command must be called with either only the --certificate-chain flag or with the --root-certificate and --intermediate-certificates flags")
 	}
 
 	// return root and intermediate certificates when they've been passed
@@ -198,6 +198,10 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 		return nil, nil, fmt.Errorf("expected at least one certificate to represent the root")
 	}
 
+	if intermediatePEM == "" {
+		return rootCerts, []*x509.Certificate{}, nil
+	}
+
 	// parse intermediate certificates
 	intermediatePEMBytes, err := os.ReadFile(filepath.Clean(intermediatePEM))
 	if err != nil {
@@ -207,6 +211,10 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 	intermediateCerts, err := cryptoutils.UnmarshalCertificatesFromPEM(intermediatePEMBytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
+	}
+
+	if len(intermediateCerts) == 0 {
+		return nil, nil, fmt.Errorf("expected at least one intermediate certificate")
 	}
 
 	return rootCerts, intermediateCerts, nil
