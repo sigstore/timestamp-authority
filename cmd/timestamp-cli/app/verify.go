@@ -51,7 +51,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("common-name", "", "expected leaf certificate subject common name")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to file with PEM-encoded leaf certificate")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "intermediate-certificates", "path to file with PEM-encoded intermediate certificates. Must be called with the root-certificate flag.")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificate", "path to file with a PEM-encoded root certificate. Must be called with the intermediate-certificates flag.")	
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificate", "path to file with a PEM-encoded root certificate. Must be called with the intermediate-certificates flag.")
 }
 
 var verifyCmd = &cobra.Command{
@@ -157,45 +157,45 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 		return nil, nil, fmt.Errorf("the verify command must be called with either only the --certificate-chain flag or with both the --root-certificate and --intermediate-certificates flags")
 	}
 
-	// return root and intermediate certificates when they've been passed 
+	// return root and intermediate certificates when they've been passed
 	// together with the certificate-chain flag
 	if certChainPEM != "" {
 		pemBytes, err := os.ReadFile(filepath.Clean(certChainPEM))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading request from file: %w", err)
 		}
-	
+
 		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(pemBytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 		}
-	
+
 		if len(certs) == 0 {
 			return nil, nil, fmt.Errorf("expected at least one certificate to represent the root")
 		}
-	
+
 		// intermediate certs are above the root certificate in the PEM file
 		intermediateCerts := certs[0 : len(certs)-1]
 		// the root certificate is last in the PEM file
 		rootCerts := []*x509.Certificate{certs[len(certs)-1]}
-	
+
 		return rootCerts, intermediateCerts, nil
 	}
 
-	// return root and intermediate certificates when they've been passed 
+	// return root and intermediate certificates when they've been passed
 	// separately with the root-certificate and intermediate-certificates flags
 	rootPEMBytes, err := os.ReadFile(filepath.Clean(rootPEM))
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
-	rootCertSlice, err := cryptoutils.UnmarshalCertificatesFromPEM(rootPEMBytes)
+	rootCerts, err := cryptoutils.UnmarshalCertificatesFromPEM(rootPEMBytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 	}
 
-	if len(rootCertSlice) != 1 {
-		return nil, nil, fmt.Errorf("expected one certificate to represent the root")
+	if len(rootCerts) == 0 {
+		return nil, nil, fmt.Errorf("expected at least one certificate to represent the root")
 	}
 
 	// parse intermediate certificates
@@ -209,7 +209,7 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 		return nil, nil, fmt.Errorf("failed to parse intermediate and root certs from PEM file: %w", err)
 	}
 
-	return rootCertSlice, intermediateCerts, nil
+	return rootCerts, intermediateCerts, nil
 }
 
 func getOID() ([]int, error) {
