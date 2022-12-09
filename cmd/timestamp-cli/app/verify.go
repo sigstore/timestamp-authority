@@ -51,7 +51,7 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("common-name", "", "expected leaf certificate subject common name")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to file with PEM-encoded leaf certificate")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "intermediate-certificates", "path to file with PEM-encoded intermediate certificates. Must be called with the root-certificate flag.")
-	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificate", "path to file with a PEM-encoded root certificate. Must be called with the intermediate-certificates flag.")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificates", "path to file with a PEM-encoded root certificates. Must be called with the intermediate-certificates flag.")
 }
 
 var verifyCmd = &cobra.Command{
@@ -145,15 +145,15 @@ func getNonce() (*big.Int, error) {
 
 func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, error) {
 	certChainPEM := viper.GetString("certificate-chain")
-	rootPEM := viper.GetString("root-certificate")
+	rootPEM := viper.GetString("root-certificates")
 	intermediatePEM := viper.GetString("intermediate-certificates")
 
 	// the verify flag must be called with either one of the two flag combinations:
-	// 1. Called with both the --root-certificate flag and the --intermediate-certificates flag
+	// 1. Called with both the --root-certificates flag and the --intermediate-certificates flag
 	// 2. Called with only the --certificate-chain flag
 
 	// this early exit if statement is only entered if neither of those combinations is valid
-	if !((intermediatePEM != "" && rootPEM != "") || certChainPEM != "") {
+	if !((intermediatePEM != "" && rootPEM != "" && certChainPEM == "") || (intermediatePEM == "" && rootPEM == "" && certChainPEM != "")) {
 		return nil, nil, fmt.Errorf("the verify command must be called with either only the --certificate-chain flag or with both the --root-certificate and --intermediate-certificates flags")
 	}
 
