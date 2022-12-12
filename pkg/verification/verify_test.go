@@ -493,10 +493,10 @@ func createCertChainAndSigner() ([]*x509.Certificate, *signature.ECDSASignerVeri
 	return certChain, sv, nil
 }
 
-func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASignerVerifier) (*timestamp.Timestamp, error) {
+func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASignerVerifier, tsHasCerts bool) (*timestamp.Timestamp, error) {
 	tsq, err := timestamp.CreateRequest(strings.NewReader("TestRequest"), &timestamp.RequestOptions{
 		Hash:         crypto.SHA256,
-		Certificates: true,
+		Certificates: tsHasCerts,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp request: %v", err)
@@ -537,45 +537,93 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		t.Errorf("failed to create certificate chain: %v", err)
 	}
 
-	ts, err := createSignedTimestamp(certChain, sv)
+	tsWithCerts, err := createSignedTimestamp(certChain, sv, true)
 	if err != nil {
 		t.Errorf("failed to create signed certificate: %v", err)
 	}
 
-	opts := VerifyOpts{
-		Roots:         []*x509.Certificate{certChain[2]},
-		Intermediates: []*x509.Certificate{certChain[1]},
-	}
-
-	err = verifyTSRWithChain(ts, opts)
-	if err != nil {
-		t.Error("expected verifyTSRWithChain to successfully verify certificate chain")
-	}
-}
-
-func TestVerifyTSRWithChain_Failure(t *testing.T) {
-	certChain, sv, err := createCertChainAndSigner()
-	if err != nil {
-		t.Errorf("failed to create certificate chain: %v", err)
-	}
-
-	ts, err := createSignedTimestamp(certChain, sv)
+	tsWithoutCerts, err := createSignedTimestamp(certChain, sv, false)
 	if err != nil {
 		t.Errorf("failed to create signed certificate: %v", err)
 	}
+
+	// get certificates
+	leaf := certChain[0]
+	intermediate := certChain[1]
+	root := certChain[2]
 
 	// invalidate the intermediate certificate
-	intermediate := certChain[1]
-	intermediate.RawIssuer = nil
-	intermediate.Issuer = pkix.Name{}
+	var invalidIntermediate x509.Certificate = *certChain[1]
+	invalidIntermediate.RawIssuer = nil
+	invalidIntermediate.Issuer = pkix.Name{}
 
-	opts := VerifyOpts{
-		Roots:         []*x509.Certificate{certChain[2]},
-		Intermediates: []*x509.Certificate{intermediate},
+	type test struct {
+		ts                  *timestamp.Timestamp
+		opts                VerifyOpts
+		expectVerifySuccess bool
 	}
 
-	err = verifyTSRWithChain(ts, opts)
-	if err == nil {
-		t.Error("expected verifyTSRWithChain to fail verifying the chain")
+	tests := []test{
+		{
+			ts: tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{intermediate},
+			},
+			expectVerifySuccess: true,
+		},
+		{
+			ts: tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{&invalidIntermediate},
+			},
+			expectVerifySuccess: false,
+		},
+		{
+			ts: tsWithCerts,
+			opts: VerifyOpts{
+				Roots: []*x509.Certificate{root},
+			},
+			expectVerifySuccess: false,
+		},
+		{
+			ts: tsWithCerts,
+			opts: VerifyOpts{
+				Intermediates: []*x509.Certificate{intermediate},
+			},
+			expectVerifySuccess: false,
+		},
+		{
+			ts:                  tsWithCerts,
+			opts:                VerifyOpts{},
+			expectVerifySuccess: false,
+		},
+		{
+			ts: tsWithoutCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{intermediate},
+			},
+			expectVerifySuccess: false,
+		},
+		{
+			ts: tsWithoutCerts,
+			opts: VerifyOpts{
+				Roots:          []*x509.Certificate{root},
+				Intermediates:  []*x509.Certificate{intermediate},
+				TSACertificate: leaf,
+			},
+			expectVerifySuccess: true,
+		},
+	}
+
+	for _, tc := range tests {
+		err = verifyTSRWithChain(tc.ts, tc.opts)
+		if tc.expectVerifySuccess && err != nil {
+			t.Errorf("expected verifyTSRWithChain to successfully verify certificate chain, err: %v", err)
+		} else if !tc.expectVerifySuccess && err == nil {
+			t.Error("expected verifyTSRWithChain to fail verification")
+		}
 	}
 }

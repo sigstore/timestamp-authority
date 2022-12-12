@@ -250,7 +250,10 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		return fmt.Errorf("error parsing hashed message: %w", err)
 	}
 
-	// build cert pool containing both intermediate and root certificates
+	if opts.Roots == nil || len(opts.Roots) == 0 {
+		return fmt.Errorf("no root certificates provided for verifying the certificate chain")
+	}
+
 	rootCertPool := x509.NewCertPool()
 	for _, cert := range opts.Roots {
 		rootCertPool.AddCert(cert)
@@ -262,11 +265,13 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	// leaf certificate issuer and serial number information is already part of
 	// the PKCS7 object, adding the leaf certificate to the Certificates field
 	// will allow verification to pass
-	if p7Message.Certificates == nil {
+	if p7Message.Certificates == nil && opts.TSACertificate != nil {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
 
-	p7Message.Certificates = append(p7Message.Certificates, opts.Intermediates...)
+	if opts.Intermediates != nil {
+		p7Message.Certificates = append(p7Message.Certificates, opts.Intermediates...)
+	}
 
 	err = p7Message.VerifyWithChain(rootCertPool)
 	if err != nil {
