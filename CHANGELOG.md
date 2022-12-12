@@ -1,3 +1,29 @@
+# 0.2.0
+
+0.2.0 improves the verification library (https://github.com/sigstore/timestamp-authority/issues/121).
+The library now verifies the full certificate chain and additional properties of the timestamp.
+
+## Changes
+
+### Enhancements
+
+* Start adding more verification with VerificationOpts struct (https://github.com/sigstore/timestamp-authority/pull/153)
+* Verify command returns the parsed timestamp (https://github.com/sigstore/timestamp-authority/pull/174)
+* Add intermediate and root verify flags (https://github.com/sigstore/timestamp-authority/pull/180)
+* Verify full certificate chain (https://github.com/sigstore/timestamp-authority/pull/181)
+
+### Bug fixes
+
+### Misc
+
+* Add mock client (https://github.com/sigstore/timestamp-authority/pull/175)
+* Update timing accuracy statements in the policy document (https://github.com/sigstore/timestamp-authority/pull/179)
+
+## Contributors
+
+* Hayden Blauzvern
+* Meredith Lancaster
+
 # 0.1.3
 
 ## Changes
