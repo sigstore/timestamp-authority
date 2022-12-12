@@ -558,7 +558,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 	invalidIntermediate.Issuer = pkix.Name{}
 
 	type test struct {
-		name string
+		name                string
 		ts                  *timestamp.Timestamp
 		opts                VerifyOpts
 		expectVerifySuccess bool
@@ -567,7 +567,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 	tests := []test{
 		{
 			name: "Verification is successful with included leaf certificate in timestamp",
-			ts: tsWithCerts,
+			ts:   tsWithCerts,
 			opts: VerifyOpts{
 				Roots:         []*x509.Certificate{root},
 				Intermediates: []*x509.Certificate{intermediate},
@@ -576,7 +576,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		},
 		{
 			name: "Verification fails due to invalid intermediate certificate",
-			ts: tsWithCerts,
+			ts:   tsWithCerts,
 			opts: VerifyOpts{
 				Roots:         []*x509.Certificate{root},
 				Intermediates: []*x509.Certificate{&invalidIntermediate},
@@ -585,7 +585,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		},
 		{
 			name: "Verification fails due to missing intermediate certificate",
-			ts: tsWithCerts,
+			ts:   tsWithCerts,
 			opts: VerifyOpts{
 				Roots: []*x509.Certificate{root},
 			},
@@ -593,21 +593,21 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		},
 		{
 			name: "Verification fails due to missing root certificate",
-			ts: tsWithCerts,
+			ts:   tsWithCerts,
 			opts: VerifyOpts{
 				Intermediates: []*x509.Certificate{intermediate},
 			},
 			expectVerifySuccess: false,
 		},
 		{
-			name: "Verification fails due to missing root and intermediate certificates",
+			name:                "Verification fails due to missing root and intermediate certificates",
 			ts:                  tsWithCerts,
 			opts:                VerifyOpts{},
 			expectVerifySuccess: false,
 		},
 		{
 			name: "Verification fails due to missing leaf certificate",
-			ts: tsWithoutCerts,
+			ts:   tsWithoutCerts,
 			opts: VerifyOpts{
 				Roots:         []*x509.Certificate{root},
 				Intermediates: []*x509.Certificate{intermediate},
@@ -616,7 +616,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		},
 		{
 			name: "Verification is successful with out of band leaf certificate",
-			ts: tsWithoutCerts,
+			ts:   tsWithoutCerts,
 			opts: VerifyOpts{
 				Roots:          []*x509.Certificate{root},
 				Intermediates:  []*x509.Certificate{intermediate},
@@ -629,9 +629,9 @@ func TestVerifyTSRWithChain(t *testing.T) {
 	for _, tc := range tests {
 		err = verifyTSRWithChain(tc.ts, tc.opts)
 		if tc.expectVerifySuccess && err != nil {
-			t.Errorf("test %s unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", tc.name, err)
+			t.Errorf("test '%s' unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", tc.name, err)
 		} else if !tc.expectVerifySuccess && err == nil {
-			t.Errorf("test %s unexpectedly passed \nExpected verifyTSRWithChain to fail verification", tc.name)
+			t.Errorf("testg '%s' unexpectedly passed \nExpected verifyTSRWithChain to fail verification", tc.name)
 		}
 	}
 }
