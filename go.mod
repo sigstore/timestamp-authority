@@ -5,7 +5,7 @@ go 1.19
 require (
 	cloud.google.com/go/security v1.10.0
 	github.com/beevik/ntp v0.3.0
-	github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4
+	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.3
