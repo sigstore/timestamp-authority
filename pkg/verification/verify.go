@@ -259,6 +259,16 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		rootCertPool.AddCert(cert)
 	}
 
+	intermediateCertPool := x509.NewCertPool()
+	for _, cert := range opts.Intermediates {
+		intermediateCertPool.AddCert(cert)
+	}
+
+	x509Opts := x509.VerifyOptions{
+		Roots:         rootCertPool,
+		Intermediates: intermediateCertPool,
+	}
+
 	// if the PCKS7 object does not have any certificates set in the
 	// Certificates field, the VerifyWithChain method will because it will be
 	// unable to find a leaf certificate associated with a signer. Since the
@@ -269,11 +279,7 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
 
-	if opts.Intermediates != nil {
-		p7Message.Certificates = append(p7Message.Certificates, opts.Intermediates...)
-	}
-
-	err = p7Message.VerifyWithChain(rootCertPool)
+	err = p7Message.VerifyWithOpts(x509Opts)
 	if err != nil {
 		return fmt.Errorf("error while verifying with chain: %w", err)
 	}
