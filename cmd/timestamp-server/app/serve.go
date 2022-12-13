@@ -81,9 +81,13 @@ var serveCmd = &cobra.Command{
 		port := int(viper.GetUint("port"))
 		scheme := viper.GetStringSlice("scheme")
 
-		ntpMonitoring := viper.GetString("ntp-monitoring")
 		var ntpm *ntpmonitor.NTPMonitor
-		if ntpMonitoring != "" {
+		disableNTPMonitoring := viper.GetBool("disable-ntp-monitoring")
+		if disableNTPMonitoring {
+			log.Logger.Info("ntp monitoring disabled")			
+		} else {
+			ntpMonitoring := viper.GetString("ntp-monitoring")
+			var ntpm *ntpmonitor.NTPMonitor
 			log.Logger.Infof("ntp monitoring: %s", ntpMonitoring)
 			go func() {
 				ntpm, err = ntpmonitor.New(ntpMonitoring)
