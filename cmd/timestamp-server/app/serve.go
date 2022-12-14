@@ -77,10 +77,6 @@ var serveCmd = &cobra.Command{
 			}()
 		}
 
-		host := viper.GetString("host")
-		port := int(viper.GetUint("port"))
-		scheme := viper.GetStringSlice("scheme")
-
 		var ntpm *ntpmonitor.NTPMonitor
 		disableNTPMonitoring := viper.GetBool("disable-ntp-monitoring")
 		if disableNTPMonitoring {
@@ -98,6 +94,10 @@ var serveCmd = &cobra.Command{
 				ntpm.Start()
 			}()
 		}
+
+		host := viper.GetString("host")
+		port := int(viper.GetUint("port"))
+		scheme := viper.GetStringSlice("scheme")
 
 		server := server.NewRestAPIServer(host, port, scheme, readTimeout, writeTimeout)
 		defer func() {
