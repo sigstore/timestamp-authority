@@ -80,7 +80,7 @@ var serveCmd = &cobra.Command{
 		var ntpm *ntpmonitor.NTPMonitor
 		disableNTPMonitoring := viper.GetBool("disable-ntp-monitoring")
 		if disableNTPMonitoring {
-			log.Logger.Info("ntp monitoring disabled")			
+			log.Logger.Info("ntp monitoring disabled")
 		} else {
 			ntpMonitoring := viper.GetString("ntp-monitoring")
 			var ntpm *ntpmonitor.NTPMonitor
