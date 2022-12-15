@@ -44,7 +44,7 @@ type Config struct {
 // loaded values.
 func LoadConfig(path string) (*Config, error) {
 	var configData []byte
-	if path == "ntpsync.yaml" {
+	if path == "" {
 		configData = defaultConfigData
 	} else {
 		data, err := os.ReadFile(path)
