@@ -16,11 +16,15 @@
 package ntpmonitor
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed ntpsync.yaml
+var defaultConfigData []byte
 
 // Config holds the configuration for a NTPMonitor
 type Config struct {
@@ -37,14 +41,20 @@ type Config struct {
 // Config object with the vales found. No sanity checking is made of the
 // loaded values.
 func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %s %w",
-			path, err)
+	var configData []byte
+	if path == "ntpsync.yaml" {
+		configData = defaultConfigData
+	} else {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %s %w",
+				path, err)
+		}
+		configData = data
 	}
 
 	var cfg Config
-	if err = yaml.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal(configData, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 

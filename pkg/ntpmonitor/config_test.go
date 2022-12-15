@@ -19,23 +19,25 @@ import (
 	"os"
 	"path"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 var yamlData = `
 # Number of attempts to contact a ntp server before giving up.
-request_attempts: 3
+request_attempts: 2
 # The timeout in seconds for a request to respond. This value must be
 # smaller than max_time_delta.
-request_timeout: 5
+request_timeout: 1
 # Number of randomly selected ntp servers to interrogate.
-num_servers: 4
+num_servers: 2
 # Number of servers who must agree with local time.
-server_threshold: 3
+server_threshold: 1
 # Maximum number of seconds the local time is allowed to drift from the
 # response of a ntp server
-max_time_delta: 6
+max_time_delta: 2
 # Period (in seconds) for polling ntp servers
-period: 60
+period: 80
 # List of servers to contact. Many DNS names resolves to multiple A records.
 servers:
   #
@@ -46,13 +48,10 @@ servers:
 
   # Google AS15169
   - "time.google.com"
-  - "time1.google.com"
-  - "time2.google.com"
-  - "time3.google.com"
-  - "time4.google.com"
 `
 
 func TestLoadConfig(t *testing.T) {
+	// create test custom config for testing
 	var dir = t.TempDir()
 	var path = path.Join(dir, "cfg.yaml")
 
@@ -66,40 +65,72 @@ func TestLoadConfig(t *testing.T) {
 	}
 	f.Close()
 
-	cfg, err := LoadConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg == nil {
-		t.Fatal("no config returned")
+	// create default config for testing
+	var defaultConfig Config
+	if err = yaml.Unmarshal(defaultConfigData, &defaultConfig); err != nil {
+		t.Fatalf("failed to parse default config YAML: %v", err)
 	}
 
-	if cfg.RequestAttempts != 3 {
-		t.Errorf("request attempts, got %d expected %d",
-			cfg.RequestAttempts, 3)
+	type test struct {
+		configPath     string
+		expectedConfig Config
 	}
-	if cfg.RequestTimeout != 5 {
-		t.Errorf("request timeout, got %d expected %d",
-			cfg.RequestTimeout, 5)
+
+	tests := []test{
+		{
+			configPath: path,
+			expectedConfig: Config{
+				RequestAttempts: 2,
+				RequestTimeout:  1,
+				NumServers:      2,
+				ServerThreshold: 1,
+				MaxTimeDelta:    2,
+				Period:          80,
+				Servers:         []string{"a", "b"},
+			},
+		},
+		{
+			configPath:     "ntpsync.yaml",
+			expectedConfig: defaultConfig,
+		},
 	}
-	if cfg.NumServers != 4 {
-		t.Errorf("num servers, got %d expected %d",
-			cfg.NumServers, 4)
-	}
-	if cfg.ServerThreshold != 3 {
-		t.Errorf("server threshold, got %d expected %d",
-			cfg.ServerThreshold, 3)
-	}
-	if cfg.MaxTimeDelta != 6 {
-		t.Errorf("max time delta, got %d expected %d",
-			cfg.MaxTimeDelta, 6)
-	}
-	if cfg.Period != 60 {
-		t.Errorf("period, got %d expected %d",
-			cfg.Period, 60)
-	}
-	if len(cfg.Servers) != 6 {
-		t.Errorf("number of servers in list, got %d expected %d",
-			len(cfg.Servers), 6)
+
+	for _, tc := range tests {
+		cfg, err := LoadConfig(tc.configPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg == nil {
+			t.Fatal("no config returned")
+		}
+
+		if cfg.RequestAttempts != tc.expectedConfig.RequestAttempts {
+			t.Errorf("request attempts, got %d expected %d",
+				cfg.RequestAttempts, tc.expectedConfig.RequestAttempts)
+		}
+		if cfg.RequestTimeout != tc.expectedConfig.RequestTimeout {
+			t.Errorf("request timeout, got %d expected %d",
+				cfg.RequestTimeout, tc.expectedConfig.RequestTimeout)
+		}
+		if cfg.NumServers != tc.expectedConfig.NumServers {
+			t.Errorf("num servers, got %d expected %d",
+				cfg.NumServers, tc.expectedConfig.NumServers)
+		}
+		if cfg.ServerThreshold != tc.expectedConfig.ServerThreshold {
+			t.Errorf("server threshold, got %d expected %d",
+				cfg.ServerThreshold, tc.expectedConfig.ServerThreshold)
+		}
+		if cfg.MaxTimeDelta != tc.expectedConfig.MaxTimeDelta {
+			t.Errorf("max time delta, got %d expected %d",
+				cfg.MaxTimeDelta, tc.expectedConfig.MaxTimeDelta)
+		}
+		if cfg.Period != tc.expectedConfig.Period {
+			t.Errorf("period, got %d expected %d",
+				cfg.Period, tc.expectedConfig.Period)
+		}
+		if len(cfg.Servers) != len(tc.expectedConfig.Servers) {
+			t.Errorf("number of servers in list, got %d expected %d",
+				len(cfg.Servers), len(tc.expectedConfig.Servers))
+		}
 	}
 }
