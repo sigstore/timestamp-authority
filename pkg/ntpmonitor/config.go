@@ -16,6 +16,8 @@
 package ntpmonitor
 
 import (
+	// a blank import is recommended by the Go docs
+	// when using embed with byte slices
 	_ "embed"
 	"fmt"
 	"os"
