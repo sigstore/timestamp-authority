@@ -25,7 +25,7 @@ Rekor's clock being manipulated.
 As a artifact signer, you can:
 
 * Generate a signature over an artifact
-* Fetch a timestamp for that signature (more below in [What to sign](##what-to-sign))
+* Fetch a timestamp for that signature (more below in [What to sign](#what-to-sign))
 * Upload the signature, artifact hash, and certificate to Rekor (hashedrekord record type)
 * Upload the timestamp to Rekor (rfc3161 record type)
    * This step is important because it makes the timestamps publicly auditable
