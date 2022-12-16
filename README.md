@@ -19,13 +19,13 @@ time against well-known NTP sources.
 
 Timestamps are a critical component of [Rekor](https://github.com/sigstore/rekor), Sigstore's signature transparency log.
 Timestamps are used to verify short-lived certificates. Currently, the timestamp comes from Rekor's own internal clock,
-which is not externally verifiable. Using signed timestamps issued from timestamp authorities mitigates the risk of
+which is not externally verifiable or immutable. Using signed timestamps issued from timestamp authorities mitigates the risk of
 Rekor's clock being manipulated.
 
 As a artifact signer, you can:
 
 * Generate a signature over an artifact
-* Fetch a timestamp for that signature (more below in "What to sign")
+* Fetch a timestamp for that signature (more below in [What to sign](##what-to-sign))
 * Upload the signature, artifact hash, and certificate to Rekor (hashedrekord record type)
 * Upload the timestamp to Rekor (rfc3161 record type)
    * This step is important because it makes the timestamps publicly auditable
@@ -40,10 +40,10 @@ As an artifact verifier:
 
 ### What to sign
 
-For usage within Sigstore, we recommend signing over a value that is associated with an artifact.
+For usage within Sigstore, we recommend signing over a value that is associated with a signature.
 For [Cosign](https://github.com/sigstore/cosign/), we have chosen to sign the artifact signature,
-a process called "countersigning". We sign over the raw signature, not a base64-encoded value. Signing
-over the signature ensures that the signature, not the artifact, was created a certain time.
+a process called "countersigning". We sign over the raw signature bytes, not a base64-encoded value. Signing
+over the signature ensures that the signature, not the artifact, was created at a certain time.
 
 ## Local development
 
