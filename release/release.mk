@@ -1,12 +1,3 @@
-##################
-# release section
-##################
-
-# used when releasing together with GCP CloudBuild
-.PHONY: release
-release:
-	LDFLAGS="$(LDFLAGS)" goreleaser release --rm-dist --timeout 120m
-
 ###########################
 # sign section
 ###########################
