@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -35,20 +34,13 @@ import (
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/client/mock"
 	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/server"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
-	"github.com/spf13/viper"
 )
 
 func TestVerifyArtifactHashedMessages(t *testing.T) {
-	viper.Set("timestamp-signer", "memory")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	c, err := client.GetTimestampClient(server.URL)
+	c, err := mock.NewTSAClient(mock.TSAClientOptions{Time: time.Now()})
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}

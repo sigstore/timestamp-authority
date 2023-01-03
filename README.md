@@ -3,6 +3,7 @@
 A service for issuing [RFC 3161 timestamps](https://datatracker.ietf.org/doc/html/rfc3161).
 
 Timestamps conform to the [RFC 3628 policy](https://datatracker.ietf.org/doc/html/rfc3628).
+The timestamp structure conforms to the updates in [RFC 5816](https://datatracker.ietf.org/doc/rfc5816).
 
 ## Security model
 
