@@ -24,6 +24,7 @@ import (
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
+	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
@@ -35,6 +36,10 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 	req, err := timestamp.ParseRequest(requestBytes)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+	}
+
+	if err := verification.VerifyRequest(req); err != nil {
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, weakHashAlgorithmTimestampRequest)
 	}
 
 	policyID := req.TSAPolicyOID
