@@ -3,7 +3,7 @@ module github.com/sigstore/timestamp-authority
 go 1.19
 
 require (
-	cloud.google.com/go/security v1.10.0
+	cloud.google.com/go/security v1.11.0
 	github.com/beevik/ntp v0.3.0
 	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
