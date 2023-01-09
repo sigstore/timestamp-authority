@@ -1,3 +1,28 @@
+# 0.2.1
+
+0.2.1 now rejects timestamp requests that use SHA-1. For server operators, it 
+now defaults to using NTP monitoring.
+
+## Changes
+
+### Enhancements
+
+* Generate slsa provenance (https://github.com/sigstore/timestamp-authority/pull/193)
+* Use default NTP monitoring configuration (https://github.com/sigstore/timestamp-authority/pull/186)
+* Reject requests that use SHA-1 (https://github.com/sigstore/timestamp-authority/pull/202)
+
+### Bug Fixes
+
+### Misc
+
+* Update README with more details (https://github.com/sigstore/timestamp-authority/pull/188)
+
+## Contributors
+
+* Hayden B
+* Hector Fernandez
+* Meredith Lancaster
+
 # 0.2.0
 
 0.2.0 improves the verification library (https://github.com/sigstore/timestamp-authority/issues/121).
