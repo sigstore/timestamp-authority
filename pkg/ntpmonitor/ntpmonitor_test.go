@@ -22,18 +22,17 @@ import (
 	"github.com/beevik/ntp"
 )
 
-type MockNTPClient struct{}
+type MockNTPClient struct {
+	ignoredServers map[string]string
+}
 
 func (c MockNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	if _, ok := c.ignoredServers[srv]; ok {
+		return &ntp.Response{}, errors.New("failed to query NTP server")
+	}
 	return &ntp.Response{
 		ClockOffset: 1,
 	}, nil
-}
-
-type FailNTPClient struct{}
-
-func (c FailNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
-	return &ntp.Response{}, errors.New("failed to query NTP server(s)")
 }
 
 func TestNewFromConfig(t *testing.T) {
@@ -119,7 +118,11 @@ func TestNewFromConfig(t *testing.T) {
 
 func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	mockNTP := MockNTPClient{}
-	failNTP := FailNTPClient{}
+	failNTP := MockNTPClient{
+		ignoredServers: map[string]string{
+			"some-server": "some-server",
+		},
+	}
 
 	testCases := []struct {
 		name             string
@@ -127,12 +130,12 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		expectTestToPass bool
 	}{
 		{
-			name:             "Successfully Query NTP Server",
+			name:             "Successfully queried NTP server",
 			client:           mockNTP,
 			expectTestToPass: true,
 		},
 		{
-			name:             "Successfully Query NTP Server",
+			name:             "Failed to query NTP server",
 			client:           failNTP,
 			expectTestToPass: false,
 		},
@@ -141,6 +144,8 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		monitor := NTPMonitor{
 			cfg: &Config{
 				RequestAttempts: 3,
+				Servers:         []string{"some-server", "some-other-server"},
+				NumServers:      2,
 			},
 			ntpClient: tc.client,
 		}
