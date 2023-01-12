@@ -44,10 +44,21 @@ var (
 	ErrDeltaTooSmall = errors.New("delta is too small")
 )
 
+type NTPClient interface {
+	QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error)
+}
+
+type LiveNTPClient struct{}
+
+func (c LiveNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	return ntp.QueryWithOptions(srv, opts)
+}
+
 // NTPMonitor compares the local time with a set of trusted NTP servers.
 type NTPMonitor struct {
-	cfg *Config
-	run atomic.Bool
+	cfg       *Config
+	run       atomic.Bool
+	ntpClient NTPClient
 }
 
 // New creates a NTPMonitor, reading the configuration from the provided
@@ -99,7 +110,7 @@ func (n *NTPMonitor) Start() {
 		noResponse := 0
 		for _, srv := range servers {
 			// Create a time interval from 'now' with the max
-			// time delta added/remobed
+			// time delta added/removed
 			// Make sure the time from the remote NTP server lies
 			// within this interval.
 			resp, err := n.QueryNTPServer(srv)
@@ -160,7 +171,7 @@ func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
 		opts := ntp.QueryOptions{
 			Timeout: time.Duration(n.cfg.RequestTimeout) * time.Second,
 		}
-		resp, err := ntp.QueryWithOptions(srv, opts)
+		resp, err := n.ntpClient.QueryWithOptions(srv, opts)
 		pkgapi.MetricNTPLatency.With(map[string]string{
 			"host": srv,
 		}).Observe(float64(time.Since(start)))

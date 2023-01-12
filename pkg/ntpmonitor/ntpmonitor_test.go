@@ -16,8 +16,25 @@
 package ntpmonitor
 
 import (
+	"errors"
 	"testing"
+
+	"github.com/beevik/ntp"
 )
+
+type MockNTPClient struct{}
+
+func (c MockNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	return &ntp.Response{
+		ClockOffset: 1,
+	}, nil
+}
+
+type FailNTPClient struct{}
+
+func (c FailNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	return &ntp.Response{}, errors.New("failed to query NTP server(s)")
+}
 
 func TestNewFromConfig(t *testing.T) {
 	var cfg Config
@@ -33,7 +50,7 @@ func TestNewFromConfig(t *testing.T) {
 		t.Errorf("expected error %s got %s", ErrTooFewServers, err)
 	}
 
-	// Number of servers are smaller than requsted
+	// Number of servers are smaller than requested
 	cfg.Servers = append(cfg.Servers, "foo.bar")
 	cfg.NumServers = 2
 	nm, err = NewFromConfig(&cfg)
@@ -97,5 +114,46 @@ func TestNewFromConfig(t *testing.T) {
 	}
 	if err != nil {
 		t.Errorf("unexpected error %s", err)
+	}
+}
+
+func TestNTPMonitorQueryNTPServer(t *testing.T) {
+	mockNTP := MockNTPClient{}
+	failNTP := FailNTPClient{}
+
+	testCases := []struct {
+		name             string
+		client           NTPClient
+		expectTestToPass bool
+	}{
+		{
+			name:             "Successfully Query NTP Server",
+			client:           mockNTP,
+			expectTestToPass: true,
+		},
+		{
+			name:             "Successfully Query NTP Server",
+			client:           failNTP,
+			expectTestToPass: false,
+		},
+	}
+	for _, tc := range testCases {
+		monitor := NTPMonitor{
+			cfg: &Config{
+				RequestAttempts: 3,
+			},
+			ntpClient: tc.client,
+		}
+
+		resp, err := monitor.QueryNTPServer("some-server")
+		if tc.expectTestToPass && err != nil {
+			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
+		}
+		if tc.expectTestToPass && resp == nil {
+			t.Errorf("test '%s' unexpectedly failed with nil ntp.Response: %v", tc.name, resp)
+		}
+		if !tc.expectTestToPass && err == nil {
+			t.Errorf("test '%s' unexpectedly passed with a nil error", tc.name)
+		}
 	}
 }
