@@ -64,4 +64,23 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
     with:
       base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: true # upload to a new release
+      upload-assets: false # do not upload to a new release since goreleaser creates it
+
+  release-provenance:
+    needs: [provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # To read the workflow path.
+      contents: write # To add assets to a release.
+    steps:
+      - name: Download the provenance
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: ${{needs.provenance.outputs.provenance-name}}
+
+      - name: Release Provenance
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        id: release-provenance
+        with:
+          draft: true
+          files: ${{needs.provenance.outputs.provenance-name}}
