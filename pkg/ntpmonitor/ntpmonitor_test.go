@@ -17,30 +17,35 @@ package ntpmonitor
 
 import (
 	"errors"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/beevik/ntp"
 )
 
 type MockNTPClient struct {
-	ignoredServers      map[string]string
-	requestCounter      int
-	succeedOnRequestNum int
+	ignoredServers map[string]string
 }
 
-func (c *MockNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+func (c MockNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
 	if _, ok := c.ignoredServers[srv]; ok {
-		return &ntp.Response{}, errors.New("failed to query NTP server")
-	}
-
-	c.requestCounter++
-	if c.succeedOnRequestNum > 0 && c.requestCounter < c.succeedOnRequestNum {
-		return &ntp.Response{}, errors.New("failed to query NTP server")
+		return nil, errors.New("failed to query NTP server")
 	}
 
 	return &ntp.Response{
 		ClockOffset: 1,
+		Time:        time.Now(),
+	}, nil
+}
+
+type driftedTimeNTPClient struct {
+	driftedOffset time.Duration
+}
+
+func (c driftedTimeNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	return &ntp.Response{
+		ClockOffset: c.driftedOffset,
+		Time:        time.Now(),
 	}, nil
 }
 
@@ -132,9 +137,6 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 			"some-server": "",
 		},
 	}
-	succeedOnThirdTryNTP := MockNTPClient{
-		succeedOnRequestNum: 3,
-	}
 
 	testCases := []struct {
 		name             string
@@ -143,42 +145,38 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		expectTestToPass bool
 	}{
 		{
-			name:             "Successfully queried NTP server",
+			name:             "Successfully query NTP server",
 			client:           mockNTP,
 			requestAttempts:  3,
 			expectTestToPass: true,
 		},
 		{
-			name:             "Failed to query NTP server",
+			name:             "Fail to query NTP server",
 			client:           failNTP,
-			requestAttempts:  3,
+			requestAttempts:  1,
 			expectTestToPass: false,
-		},
-		{
-			name:             "Successfully query NTP server on the third try",
-			client:           succeedOnThirdTryNTP,
-			requestAttempts:  3,
-			expectTestToPass: true,
 		},
 	}
 	for _, tc := range testCases {
-		fmt.Println(tc.name)
-
-		monitor := NTPMonitor{
-			cfg: &Config{
-				Servers:         []string{"some-server", "some-other-server", "a third server"},
-				NumServers:      3,
-				RequestAttempts: tc.requestAttempts,
-			},
-			ntpClient: &tc.client,
+		monitor, err := NewFromConfig(&Config{
+			Servers:         []string{"some-server"},
+			NumServers:      1,
+			RequestAttempts: tc.requestAttempts,
+			ServerThreshold: 1,
+			RequestTimeout:  1,
+			MaxTimeDelta:    1,
+		})
+		if err != nil {
+			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
+		monitor.ntpClient = tc.client
 
 		resp, err := monitor.QueryNTPServer("some-server")
 		if tc.expectTestToPass && err != nil {
 			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
 		}
 		if tc.expectTestToPass && resp == nil {
-			t.Errorf("test '%s' unexpectedly failed with nil ntp.Response: %v", tc.name, resp)
+			t.Errorf("test '%s' unexpectedly failed with nil ntp.Response", tc.name)
 		}
 		if !tc.expectTestToPass && err == nil {
 			t.Errorf("test '%s' unexpectedly passed with a nil error", tc.name)
@@ -186,8 +184,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	}
 }
 
-func TestNTPMonitorStart(t *testing.T) {
-	t.Skip()
+func TestNTPMonitorQueryServers(t *testing.T) {
 	mockNTP := MockNTPClient{}
 	failNTP := MockNTPClient{
 		ignoredServers: map[string]string{
@@ -196,62 +193,85 @@ func TestNTPMonitorStart(t *testing.T) {
 			"a third server":    "",
 		},
 	}
-	failTwoServersNTP := MockNTPClient{
+	partialFailNTP := MockNTPClient{
 		ignoredServers: map[string]string{
-			"some-server":       "",
 			"some-other-server": "",
+			"a third server":    "",
 		},
+	}
+
+	offsetDuration, err := time.ParseDuration("2s")
+	if err != nil {
+		t.Fatalf("unexpected failed to parse duration: %v", err)
+	}
+
+	driftedNTP := driftedTimeNTPClient{
+		driftedOffset: offsetDuration,
 	}
 
 	testCases := []struct {
-		name             string
-		client           MockNTPClient
-		serverThreshold  int
-		expectTestToPass bool
+		name                       string
+		client                     NTPClient
+		serverThreshold            int
+		maxTimeDelta               int
+		expectEnoughServerResponse bool
+		expectValidServerResponse  bool
 	}{
 		{
-			name:             "Successfully queried all NTP servers",
-			client:           mockNTP,
-			serverThreshold:  3,
-			expectTestToPass: true,
+			name:                       "Successfully query all NTP servers",
+			client:                     mockNTP,
+			serverThreshold:            3,
+			maxTimeDelta:               3,
+			expectEnoughServerResponse: true,
+			expectValidServerResponse:  true,
 		},
 		{
-			name:             "Failed to query any NTP servers",
-			client:           failNTP,
-			serverThreshold:  1,
-			expectTestToPass: false,
+			name:                       "Receive too few server responses",
+			client:                     partialFailNTP,
+			serverThreshold:            2,
+			maxTimeDelta:               5,
+			expectEnoughServerResponse: false,
+			expectValidServerResponse:  true,
 		},
 		{
-			name:             "Failed to reach NTP query threshold",
-			client:           failTwoServersNTP,
-			serverThreshold:  2,
-			expectTestToPass: false,
+			name:                       "Receive too many drifted time responses",
+			client:                     driftedNTP,
+			serverThreshold:            2,
+			maxTimeDelta:               4,
+			expectEnoughServerResponse: true,
+			expectValidServerResponse:  false,
 		},
 		{
-			name:             "Successfully reached NTP query threshold",
-			client:           failTwoServersNTP,
-			serverThreshold:  1,
-			expectTestToPass: true,
+			name:                       "Fail to receive any responses",
+			client:                     failNTP,
+			serverThreshold:            1,
+			maxTimeDelta:               4,
+			expectEnoughServerResponse: false,
+			expectValidServerResponse:  false,
 		},
 	}
 	for _, tc := range testCases {
-		monitor := NTPMonitor{
-			cfg: &Config{
-				Servers:    []string{"some-server", "some-other-server", "a third server"},
-				NumServers: 3,
-			},
-			ntpClient: &tc.client,
+		monitor, err := NewFromConfig(&Config{
+			Servers:         []string{"some-server", "some-other-server", "a third server"},
+			NumServers:      3,
+			Period:          1,
+			RequestAttempts: 1,
+			ServerThreshold: tc.serverThreshold,
+			RequestTimeout:  1,
+			MaxTimeDelta:    tc.maxTimeDelta,
+		})
+		if err != nil {
+			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
+		monitor.ntpClient = tc.client
 
-		monitor.Start()
-		// if tc.expectTestToPass && err != nil {
-		// 	t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
-		// }
-		// if tc.expectTestToPass && resp == nil {
-		// 	t.Errorf("test '%s' unexpectedly failed with nil ntp.Response: %v", tc.name, resp)
-		// }
-		// if !tc.expectTestToPass && err == nil {
-		// 	t.Errorf("test '%s' unexpectedly passed with a nil error", tc.name)
-		// }
+		delta := time.Duration(5) * time.Second
+		responses := monitor.queryServers(delta)
+		if tc.expectEnoughServerResponse && responses.tooFewServerResponses {
+			t.Errorf("test '%s' unexpectedly failed with too few server responses", tc.name)
+		}
+		if tc.expectValidServerResponse && responses.tooManyInvalidResponses {
+			t.Errorf("test '%s' unexpectedly failed with too many invalid responses", tc.name)
+		}
 	}
 }
