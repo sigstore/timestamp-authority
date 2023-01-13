@@ -134,7 +134,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	mockNTP := MockNTPClient{}
 	failNTP := MockNTPClient{
 		ignoredServers: map[string]string{
-			"some-server": "",
+			"s1": "",
 		},
 	}
 
@@ -159,7 +159,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		monitor, err := NewFromConfig(&Config{
-			Servers:         []string{"some-server"},
+			Servers:         []string{"s1"},
 			NumServers:      1,
 			RequestAttempts: tc.requestAttempts,
 			ServerThreshold: 1,
@@ -171,7 +171,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		}
 		monitor.ntpClient = tc.client
 
-		resp, err := monitor.QueryNTPServer("some-server")
+		resp, err := monitor.QueryNTPServer("s1")
 		if tc.expectTestToPass && err != nil {
 			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
 		}
@@ -188,15 +188,15 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 	mockNTP := MockNTPClient{}
 	failNTP := MockNTPClient{
 		ignoredServers: map[string]string{
-			"some-server":       "",
-			"some-other-server": "",
-			"a third server":    "",
+			"s1": "",
+			"s2": "",
+			"s3": "",
 		},
 	}
 	partialFailNTP := MockNTPClient{
 		ignoredServers: map[string]string{
-			"some-other-server": "",
-			"a third server":    "",
+			"s2": "",
+			"s3": "",
 		},
 	}
 
@@ -252,7 +252,7 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		monitor, err := NewFromConfig(&Config{
-			Servers:         []string{"some-server", "some-other-server", "a third server"},
+			Servers:         []string{"s1", "s2", "s3", "s4", "s5", "s6"},
 			NumServers:      3,
 			Period:          1,
 			RequestAttempts: 1,
