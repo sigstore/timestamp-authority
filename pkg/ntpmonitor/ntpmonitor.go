@@ -44,6 +44,11 @@ var (
 	ErrDeltaTooSmall = errors.New("delta is too small")
 )
 
+type serverResponses struct {
+	tooFewServerResponses   bool
+	tooManyInvalidResponses bool
+}
+
 type NTPClient interface {
 	QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error)
 }
@@ -59,6 +64,10 @@ type NTPMonitor struct {
 	cfg       *Config
 	run       atomic.Bool
 	ntpClient NTPClient
+}
+
+func (n *NTPMonitor) WithCustomClient(client NTPClient) {
+	n.ntpClient = client
 }
 
 // New creates a NTPMonitor, reading the configuration from the provided
@@ -89,17 +98,11 @@ func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
 		return nil, ErrDeltaTooSmall
 	}
 
-	return &NTPMonitor{cfg: cfg}, nil
+	liveClient := LiveNTPClient{}
+	return &NTPMonitor{cfg: cfg, ntpClient: liveClient}, nil
 }
 
-type serverResponses struct {
-	tooFewServerResponses   bool
-	tooManyInvalidResponses bool
-}
-
-func (n *NTPMonitor) queryServers(delta time.Duration) serverResponses {
-	// Get a random set of servers
-	servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers)
+func (n *NTPMonitor) queryServers(delta time.Duration, servers []string) serverResponses {
 	validResponses := 0
 	noResponse := 0
 	for _, srv := range servers {
@@ -148,7 +151,9 @@ func (n *NTPMonitor) Start() {
 	delta := time.Duration(n.cfg.MaxTimeDelta) * time.Second
 	log.Logger.Info("ntp monitoring starting")
 	for n.run.Load() {
-		responses := n.queryServers(delta)
+		// Get a random set of servers
+		servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers)
+		responses := n.queryServers(delta, servers)
 
 		// Did enough NTP servers respond?
 		if responses.tooFewServerResponses {

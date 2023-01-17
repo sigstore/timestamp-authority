@@ -27,7 +27,7 @@ type MockNTPClient struct {
 	ignoredServers map[string]string
 }
 
-func (c MockNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+func (c MockNTPClient) QueryWithOptions(srv string, _ ntp.QueryOptions) (*ntp.Response, error) {
 	if _, ok := c.ignoredServers[srv]; ok {
 		return nil, errors.New("failed to query NTP server")
 	}
@@ -42,7 +42,7 @@ type driftedTimeNTPClient struct {
 	driftedOffset time.Duration
 }
 
-func (c driftedTimeNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+func (c driftedTimeNTPClient) QueryWithOptions(_ string, _ ntp.QueryOptions) (*ntp.Response, error) {
 	return &ntp.Response{
 		ClockOffset: c.driftedOffset,
 		Time:        time.Now(),
@@ -141,19 +141,16 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	testCases := []struct {
 		name             string
 		client           MockNTPClient
-		requestAttempts  int
 		expectTestToPass bool
 	}{
 		{
 			name:             "Successfully query NTP server",
 			client:           mockNTP,
-			requestAttempts:  3,
 			expectTestToPass: true,
 		},
 		{
 			name:             "Fail to query NTP server",
 			client:           failNTP,
-			requestAttempts:  1,
 			expectTestToPass: false,
 		},
 	}
@@ -161,7 +158,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		monitor, err := NewFromConfig(&Config{
 			Servers:         []string{"s1"},
 			NumServers:      1,
-			RequestAttempts: tc.requestAttempts,
+			RequestAttempts: 1,
 			ServerThreshold: 1,
 			RequestTimeout:  1,
 			MaxTimeDelta:    1,
@@ -169,7 +166,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
-		monitor.ntpClient = tc.client
+		monitor.WithCustomClient(tc.client)
 
 		resp, err := monitor.QueryNTPServer("s1")
 		if tc.expectTestToPass && err != nil {
@@ -187,20 +184,13 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 func TestNTPMonitorQueryServers(t *testing.T) {
 	mockNTP := MockNTPClient{}
 	failNTP := MockNTPClient{
-		ignoredServers: map[string]string{
-			"s1": "",
-			"s2": "",
-			"s3": "",
-		},
+		ignoredServers: map[string]string{"s1": "", "s2": "", "s3": ""},
 	}
 	partialFailNTP := MockNTPClient{
-		ignoredServers: map[string]string{
-			"s2": "",
-			"s3": "",
-		},
+		ignoredServers: map[string]string{"s2": "", "s3": ""},
 	}
 
-	offsetDuration, err := time.ParseDuration("2s")
+	offsetDuration, err := time.ParseDuration("5s")
 	if err != nil {
 		t.Fatalf("unexpected failed to parse duration: %v", err)
 	}
@@ -231,13 +221,13 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 			serverThreshold:            2,
 			maxTimeDelta:               5,
 			expectEnoughServerResponse: false,
-			expectValidServerResponse:  true,
+			expectValidServerResponse:  false,
 		},
 		{
 			name:                       "Receive too many drifted time responses",
 			client:                     driftedNTP,
 			serverThreshold:            2,
-			maxTimeDelta:               4,
+			maxTimeDelta:               2,
 			expectEnoughServerResponse: true,
 			expectValidServerResponse:  false,
 		},
@@ -256,17 +246,19 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 			NumServers:      3,
 			Period:          1,
 			RequestAttempts: 1,
-			ServerThreshold: tc.serverThreshold,
 			RequestTimeout:  1,
+			ServerThreshold: tc.serverThreshold,
 			MaxTimeDelta:    tc.maxTimeDelta,
 		})
 		if err != nil {
 			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
-		monitor.ntpClient = tc.client
 
-		delta := time.Duration(5) * time.Second
-		responses := monitor.queryServers(delta)
+		monitor.WithCustomClient(tc.client)
+		delta := time.Duration(tc.maxTimeDelta) * time.Second
+		testedServers := []string{"s1", "s2", "s3"}
+
+		responses := monitor.queryServers(delta, testedServers)
 		if tc.expectEnoughServerResponse && responses.tooFewServerResponses {
 			t.Errorf("test '%s' unexpectedly failed with too few server responses", tc.name)
 		}
