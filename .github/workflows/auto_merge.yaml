@@ -3,6 +3,8 @@ name: Dependabot auto-merge
 on:
   pull_request:
 
+permissions: read-all
+
 jobs:
   dependabot:
     permissions:
