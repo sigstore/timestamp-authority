@@ -24,6 +24,8 @@ import (
 )
 
 type MockNTPClient struct {
+	// add the names of servers that MockNTPClient#QueryWithOptions should
+	// always return an error response for
 	ignoredServers map[string]string
 }
 
@@ -155,20 +157,19 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		monitor, err := NewFromConfig(&Config{
+		monitor, err := NewFromConfigWithClient(&Config{
 			Servers:         []string{"s1"},
 			NumServers:      1,
 			RequestAttempts: 1,
 			ServerThreshold: 1,
 			RequestTimeout:  1,
 			MaxTimeDelta:    1,
-		})
+		}, tc.client)
 		if err != nil {
 			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
-		monitor.WithCustomClient(tc.client)
 
-		resp, err := monitor.QueryNTPServer("s1")
+		resp, err := monitor.queryNTPServer("s1")
 		if tc.expectTestToPass && err != nil {
 			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
 		}
@@ -241,7 +242,7 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		monitor, err := NewFromConfig(&Config{
+		monitor, err := NewFromConfigWithClient(&Config{
 			Servers:         []string{"s1", "s2", "s3", "s4", "s5", "s6"},
 			NumServers:      3,
 			Period:          1,
@@ -249,12 +250,11 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 			RequestTimeout:  1,
 			ServerThreshold: tc.serverThreshold,
 			MaxTimeDelta:    tc.maxTimeDelta,
-		})
+		}, tc.client)
 		if err != nil {
 			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
 
-		monitor.WithCustomClient(tc.client)
 		delta := time.Duration(tc.maxTimeDelta) * time.Second
 		testedServers := []string{"s1", "s2", "s3"}
 

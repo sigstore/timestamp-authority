@@ -66,10 +66,6 @@ type NTPMonitor struct {
 	ntpClient NTPClient
 }
 
-func (n *NTPMonitor) WithCustomClient(client NTPClient) {
-	n.ntpClient = client
-}
-
 // New creates a NTPMonitor, reading the configuration from the provided
 // path.
 func New(configFile string) (*NTPMonitor, error) {
@@ -82,6 +78,12 @@ func New(configFile string) (*NTPMonitor, error) {
 
 // NewFromConfig creates a NTPMonitor from an instantiated configuration.
 func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
+	// default to using a live NTP client
+	liveNTPClient := LiveNTPClient{}
+	return NewFromConfigWithClient(cfg, liveNTPClient)
+}
+
+func NewFromConfigWithClient(cfg *Config, client NTPClient) (*NTPMonitor, error) {
 	if len(cfg.Servers) == 0 || len(cfg.Servers) < cfg.NumServers {
 		return nil, ErrTooFewServers
 	}
@@ -98,8 +100,7 @@ func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
 		return nil, ErrDeltaTooSmall
 	}
 
-	liveClient := LiveNTPClient{}
-	return &NTPMonitor{cfg: cfg, ntpClient: liveClient}, nil
+	return &NTPMonitor{cfg: cfg, ntpClient: client}, nil
 }
 
 func (n *NTPMonitor) queryServers(delta time.Duration, servers []string) serverResponses {
@@ -110,7 +111,7 @@ func (n *NTPMonitor) queryServers(delta time.Duration, servers []string) serverR
 		// time delta added/removed
 		// Make sure the time from the remote NTP server lies
 		// within this interval.
-		resp, err := n.QueryNTPServer(srv)
+		resp, err := n.queryNTPServer(srv)
 		if err != nil {
 			log.Logger.Errorf("ntp response timeout from %s",
 				srv)
@@ -179,9 +180,9 @@ func (n *NTPMonitor) Stop() {
 	n.run.Store(false)
 }
 
-// QueryNTPServer queries a provided ntp server, trying up to a configured
+// queryNTPServer queries a provided ntp server, trying up to a configured
 // amount of times. There is one second sleep between each attempt.
-func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
+func (n *NTPMonitor) queryNTPServer(srv string) (*ntp.Response, error) {
 	var i = 1
 	for {
 		log.Logger.Debugf("querying ntp server %s", srv)
