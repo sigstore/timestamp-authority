@@ -19,7 +19,7 @@ import (
 	"math/rand"
 )
 
-// RandomChoice returns a random selection of n items from the slic s.
+// RandomChoice returns a random selection of n items from the slice s.
 // The choice is made using a PSEUDO RANDOM selection.
 // If n is greater than len(s), an empty slice is returned.
 func RandomChoice[T any](s []T, n int) []T {

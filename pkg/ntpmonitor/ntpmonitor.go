@@ -44,10 +44,26 @@ var (
 	ErrDeltaTooSmall = errors.New("delta is too small")
 )
 
+type serverResponses struct {
+	tooFewServerResponses   bool
+	tooManyInvalidResponses bool
+}
+
+type NTPClient interface {
+	QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error)
+}
+
+type LiveNTPClient struct{}
+
+func (c LiveNTPClient) QueryWithOptions(srv string, opts ntp.QueryOptions) (*ntp.Response, error) {
+	return ntp.QueryWithOptions(srv, opts)
+}
+
 // NTPMonitor compares the local time with a set of trusted NTP servers.
 type NTPMonitor struct {
-	cfg *Config
-	run atomic.Bool
+	cfg       *Config
+	run       atomic.Bool
+	ntpClient NTPClient
 }
 
 // New creates a NTPMonitor, reading the configuration from the provided
@@ -62,6 +78,12 @@ func New(configFile string) (*NTPMonitor, error) {
 
 // NewFromConfig creates a NTPMonitor from an instantiated configuration.
 func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
+	// default to using a live NTP client
+	liveNTPClient := LiveNTPClient{}
+	return NewFromConfigWithClient(cfg, liveNTPClient)
+}
+
+func NewFromConfigWithClient(cfg *Config, client NTPClient) (*NTPMonitor, error) {
 	if len(cfg.Servers) == 0 || len(cfg.Servers) < cfg.NumServers {
 		return nil, ErrTooFewServers
 	}
@@ -78,7 +100,44 @@ func NewFromConfig(cfg *Config) (*NTPMonitor, error) {
 		return nil, ErrDeltaTooSmall
 	}
 
-	return &NTPMonitor{cfg: cfg}, nil
+	return &NTPMonitor{cfg: cfg, ntpClient: client}, nil
+}
+
+func (n *NTPMonitor) queryServers(delta time.Duration, servers []string) serverResponses {
+	validResponses := 0
+	noResponse := 0
+	for _, srv := range servers {
+		// Create a time interval from 'now' with the max
+		// time delta added/removed
+		// Make sure the time from the remote NTP server lies
+		// within this interval.
+		resp, err := n.queryNTPServer(srv)
+		if err != nil {
+			log.Logger.Errorf("ntp response timeout from %s",
+				srv)
+			noResponse++
+			continue
+		}
+
+		// ClockOffset is the estimated difference from
+		// local time to NTP server's time.
+		// The estimate assumes latency is similar for both
+		// sending and receiving data.
+		// The estimated offset does not depend on the value
+		// of the latency.
+		if resp.ClockOffset.Abs() > delta {
+			log.Logger.Warnf("local time is different from %s: %s",
+				srv, resp.Time)
+		} else {
+			validResponses++
+		}
+	}
+
+	// Did enough NTP servers respond?
+	return serverResponses{
+		tooFewServerResponses:   n.cfg.ServerThreshold > n.cfg.NumServers-noResponse,
+		tooManyInvalidResponses: n.cfg.ServerThreshold > validResponses,
+	}
 }
 
 // Start the periodic monitor. Once started, it runs until Stop() is called,
@@ -95,43 +154,15 @@ func (n *NTPMonitor) Start() {
 	for n.run.Load() {
 		// Get a random set of servers
 		servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers)
-		validResponses := 0
-		noResponse := 0
-		for _, srv := range servers {
-			// Create a time interval from 'now' with the max
-			// time delta added/remobed
-			// Make sure the time from the remote NTP server lies
-			// within this interval.
-			resp, err := n.QueryNTPServer(srv)
-
-			if err != nil {
-				log.Logger.Errorf("ntp response timeout from %s",
-					srv)
-				noResponse++
-				continue
-			}
-
-			// ClockOffset is the estimated difference from
-			// local time to NTP server's time.
-			// The estimate assumes latency is similar for both
-			// sending and receiving data.
-			// The estimated offset does not depend on the value
-			// of the latency.
-			if resp.ClockOffset.Abs() > delta {
-				log.Logger.Warnf("local time is different from %s: %s",
-					srv, resp.Time)
-			} else {
-				validResponses++
-			}
-		}
+		responses := n.queryServers(delta, servers)
 
 		// Did enough NTP servers respond?
-		if n.cfg.ServerThreshold > n.cfg.NumServers-noResponse {
+		if responses.tooFewServerResponses {
 			pkgapi.MetricNTPErrorCount.With(map[string]string{
 				"reason": "err_too_few",
 			}).Inc()
 		}
-		if n.cfg.ServerThreshold > validResponses {
+		if responses.tooManyInvalidResponses {
 			pkgapi.MetricNTPErrorCount.With(map[string]string{
 				"reason": "err_inv_time",
 			}).Inc()
@@ -149,9 +180,9 @@ func (n *NTPMonitor) Stop() {
 	n.run.Store(false)
 }
 
-// QueryNTPServer queries a provided ntp server, trying up to a configured
+// queryNTPServer queries a provided ntp server, trying up to a configured
 // amount of times. There is one second sleep between each attempt.
-func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
+func (n *NTPMonitor) queryNTPServer(srv string) (*ntp.Response, error) {
 	var i = 1
 	for {
 		log.Logger.Debugf("querying ntp server %s", srv)
@@ -160,7 +191,7 @@ func (n *NTPMonitor) QueryNTPServer(srv string) (*ntp.Response, error) {
 		opts := ntp.QueryOptions{
 			Timeout: time.Duration(n.cfg.RequestTimeout) * time.Second,
 		}
-		resp, err := ntp.QueryWithOptions(srv, opts)
+		resp, err := n.ntpClient.QueryWithOptions(srv, opts)
 		pkgapi.MetricNTPLatency.With(map[string]string{
 			"host": srv,
 		}).Observe(float64(time.Since(start)))
