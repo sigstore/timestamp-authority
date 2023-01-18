@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	pkgapi "github.com/sigstore/timestamp-authority/pkg/api"
 )
 
 type MockNTPClient struct {
@@ -156,6 +158,13 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 			expectTestToPass: false,
 		},
 	}
+
+	// There does not seem to be a way to reset the metric counter for testing
+	// purposes. To test that the metric counter value is incrementing by one
+	// as expected, we can set this variable to zero before the test for loop
+	// and increment it the call to monitor.queryNTPServer. We then check that
+	// the metric value has only increased by one as expected
+	expectedMetricValue := 0
 	for _, tc := range testCases {
 		monitor, err := NewFromConfigWithClient(&Config{
 			Servers:         []string{"s1"},
@@ -170,6 +179,9 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		}
 
 		resp, err := monitor.queryNTPServer("s1")
+		// increment the expected metric value
+		expectedMetricValue++
+
 		if tc.expectTestToPass && err != nil {
 			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
 		}
@@ -178,6 +190,11 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 		}
 		if !tc.expectTestToPass && err == nil {
 			t.Errorf("test '%s' unexpectedly passed with a nil error", tc.name)
+		}
+		// check that the actual metric value was incremented by one as expected
+		actualMetricCount := testutil.CollectAndCount(pkgapi.MetricNTPSyncCount)
+		if expectedMetricValue != actualMetricCount {
+			t.Errorf("test '%s' unexpectedly failed with wrong metric value %d, expected %d", tc.name, actualMetricCount, expectedMetricValue)
 		}
 	}
 }
