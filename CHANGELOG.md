@@ -1,6 +1,26 @@
+# 1.0.0-rc.0
+
+_Note: This is a prerelease for 1.0. Please try it out and file issues!_
+
+## Changes
+
+SLSA provenance is now uploaded with each release. Use
+[slsa-verifier](https://github.com/slsa-framework/slsa-verifier/) to verify
+the release.
+
+### Misc
+
+* Mock NTP client (https://github.com/sigstore/timestamp-authority/pull/217)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior
+* Hayden B
+* Meredith Lancaster
+
 # 0.2.1
 
-0.2.1 now rejects timestamp requests that use SHA-1. For server operators, it 
+0.2.1 now rejects timestamp requests that use SHA-1. For server operators, it
 now defaults to using NTP monitoring.
 
 ## Changes
