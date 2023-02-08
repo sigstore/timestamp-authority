@@ -64,13 +64,14 @@ validate-openapi: $(SWAGGER)
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_timestamp_server.go: $(OPENAPIDEPS)
 
-lint:
+lint: ## Go linting
 	$(GOBIN)/golangci-lint run -v ./...
 
 gosec:
 	$(GOBIN)/gosec ./...
 
 gen: $(GENSRC)
+
 .PHONY : timestamp-cli
 timestamp-cli: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/timestamp-cli ./cmd/timestamp-cli
@@ -89,7 +90,7 @@ clean:
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
 
-up:
+up: ## Run the TSA with Docker Compose
 	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
 	docker-compose -f docker-compose.yml up
 
@@ -107,7 +108,7 @@ ko:
 		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
 
 .PHONY: ko-local
-ko-local:
+ko-local: ## Run Ko locally
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
@@ -129,10 +130,10 @@ $(SWAGGER): $(TOOLS_DIR)/go.mod
 # help
 ##################
 
-help: # Display help
+help: ## Display help
 	@awk -F ':|##' \
-		'/^[^\t].+?:.*?##/ (\
+		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
-		)' $(MAKEFILE_LIST) | sort
+		}' $(MAKEFILE_LIST) | sort
 
 include release/release.mk
