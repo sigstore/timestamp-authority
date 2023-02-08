@@ -31,8 +31,10 @@ paths:
       tags:
         - timestamp
       consumes:
+        - application/json
         - application/timestamp-query
       produces:
+        - application/json
         - application/timestamp-reply
       parameters:
         - in: body

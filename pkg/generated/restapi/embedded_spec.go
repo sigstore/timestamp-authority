@@ -47,9 +47,11 @@ func init() {
     "/api/v1/timestamp": {
       "post": {
         "consumes": [
+          "application/json",
           "application/timestamp-query"
         ],
         "produces": [
+          "application/json",
           "application/timestamp-reply"
         ],
         "tags": [
@@ -168,9 +170,11 @@ func init() {
     "/api/v1/timestamp": {
       "post": {
         "consumes": [
+          "application/json",
           "application/timestamp-query"
         ],
         "produces": [
+          "application/json",
           "application/timestamp-reply"
         ],
         "tags": [
