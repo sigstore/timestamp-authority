@@ -85,7 +85,7 @@ func TestSelection(t *testing.T) {
 	}
 
 	// Math.rand is deterministic based on a given seed
-	rand.Seed(seed)
+	rand.New(rand.NewSource(seed))
 
 	for _, c := range cases {
 		got := RandomChoice(c.input, c.n)
