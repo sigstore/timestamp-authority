@@ -22,7 +22,7 @@ import (
 // RandomChoice returns a random selection of n items from the slice s.
 // The choice is made using a PSEUDO RANDOM selection.
 // If n is greater than len(s), an empty slice is returned.
-func RandomChoice[T any](s []T, n int) []T {
+func RandomChoice[T any](s []T, n int, r *rand.Rand) []T {
 	if n > len(s) || n < 1 {
 		return []T{}
 	}
@@ -41,7 +41,7 @@ func RandomChoice[T any](s []T, n int) []T {
 		// The use of deterministic (pseudo) random generators are
 		// ok for this use-case.
 		//nolint:gosec
-		i := rand.Intn(len(indices))
+		i := r.Intn(len(indices))
 
 		result = append(result, s[indices[i]])
 		if len(result) == n {
