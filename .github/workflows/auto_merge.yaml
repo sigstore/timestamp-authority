@@ -3,18 +3,19 @@ name: Dependabot auto-merge
 on:
   pull_request:
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: read-all
 
 jobs:
   dependabot:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@5ef00187930bafb52d529e0b9c3dff045dfa9851 # v1.3.5
+        uses: dependabot/fetch-metadata@4de7a6c08ce727a42e0adbbdc345f761a01240ce # v1.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 

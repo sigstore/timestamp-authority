@@ -1,3 +1,5 @@
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/sigstore/timestamp-authority/badge)](https://api.securityscorecards.dev/projects/github.com/sigstore/timestamp-authority)
+
 # Sigstore Timestamp Authority
 
 A service for issuing [RFC 3161 timestamps](https://datatracker.ietf.org/doc/html/rfc3161).

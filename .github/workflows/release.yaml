@@ -7,13 +7,14 @@ on:
 
 concurrency: cut-release
 
-permissions:
-  contents: write # needed to write releases
-  id-token: write # needed for keyless signing
-  packages: write # needed for pushing the images to ghcr.io
+permissions: read-all
 
 jobs:
   release:
+    permissions:
+      contents: write # needed to write releases
+      id-token: write # needed for keyless signing
+      packages: write # needed for pushing the images to ghcr.io
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
@@ -26,7 +27,7 @@ jobs:
           check-latest: true
 
       - uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b # v2.8.1
-      - uses: anchore/sbom-action/download-syft@06e109483e6aa305a2b2395eabae554e51530e1d # v0.13.1
+      - uses: anchore/sbom-action/download-syft@07978da4bdb4faa726e52dfc6b1bed63d4b56479 # v0.13.3
       - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
       - name: Set LDFLAGS
@@ -38,7 +39,7 @@ jobs:
 
       - name: Run GoReleaser
         id: run-goreleaser
-        uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1 # v4.1.0
+        uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
         with:
           version: latest
           args: release --rm-dist
