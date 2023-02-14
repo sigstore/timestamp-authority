@@ -17,6 +17,7 @@ package api
 import (
 	"bytes"
 	"encoding/asn1"
+	"encoding/json"
 	"io"
 	"net/http"
 	"time"
@@ -33,9 +34,24 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
-	req, err := timestamp.ParseRequest(requestBytes)
-	if err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+	val := params.HTTPRequest.Header.Get("Content-Type")
+
+	var req *timestamp.Request
+	var contentType string
+	if val == "application/json" {
+		jsonReq, err := timestamp.ParseJSONRequest(requestBytes)
+		if err != nil {
+			return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+		}
+		req = jsonReq
+		contentType = val
+	} else if val == "application/timestamp-query" {
+		asn1Req, err := timestamp.ParseASN1Request(requestBytes)
+		if err != nil {
+			return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+		}
+		req = asn1Req
+		contentType = val
 	}
 
 	if err := verification.VerifyRequest(req); err != nil {
@@ -63,7 +79,13 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		ExtraExtensions:   req.Extensions,
 	}
 
-	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner)
+	var marshalFunc func(v any) ([]byte, error)
+	if contentType == "application/json" {
+		marshalFunc = json.Marshal
+	} else {
+		marshalFunc = asn1.Marshal
+	}
+	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner, marshalFunc)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}

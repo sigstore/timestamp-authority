@@ -76,7 +76,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		name string
 		policyOID              []int
 		extensions           []pkix.Extension
-		nonce big.NewInt
+		nonce *big.Int
 		addCertificates bool
 	}
 
@@ -100,7 +100,7 @@ func TestGetTimestampResponse(t *testing.T) {
 			policyOID: asn1.ObjectIdentifier{1, 2, 3, 4, 5},
 			extensions: []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
 			addCertificates: false,
-		}
+		},
 	}
 
 	for _, tc := range tests {
@@ -119,10 +119,10 @@ func TestGetTimestampResponse(t *testing.T) {
 		})
 
 		if tc.extensions != nil {
-			req.ExtraExtensions = tc.extensions
+			tsq.ExtraExtensions = tc.extensions
 		}
 		if tc.oidPolicy != nil {
-			req.TSAPolicyOID = tc.policyOID
+			tsq.TSAPolicyOID = tc.policyOID
 		}
 
 		if err != nil {
