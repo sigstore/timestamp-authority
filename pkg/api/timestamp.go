@@ -17,16 +17,28 @@ package api
 import (
 	"bytes"
 	"encoding/asn1"
-	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
+
+// v0.0.0-20230214160055-515d64fc31c5
+
+func getContentType(r *http.Request) (string, error) {
+	contentTypeHeader := r.Header.Get("Content-Type")
+	splitHeader := strings.Split(contentTypeHeader, "application/")
+	if len(splitHeader) != 2 {
+		return "", errors.New("expected header value to be split into two pieces")
+	}
+	return splitHeader[1], nil
+}
 
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
 	requestBytes, err := io.ReadAll(params.Request)
@@ -34,24 +46,19 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
-	val := params.HTTPRequest.Header.Get("Content-Type")
+	contentType, err := getContentType(params.HTTPRequest)
+	if err != nil {
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+	}
 
-	var req *timestamp.Request
-	var contentType string
-	if val == "application/json" {
-		jsonReq, err := timestamp.ParseJSONRequest(requestBytes)
-		if err != nil {
-			return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
-		}
-		req = jsonReq
-		contentType = val
-	} else if val == "application/timestamp-query" {
-		asn1Req, err := timestamp.ParseASN1Request(requestBytes)
-		if err != nil {
-			return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
-		}
-		req = asn1Req
-		contentType = val
+	handler, err := timestamp.NewEncodingHandler(contentType)
+	if err != nil {
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+	}
+
+	req, err := handler.ParseRequest(requestBytes)
+	if err != nil {
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
 	if err := verification.VerifyRequest(req); err != nil {
@@ -79,13 +86,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		ExtraExtensions:   req.Extensions,
 	}
 
-	var marshalFunc func(v any) ([]byte, error)
-	if contentType == "application/json" {
-		marshalFunc = json.Marshal
-	} else {
-		marshalFunc = asn1.Marshal
-	}
-	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner, marshalFunc)
+	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner, handler.MarshalResponse)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}

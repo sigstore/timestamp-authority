@@ -451,8 +451,8 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/malancas/timestamp v0.0.0-20230214001005-c25138edfde0 h1:/8d69z50b8XQ4rM3SSjq0vzpJrFFW7CCn0nLUChcwkg=
-github.com/malancas/timestamp v0.0.0-20230214001005-c25138edfde0/go.mod h1:gPUr3tykDzAjX93+HPDiuHryLHoWAaXa/pA7Uo5bW+8=
+github.com/malancas/timestamp v0.0.0-20230214160055-515d64fc31c5 h1:ZzuJZvv11WwiQWdOxUq7MJyHg6K0d8Pv0UJ4wTXiwWI=
+github.com/malancas/timestamp v0.0.0-20230214160055-515d64fc31c5/go.mod h1:gPUr3tykDzAjX93+HPDiuHryLHoWAaXa/pA7Uo5bW+8=
 github.com/markbates/oncer v0.0.0-20181203154359-bf2de49a0be2/go.mod h1:Ld9puTsIW75CHf65OeIOkyKbteujpZVXDpWK6YGZbxE=
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=

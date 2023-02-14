@@ -169,4 +169,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/digitorus/timestamp => github.com/malancas/timestamp v0.0.0-20230214001005-c25138edfde0
+replace github.com/digitorus/timestamp => github.com/malancas/timestamp v0.0.0-20230214160055-515d64fc31c5
