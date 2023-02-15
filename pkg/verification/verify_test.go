@@ -109,7 +109,6 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 		opts := VerifyOpts{
 			Intermediates: certs[1:2],
 			Roots:         certs[2:],
-			TimestampFormat: "timestamp-query",
 		}
 
 		ts, err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts)

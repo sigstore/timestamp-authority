@@ -73,44 +73,44 @@ func TestGetTimestampCertChain(t *testing.T) {
 
 func TestGetTimestampResponse(t *testing.T) {
 	type test struct {
-		name string
-		policyOID              []int
-		extensions           []pkix.Extension
-		nonce *big.Int
+		name            string
+		policyOID       []int
+		extensions      []pkix.Extension
+		nonce           *big.Int
 		addCertificates bool
 	}
 
 	tests := []test{
 		{
-			name: "Expect default policy OID and no extensions",
-			policyOID: nil,
-			extensions: nil,
-			nonce: big.NewInt(1234),
+			name:            "Expect default policy OID and no extensions",
+			policyOID:       nil,
+			extensions:      nil,
+			nonce:           big.NewInt(1234),
 			addCertificates: true,
 		},
 		{
-			name: "Expect custom policy OID and extensions",
-			policyOID: asn1.ObjectIdentifier{1, 2, 3, 4, 5},
-			extensions: []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
-			nonce: big.NewInt(1234),
+			name:            "Expect custom policy OID and extensions",
+			policyOID:       asn1.ObjectIdentifier{1, 2, 3, 4, 5},
+			extensions:      []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
+			nonce:           big.NewInt(1234),
 			addCertificates: true,
 		},
 		{
-			name: "Expect no nonce or TSA certificate",
-			policyOID: asn1.ObjectIdentifier{1, 2, 3, 4, 5},
-			extensions: []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
+			name:            "Expect no nonce or TSA certificate",
+			policyOID:       asn1.ObjectIdentifier{1, 2, 3, 4, 5},
+			extensions:      []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
 			addCertificates: false,
 		},
 	}
 
 	for _, tc := range tests {
 		url := createServer(t)
-	
+
 		c, err := client.GetTimestampClient(url)
 		if err != nil {
 			t.Fatalf("unexpected error creating client: %v", err)
 		}
-	
+
 		// create request with nonce and certificate, the typical request structure
 		tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
 			Hash:         crypto.SHA256,
@@ -120,22 +120,22 @@ func TestGetTimestampResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating request: %v", err)
 		}
-	
+
 		params := timestamp.NewGetTimestampResponseParams()
 		params.SetTimeout(10 * time.Second)
 		params.Request = io.NopCloser(bytes.NewReader(tsq))
-	
+
 		var respBytes bytes.Buffer
 		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
 		if err != nil {
 			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}
-	
+
 		tsr, err := ts.ParseResponse(respBytes.Bytes())
 		if err != nil {
 			t.Fatalf("unexpected error parsing response: %v", err)
 		}
-	
+
 		// if tc.extensions != nil {
 		// 	tsr.ExtraExtensions = tc.extensions
 		// }

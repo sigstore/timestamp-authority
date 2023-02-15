@@ -54,7 +54,6 @@ func addVerifyFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "certificate", "path to file with PEM-encoded leaf certificate")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "intermediate-certificates", "path to file with PEM-encoded intermediate certificates. Must be called with the root-certificate flag.")
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "root-certificates", "path to file with a PEM-encoded root certificates. Optionally can be called with the intermediate-certificates flag.")
-	cmd.Flags().String("timestamp-format", "asn1", "format of the timestamp to verify - json, asn1, and timestamp-query are supported")
 }
 
 var verifyCmd = &cobra.Command{
@@ -131,8 +130,6 @@ func newVerifyOpts() (verification.VerifyOpts, error) {
 
 	commonNameFlagVal := viper.GetString("common-name")
 	opts.CommonName = commonNameFlagVal
-
-	opts.TimestampFormat = viper.GetString("timestamp-format")
 
 	return opts, nil
 }

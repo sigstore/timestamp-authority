@@ -50,8 +50,6 @@ type VerifyOpts struct {
 	Nonce *big.Int
 	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value. Optional
 	CommonName string
-	// Format indicates the encoding format of the timestamp - ASN1 and JSON are valid
-	TimestampFormat string
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -212,11 +210,7 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
 
-	encodingHandler, err := timestamp.NewEncodingHandler(opts.TimestampFormat)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create encoding handler")
-	}
-
+	encodingHandler := timestamp.ASN1EncodingHandler{}
 	ts, err := encodingHandler.ParseResponse(tsrBytes)
 	if err != nil {
 		pe := timestamp.ParseError("")

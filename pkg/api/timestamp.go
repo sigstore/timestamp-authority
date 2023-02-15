@@ -17,15 +17,15 @@ package api
 import (
 	"bytes"
 	"encoding/asn1"
-	"io"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/pkg/errors"
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
@@ -33,15 +33,6 @@ import (
 // v0.0.0-20230214160055-515d64fc31c5
 
 func getContentType(r *http.Request) (string, error) {
-	contentTypeHeader := r.Header.Get("Content-Type")
-	splitHeader := strings.Split(contentTypeHeader, "application/")
-	if len(splitHeader) != 2 {
-		return "", errors.New("expected header value to be split into two pieces")
-	}
-	return splitHeader[1], nil
-}
-
-func getContentTypeHeader(r *http.Request) (string, error) {
 	contentTypeHeader := r.Header.Get("Content-Type")
 	splitHeader := strings.Split(contentTypeHeader, "application/")
 	if len(splitHeader) != 2 {

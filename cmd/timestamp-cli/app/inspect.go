@@ -30,7 +30,6 @@ import (
 func addInspectFlags(cmd *cobra.Command) {
 	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "timestamp", "path to timestamp response to inspect")
 	cmd.MarkFlagRequired("timestamp") //nolint:errcheck
-	cmd.Flags().String("timestamp-format", "asn1", "format of the timestamp to verify - json, asn1, and timestamp-query are supported")
 }
 
 type inspectCmdOutput struct {
@@ -58,11 +57,7 @@ var inspectCmd = &cobra.Command{
 			return nil, fmt.Errorf("Error reading request from TSR file: %w", err)
 		}
 
-		encodingHandler, err := timestamp.NewEncodingHandler(viper.GetString("timestamp-format"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new encoding handler: %w", err)
-		}
-		
+		encodingHandler := timestamp.ASN1EncodingHandler{}
 		ts, err := encodingHandler.ParseResponse(tsrBytes)
 		if err != nil {
 			return nil, err
