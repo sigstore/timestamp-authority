@@ -24,6 +24,7 @@ import (
 func TestGetTimestampClientWithOptions(t *testing.T) {
 	t.Parallel()
 	expectedUserAgent := "test User-Agent"
+	// expectedContentType := "application/timestamp-query"
 	requestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

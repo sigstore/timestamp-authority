@@ -21,6 +21,7 @@ type Option func(*options)
 
 type options struct {
 	UserAgent string
+	// ContentType string
 }
 
 func makeOptions(opts ...Option) *options {
@@ -42,14 +43,23 @@ func WithUserAgent(userAgent string) Option {
 	}
 }
 
+// WithContentType sets the content type of the request.
+// func WithContentType(contentType string) Option {
+// 	return func(o *options) {
+// 		o.ContentType = contentType
+// 	}
+// }
+
 type roundTripper struct {
 	http.RoundTripper
 	UserAgent string
+	// ContentType string
 }
 
 // RoundTrip implements `http.RoundTripper`
 func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", rt.UserAgent)
+	// req.Header.Set("Content-Type", rt.ContentType)
 	return rt.RoundTripper.RoundTrip(req)
 }
 
@@ -61,8 +71,13 @@ func createRoundTripper(inner http.RoundTripper, o *options) http.RoundTripper {
 		// There's nothing to do...
 		return inner
 	}
+	// if o.ContentType == "" {
+	// 	// There's nothing to do...
+	// 	return inner
+	// }
 	return &roundTripper{
 		RoundTripper: inner,
 		UserAgent:    o.UserAgent,
+		// ContentType: o.ContentType,
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/asn1"
 	"io"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -40,6 +41,15 @@ func getContentType(r *http.Request) (string, error) {
 	return splitHeader[1], nil
 }
 
+func getContentTypeHeader(r *http.Request) (string, error) {
+	contentTypeHeader := r.Header.Get("Content-Type")
+	splitHeader := strings.Split(contentTypeHeader, "application/")
+	if len(splitHeader) != 2 {
+		return "", errors.New("expected header value to be split into two pieces")
+	}
+	return splitHeader[1], nil
+}
+
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
 	requestBytes, err := io.ReadAll(params.Request)
 	if err != nil {
@@ -50,6 +60,9 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
+
+	fmt.Println("xyz content type: " + contentType)
+	fmt.Printf("\n xyz http request: %+v", params.HTTPRequest)
 
 	handler, err := timestamp.NewEncodingHandler(contentType)
 	if err != nil {

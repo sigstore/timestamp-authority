@@ -51,7 +51,6 @@ func init() {
           "application/timestamp-query"
         ],
         "produces": [
-          "application/json",
           "application/timestamp-reply"
         ],
         "tags": [
@@ -174,7 +173,6 @@ func init() {
           "application/timestamp-query"
         ],
         "produces": [
-          "application/json",
           "application/timestamp-reply"
         ],
         "tags": [

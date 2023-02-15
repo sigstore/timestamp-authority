@@ -117,14 +117,6 @@ func TestGetTimestampResponse(t *testing.T) {
 			Certificates: tc.addCertificates,
 			Nonce:        tc.nonce,
 		})
-
-		if tc.extensions != nil {
-			tsq.ExtraExtensions = tc.extensions
-		}
-		if tc.oidPolicy != nil {
-			tsq.TSAPolicyOID = tc.policyOID
-		}
-
 		if err != nil {
 			t.Fatalf("unexpected error creating request: %v", err)
 		}
@@ -144,6 +136,13 @@ func TestGetTimestampResponse(t *testing.T) {
 			t.Fatalf("unexpected error parsing response: %v", err)
 		}
 	
+		// if tc.extensions != nil {
+		// 	tsr.ExtraExtensions = tc.extensions
+		// }
+		// if tc.oidPolicy != nil {
+		// 	tsr.TSAPolicyOID = tc.policyOID
+		// }
+
 		// check certificate fields
 		if !tc.addCertificates {
 			if tsr.AddTSACertificate {
@@ -165,7 +164,7 @@ func TestGetTimestampResponse(t *testing.T) {
 
 		// check nonce
 		if tc.nonce == nil && tsr.Nonce.Cmp(tc.nonce) != 0 {
-			t.Fatalf("expected nonce %d, got %d", tsNonce, tsr.Nonce)
+			t.Fatalf("expected nonce %d, got %d", tc.nonce, tsr.Nonce)
 		}
 		// check hash and hashed message
 		if tsr.HashAlgorithm != crypto.SHA256 {
@@ -195,7 +194,7 @@ func TestGetTimestampResponse(t *testing.T) {
 			t.Fatalf("tsr should not be ordered")
 		}
 		// check policy OID
-		if (tc.oidPolicy == nil && !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2})) || (tc.oidPolicy != nil && !tsr.Policy.Equal(tc.oidPolicy)) {
+		if (tc.policyOID == nil && !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2})) || (tc.policyOID != nil && !tsr.Policy.Equal(tc.policyOID)) {
 			t.Fatalf("unexpected policy ID")
 		}
 		// check extension is present

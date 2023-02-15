@@ -103,7 +103,7 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer
 		ID:                 "getTimestampResponse",
 		Method:             "POST",
 		PathPattern:        "/api/v1/timestamp",
-		ProducesMediaTypes: []string{"application/json", "application/timestamp-reply"},
+		ProducesMediaTypes: []string{"application/timestamp-reply"},
 		ConsumesMediaTypes: []string{"application/json", "application/timestamp-query"},
 		Schemes:            []string{"http"},
 		Params:             params,

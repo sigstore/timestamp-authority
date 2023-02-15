@@ -34,7 +34,6 @@ paths:
         - application/json
         - application/timestamp-query
       produces:
-        - application/json
         - application/timestamp-reply
       parameters:
         - in: body
