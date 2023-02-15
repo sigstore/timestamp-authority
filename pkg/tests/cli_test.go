@@ -23,6 +23,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	// "net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,7 +46,7 @@ func TestInspect(t *testing.T) {
 	tsrPath := getTimestamp(t, serverURL, "blob", big.NewInt(0), nil, true)
 
 	// It should create timestamp successfully.
-	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
+	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "default")
 
 	// test that output can be parsed as a timestamp
 	resp := struct {
@@ -93,7 +94,7 @@ func TestVerify_CertificateChainFlag(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -116,7 +117,7 @@ func TestVerify_RootAndIntermediateCertificateFlags(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -139,7 +140,7 @@ func TestVerify_AllCertFlagsIncluded(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should fail to verify.
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
 }
 
@@ -159,7 +160,7 @@ func TestVerify_NoCertFlagsIncluded(t *testing.T) {
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
 
 	// It should fail to verify.
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
 }
 
@@ -182,7 +183,7 @@ func TestVerify_PassLeafCertificate(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", pemFiles.leafCertPath)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", pemFiles.leafCertPath, "--timestamp-format", "asn1", "--format", "default")
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -201,7 +202,7 @@ func TestVerify_InvalidTSR(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", invalidTSR, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "error parsing response into Timestamp")
 }
 
@@ -220,7 +221,7 @@ func TestVerify_InvalidPEM(t *testing.T) {
 	}
 
 	// It should return a message that the PEM is not valid
-	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", invalidPEMPath)
+	out := runCliErr(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", invalidPEMPath, "--timestamp-format", "timestamp-query")
 	outputContains(t, out, "failed to parse intermediate and root certs from PEM file")
 }
 
@@ -325,7 +326,7 @@ type certChainPEMFiles struct {
 	certChainPath         string
 }
 
-// getCertChainPEM returns the path of a pem file containaing
+// getCertChainPEM returns the path of a pem file containing
 // the leaf certificate and the path of a pem file containing the
 // root and intermediate certificates. Used to verify a signed timestamp
 func writeCertChainToPEMFiles(t *testing.T, restapiURL string) certChainPEMFiles {

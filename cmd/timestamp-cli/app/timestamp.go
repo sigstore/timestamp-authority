@@ -45,6 +45,7 @@ func addTimestampFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
 	cmd.Flags().Bool("certificate", true, "if the timestamp response should contain a certificate chain")
 	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
+	cmd.Flags().String("timestamp-format", "timestamp-query", "encoding format for requests and responses - Valid values are ASN1 and JSON")
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 }
 
@@ -138,8 +139,19 @@ func runTimestamp() (interface{}, error) {
 		return nil, err
 	}
 
+	// validate the format
+	format := strings.ToUpper(viper.GetString("timestamp-format"))
+	if format == "" {
+		format = "timestamp-query"
+	}
+
+	encodingHandler, err := timestamp.NewEncodingHandler(format)
+	if err != nil {
+		return nil, fmt.Errorf(fmt.Sprintf("unsupported format: %s", format), err)
+	}
+
 	// validate that timestamp is parseable
-	ts, err := timestamp.ParseResponse(respBytes.Bytes())
+	ts, err := encodingHandler.ParseResponse(respBytes.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +159,11 @@ func runTimestamp() (interface{}, error) {
 	// Write response to file
 	outStr := viper.GetString("out")
 	if outStr == "" {
-		outStr = "response.tsr"
+		if format == "JSON" {
+			outStr = "response.json"
+		} else {
+			outStr = "response.tsr"
+		}
 	}
 	if err := os.WriteFile(outStr, respBytes.Bytes(), 0600); err != nil {
 		return nil, err

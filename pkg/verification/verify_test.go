@@ -109,6 +109,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 		opts := VerifyOpts{
 			Intermediates: certs[1:2],
 			Roots:         certs[2:],
+			TimestampFormat: "timestamp-query",
 		}
 
 		ts, err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts)
@@ -516,7 +517,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp response: %v", err)
 	}
 
-	ts, err := timestamp.ParseResponse(resp)
+	ts, err := asn1Handler.ParseResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to parse timestamp response: %v", err)
 	}
