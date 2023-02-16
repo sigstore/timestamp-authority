@@ -209,7 +209,6 @@ func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpts) (*timestamp.Timestamp, error) {
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
-
 	ts, err := timestamp.ParseResponse(tsrBytes)
 	if err != nil {
 		pe := timestamp.ParseError("")

@@ -116,7 +116,7 @@ func TestVerify_RootAndIntermediateCertificateFlags(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--format", "default")
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -182,7 +182,7 @@ func TestVerify_PassLeafCertificate(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", pemFiles.leafCertPath, "--format", "default")
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--certificate-chain", pemFiles.certChainPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--certificate", pemFiles.leafCertPath)
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
