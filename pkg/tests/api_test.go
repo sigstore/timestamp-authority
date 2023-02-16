@@ -30,6 +30,7 @@ import (
 	ts "github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
+	"github.com/sigstore/timestamp-authority/pkg/tests/data"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/x509"
 
@@ -114,7 +115,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: "application/json",
-			req:          readRequestFromFile(t, "./data/timestamp-req.json"),
+			req:          data.BuildJSONReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), crypto.SHA256, testNonce),
 			nonce:        testNonce,
 		},
 	}
