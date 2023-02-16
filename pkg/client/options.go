@@ -16,6 +16,10 @@ package client
 
 import "net/http"
 
+const (
+	TimestampQueryMediaType = "application/timestamp-query"
+)
+
 // Option is a functional option for customizing static signatures.
 type Option func(*options)
 
