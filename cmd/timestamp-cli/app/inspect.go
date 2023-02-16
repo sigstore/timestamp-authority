@@ -57,8 +57,7 @@ var inspectCmd = &cobra.Command{
 			return nil, fmt.Errorf("Error reading request from TSR file: %w", err)
 		}
 
-		encodingHandler := timestamp.ASN1EncodingHandler{}
-		ts, err := encodingHandler.ParseResponse(tsrBytes)
+		ts, err := timestamp.ParseResponse(tsrBytes)
 		if err != nil {
 			return nil, err
 		}

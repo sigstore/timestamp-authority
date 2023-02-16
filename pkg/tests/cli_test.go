@@ -45,7 +45,7 @@ func TestInspect(t *testing.T) {
 	tsrPath := getTimestamp(t, serverURL, "blob", big.NewInt(0), nil, true)
 
 	// It should create timestamp successfully.
-	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "default")
+	out := runCli(t, "inspect", "--timestamp", tsrPath, "--format", "json")
 
 	// test that output can be parsed as a timestamp
 	resp := struct {
@@ -116,7 +116,7 @@ func TestVerify_RootAndIntermediateCertificateFlags(t *testing.T) {
 	pemFiles := writeCertChainToPEMFiles(t, restapiURL)
 
 	// It should verify timestamp successfully.
-	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName)
+	out := runCli(t, "--timestamp_server", restapiURL, "verify", "--timestamp", tsrPath, "--artifact", artifactPath, "--root-certificates", pemFiles.rootCertsPath, "--intermediate-certificates", pemFiles.intermediateCertsPath, "--nonce", nonce.String(), "--oid", policyOID.String(), "--common-name", commonName, "--format", "default")
 	outputContains(t, out, "Successfully verified timestamp")
 }
 
@@ -276,7 +276,7 @@ func outputContains(t *testing.T, output, sub string) {
 }
 
 func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.Int, policyOID asn1.ObjectIdentifier, tsrContainsCerts bool) string {
-	c, err := client.GetTimestampClient(url)
+	c, err := client.GetTimestampClient(url, client.WithUserAgent("test user agent"), client.WithContentType("application/timestamp-query"))
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}

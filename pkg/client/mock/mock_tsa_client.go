@@ -101,8 +101,7 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 			return nil, err
 		}
 
-		asn1Handler := timestamp.ASN1EncodingHandler{}
-		req, err := asn1Handler.ParseRequest(requestBytes)
+		req, err := timestamp.ParseASN1Request(requestBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +137,7 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 		tsStruct.Time = c.Time
 	}
 
-	resp, err := tsStruct.CreateResponse(c.CertChain[0], c.Signer, asn1.Marshal)
+	resp, err := tsStruct.CreateResponse(c.CertChain[0], c.Signer)
 	if err != nil {
 		return nil, err
 	}

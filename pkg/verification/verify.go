@@ -210,8 +210,7 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	// Verify the status of the TSR does not contain an error
 	// handled by the timestamp.ParseResponse function
 
-	encodingHandler := timestamp.ASN1EncodingHandler{}
-	ts, err := encodingHandler.ParseResponse(tsrBytes)
+	ts, err := timestamp.ParseResponse(tsrBytes)
 	if err != nil {
 		pe := timestamp.ParseError("")
 		if errors.As(err, &pe) {

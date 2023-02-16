@@ -30,8 +30,6 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
-// v0.0.0-20230214160055-515d64fc31c5
-
 func getContentType(r *http.Request) (string, error) {
 	contentTypeHeader := r.Header.Get("Content-Type")
 	splitHeader := strings.Split(contentTypeHeader, "application/")
@@ -39,6 +37,17 @@ func getContentType(r *http.Request) (string, error) {
 		return "", errors.New("expected header value to be split into two pieces")
 	}
 	return splitHeader[1], nil
+}
+
+func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error) {
+	switch contentType {
+	case "json":
+		return timestamp.ParseJSONRequest(reqBytes)
+	case "timestamp-query":
+		return timestamp.ParseASN1Request(reqBytes)
+	default:
+		return nil, fmt.Errorf("unsupported content type: %s", contentType)
+	}
 }
 
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
@@ -52,15 +61,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
-	fmt.Println("xyz content type: " + contentType)
-	fmt.Printf("\n xyz http request: %+v", params.HTTPRequest)
-
-	handler, err := timestamp.NewEncodingHandler(contentType)
-	if err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
-	}
-
-	req, err := handler.ParseRequest(requestBytes)
+	req, err := requestBodyToTimestampReq(requestBytes, contentType)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
@@ -90,7 +91,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		ExtraExtensions:   req.Extensions,
 	}
 
-	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner, handler.MarshalResponse)
+	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}

@@ -78,10 +78,12 @@ func TestCreateRoundTripper(t *testing.T) {
 	}
 
 	expectedUserAgent := "test UserAgent"
+	expectedContentType := "test ContentType"
 
 	m := &mockRoundTripper{}
 	rt := createRoundTripper(m, &options{
-		UserAgent: expectedUserAgent,
+		UserAgent:   expectedUserAgent,
+		ContentType: expectedContentType,
 	})
 	m.resp = testResp
 
@@ -96,6 +98,10 @@ func TestCreateRoundTripper(t *testing.T) {
 	gotReqUserAgent := gotReq.UserAgent()
 	if gotReqUserAgent != expectedUserAgent {
 		t.Errorf("rt.RoundTrip() did not set the User-Agent properly. Wanted: %q, got: %q", expectedUserAgent, gotReqUserAgent)
+	}
+	gotReqContentType := gotReq.Header.Get("Content-Type")
+	if gotReqContentType != expectedContentType {
+		t.Errorf("rt.RoundTrip() did not set the Content-Type properly. Wanted: %q, got: %q", expectedContentType, gotReqContentType)
 	}
 
 	if testResp != gotResp {

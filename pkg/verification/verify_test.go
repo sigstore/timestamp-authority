@@ -494,8 +494,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp request: %v", err)
 	}
 
-	asn1Handler := timestamp.ASN1EncodingHandler{}
-	req, err := asn1Handler.ParseRequest([]byte(tsq))
+	req, err := timestamp.ParseASN1Request([]byte(tsq))
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to parse timestamp request: %v", err)
 	}
@@ -511,12 +510,12 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		ExtraExtensions:   req.Extensions,
 	}
 
-	resp, err := tsTemplate.CreateResponse(certChain[0], sv, asn1.Marshal)
+	resp, err := tsTemplate.CreateResponse(certChain[0], sv)
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp response: %v", err)
 	}
 
-	ts, err := asn1Handler.ParseResponse(resp)
+	ts, err := timestamp.ParseResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to parse timestamp response: %v", err)
 	}

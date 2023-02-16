@@ -31,6 +31,8 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/x509"
+
+	"github.com/go-openapi/runtime"
 )
 
 // TestSigner encapsulates a public key for verification
@@ -106,7 +108,7 @@ func TestGetTimestampResponse(t *testing.T) {
 	for _, tc := range tests {
 		url := createServer(t)
 
-		c, err := client.GetTimestampClient(url)
+		c, err := client.GetTimestampClient(url, client.WithContentType("application/timestamp-query"))
 		if err != nil {
 			t.Fatalf("unexpected error creating client: %v", err)
 		}
@@ -120,13 +122,30 @@ func TestGetTimestampResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating request: %v", err)
 		}
+		req, err := ts.ParseASN1Request(tsq)
+		if err != nil {
+			t.Fatalf("unexpected error parsing request: %v", err)
+		}
+		if tc.extensions != nil {
+			req.ExtraExtensions = tc.extensions
+		}
+		if tc.policyOID != nil {
+			req.TSAPolicyOID = tc.policyOID
+		}
+		tsq, err = req.Marshal()
+		if err != nil {
+			t.Fatalf("unexpected error marshalling request: %v", err)
+		}
 
 		params := timestamp.NewGetTimestampResponseParams()
 		params.SetTimeout(10 * time.Second)
 		params.Request = io.NopCloser(bytes.NewReader(tsq))
 
 		var respBytes bytes.Buffer
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{"application/timestamp-query"}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 		if err != nil {
 			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}
@@ -135,13 +154,6 @@ func TestGetTimestampResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error parsing response: %v", err)
 		}
-
-		// if tc.extensions != nil {
-		// 	tsr.ExtraExtensions = tc.extensions
-		// }
-		// if tc.oidPolicy != nil {
-		// 	tsr.TSAPolicyOID = tc.policyOID
-		// }
 
 		// check certificate fields
 		if !tc.addCertificates {
@@ -157,7 +169,7 @@ func TestGetTimestampResponse(t *testing.T) {
 			if !tsr.AddTSACertificate {
 				t.Fatalf("expected TSA certificate")
 			}
-			if len(tsr.Certificates) != 0 {
+			if len(tsr.Certificates) != 1 {
 				t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
 			}
 		}
@@ -198,7 +210,7 @@ func TestGetTimestampResponse(t *testing.T) {
 			t.Fatalf("unexpected policy ID")
 		}
 		// check extension is present
-		if (tc.extensions == nil || len(tsr.Extensions) != 0) || (tc.extensions != nil || len(tsr.Extensions) != len(tc.extensions)) {
+		if (tc.extensions == nil && len(tsr.Extensions) != 0) || (tc.extensions != nil && len(tsr.Extensions) != len(tc.extensions)) {
 			t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
 		}
 	}
