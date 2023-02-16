@@ -683,9 +683,9 @@ Media handling and security:
 
 System Planning:
 
-1. Capacity demands shall be monitored and projections of future capacity r
-   equirements made to ensure that adequate processing power
-   and storage are available.
+1. Capacity demands shall be monitored and projections of future capacity 
+   requirements made to ensure that adequate processing power and storage 
+   are available.
 
 Incident reporting and response:
 
