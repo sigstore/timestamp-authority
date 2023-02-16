@@ -118,7 +118,12 @@ func createRequestFromFlags() ([]byte, error) {
 
 func runTimestamp() (interface{}, error) {
 	fmt.Println("Generating a new signed timestamp")
-	tsClient, err := client.GetTimestampClient(viper.GetString("timestamp_server"), client.WithUserAgent(UserAgent()), client.WithContentType("application/timestamp-query"))
+
+	// Set the Content-Type header to application/timestamp-query for the
+	// request that the client will make to the server. Since the server accepts
+	// both application/timestamp-query and application/json as consumers for
+	// the /api/v1/timestamp endpoint, we need to specify which one we want to use
+	tsClient, err := client.GetTimestampClient(viper.GetString("timestamp_server"), client.WithUserAgent(UserAgent()), client.WithContentType(client.TimestampQueryMediaType))
 	if err != nil {
 		return nil, err
 	}
