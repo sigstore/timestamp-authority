@@ -22,7 +22,6 @@ import (
 	"encoding/asn1"
 	"io"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -30,7 +29,6 @@ import (
 	ts "github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/pkg/client"
-	"github.com/sigstore/timestamp-authority/pkg/tests/data"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/x509"
 
@@ -82,26 +80,6 @@ type timestampTestCase struct {
 	nonce        *big.Int
 }
 
-func buildTimestampQueryReq(t *testing.T, nonce *big.Int) []byte {
-	tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-		Nonce:        nonce,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
-	}
-	return tsq
-}
-
-func readRequestFromFile(t *testing.T, path string) []byte {
-	reqBytes, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("unexpected error reading request from file: %v", err)
-	}
-	return reqBytes
-}
-
 func TestGetTimestampResponse(t *testing.T) {
 	testNonce := big.NewInt(1234)
 
@@ -109,13 +87,13 @@ func TestGetTimestampResponse(t *testing.T) {
 		{
 			name:         "Timestamp Query Request",
 			reqMediaType: client.TimestampQueryMediaType,
-			req:          buildTimestampQueryReq(t, testNonce),
+			req:          buildTimestampQueryReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), testNonce),
 			nonce:        testNonce,
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: "application/json",
-			req:          data.BuildJSONReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), crypto.SHA256, testNonce),
+			req:          buildJSONReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), testNonce),
 			nonce:        testNonce,
 		},
 	}
