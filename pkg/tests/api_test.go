@@ -78,23 +78,36 @@ type timestampTestCase struct {
 	reqMediaType string
 	req          []byte
 	nonce        *big.Int
+	includeCerts bool
+	extensions   []pkix.Extension
+	policyOID    asn1.ObjectIdentifier
 }
 
 func TestGetTimestampResponse(t *testing.T) {
+	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
+	includeCerts := true
+	opts := requestOptions{
+		Nonce:        testNonce,
+		IncludeCerts: includeCerts,
+		Extensions:   nil,
+		PolicyOID:    nil,
+	}
 
 	tests := []timestampTestCase{
 		{
 			name:         "Timestamp Query Request",
 			reqMediaType: client.TimestampQueryMediaType,
-			req:          buildTimestampQueryReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), testNonce),
+			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
 			nonce:        testNonce,
+			includeCerts: includeCerts,
 		},
 		{
 			name:         "JSON Request",
-			reqMediaType: "application/json",
-			req:          buildJSONReq(t, strings.NewReader("blobblobblobblobblobblobblobblobblob"), testNonce),
+			reqMediaType: client.JSONMediaType,
+			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
 			nonce:        testNonce,
+			includeCerts: includeCerts,
 		},
 	}
 
@@ -139,7 +152,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		if tsr.HashAlgorithm != crypto.SHA256 {
 			t.Fatalf("unexpected hash algorithm")
 		}
-		hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
+		hashedMessage := sha256.Sum256([]byte(testArtifact))
 		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
 			t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
 		}
@@ -174,107 +187,146 @@ func TestGetTimestampResponse(t *testing.T) {
 }
 
 func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
-	url := createServer(t)
+	testArtifact := "blob"
+	testNonce := big.NewInt(1234)
+	testExtensions := []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
+	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
 
-	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
-	}
-
-	// create request with nonce and certificate, the typical request structure
-	tsNonce := big.NewInt(1234)
-	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-		Nonce:        tsNonce,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
-	}
-	// populate additional request parameters for extensions and OID - atypical request structure
-	req, err := ts.ParseRequest(tsq)
-	if err != nil {
-		t.Fatalf("unexpected error parsing request: %v", err)
-	}
-	req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
-	fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
-	req.TSAPolicyOID = fakePolicyOID
-	tsq, err = req.Marshal()
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
+	opts := requestOptions{
+		Nonce:        testNonce,
+		IncludeCerts: false,
+		Extensions:   testExtensions,
+		PolicyOID:    testPolicyOID,
 	}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
+			nonce:        testNonce,
+			extensions:   testExtensions,
+			policyOID:    testPolicyOID,
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
+			nonce:        testNonce,
+			extensions:   testExtensions,
+			policyOID:    testPolicyOID,
+		},
+	}
 
-	var respBytes bytes.Buffer
-	clientOption := func(op *runtime.ClientOperation) {
-		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
-	}
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
-	}
+	for _, tc := range tests {
+		url := createServer(t)
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
-	}
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("unexpected error creating client: %v", err)
+		}
 
-	// check policy OID
-	if !tsr.Policy.Equal(fakePolicyOID) {
-		t.Fatalf("unexpected policy ID")
-	}
-	// check extension is present
-	if len(tsr.Extensions) != 1 {
-		t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+		// populate additional request parameters for extensions and OID - atypical request structure
+		tsq := tc.req
+		if tc.reqMediaType == client.TimestampQueryMediaType {
+			parsedReq, err := ts.ParseRequest(tsq)
+			if err != nil {
+				t.Fatalf("unexpected error parsing request: %v", err)
+			}
+			parsedReq.ExtraExtensions = tc.extensions
+			tsq, err = parsedReq.Marshal()
+			if err != nil {
+				t.Fatalf("unexpected error creating request: %v", err)
+			}
+		}
+
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("unexpected error getting timestamp response: %v", err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("unexpected error parsing response: %v", err)
+		}
+
+		// check policy OID
+		if !tsr.Policy.Equal(tc.policyOID) {
+			t.Fatalf("unexpected policy ID")
+		}
+		// check extension is present
+		if len(tsr.Extensions) != 1 {
+			t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+		}
 	}
 }
 
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
-	url := createServer(t)
-
-	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
+	testArtifact := "blob"
+	opts := requestOptions{
+		Nonce:        nil,
+		IncludeCerts: false,
+		Extensions:   nil,
+		PolicyOID:    nil,
 	}
 
-	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: false,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
+		},
 	}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
+	for _, tc := range tests {
+		url := createServer(t)
 
-	var respBytes bytes.Buffer
-	clientOption := func(op *runtime.ClientOperation) {
-		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
-	}
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
-	}
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("unexpected error creating client: %v", err)
+		}
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
-	}
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tc.req))
 
-	// check certificate fields
-	if len(tsr.Certificates) != 0 {
-		t.Fatalf("expected 0 certificates, got %d", len(tsr.Certificates))
-	}
-	if tsr.AddTSACertificate {
-		t.Fatalf("expected no TSA certificate")
-	}
-	// check nonce
-	if tsr.Nonce != nil {
-		t.Fatalf("expected no nonce, got %d", tsr.Nonce)
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("unexpected error getting timestamp response: %v", err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("unexpected error parsing response: %v", err)
+		}
+
+		// check certificate fields
+		if len(tsr.Certificates) != 0 {
+			t.Fatalf("expected 0 certificates, got %d", len(tsr.Certificates))
+		}
+		if tsr.AddTSACertificate {
+			t.Fatalf("expected no TSA certificate")
+		}
+		// check nonce
+		if tsr.Nonce != nil {
+			t.Fatalf("expected no nonce, got %d", tsr.Nonce)
+		}
 	}
 }

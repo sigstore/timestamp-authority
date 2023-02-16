@@ -18,6 +18,7 @@ import "net/http"
 
 const (
 	TimestampQueryMediaType = "application/timestamp-query"
+	JSONMediaType           = "application/json"
 )
 
 // Option is a functional option for customizing static signatures.

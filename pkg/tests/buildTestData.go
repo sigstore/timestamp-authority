@@ -26,7 +26,14 @@ type tsRequest struct {
 	Extensions     []pkix.Extension      `json:"extensions,omitempty"`
 }
 
-func buildJSONReq(t *testing.T, r io.Reader, nonce *big.Int) []byte {
+type requestOptions struct {
+	Nonce        *big.Int
+	IncludeCerts bool
+	Extensions   []pkix.Extension
+	PolicyOID    asn1.ObjectIdentifier
+}
+
+func buildJSONReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
 	h := crypto.SHA256.New()
 
 	b := make([]byte, h.Size())
@@ -46,14 +53,16 @@ func buildJSONReq(t *testing.T, r io.Reader, nonce *big.Int) []byte {
 
 	req := tsRequest{
 		Version: 1,
-		CertReq: true,
+		CertReq: opts.IncludeCerts,
 		MessageImprint: messageImprint{
 			HashAlgorithm: pkix.AlgorithmIdentifier{
 				Algorithm: asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1},
 			},
 			HashedMessage: finished,
 		},
-		Nonce: nonce,
+		Nonce:      opts.Nonce,
+		Extensions: opts.Extensions,
+		ReqPolicy:  opts.PolicyOID,
 	}
 
 	marshalled, err := json.Marshal(req)
@@ -63,11 +72,12 @@ func buildJSONReq(t *testing.T, r io.Reader, nonce *big.Int) []byte {
 	return marshalled
 }
 
-func buildTimestampQueryReq(t *testing.T, r io.Reader, nonce *big.Int) []byte {
+func buildTimestampQueryReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
 	tsq, err := timestamp.CreateRequest(r, &timestamp.RequestOptions{
 		Hash:         crypto.SHA256,
-		Certificates: true,
-		Nonce:        nonce,
+		Certificates: opts.IncludeCerts,
+		Nonce:        opts.Nonce,
+		TSAPolicyOID: opts.PolicyOID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)
