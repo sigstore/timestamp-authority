@@ -74,144 +74,192 @@ func TestGetTimestampCertChain(t *testing.T) {
 }
 
 func TestGetTimestampResponse(t *testing.T) {
-	type test struct {
-		name            string
-		policyOID       []int
-		extensions      []pkix.Extension
-		nonce           *big.Int
-		addCertificates bool
+	url := createServer(t)
+
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
 	}
 
-	tests := []test{
-		{
-			name:            "Expect default policy OID and no extensions",
-			policyOID:       nil,
-			extensions:      nil,
-			nonce:           big.NewInt(1234),
-			addCertificates: true,
-		},
-		{
-			name:            "Expect custom policy OID and extensions",
-			policyOID:       asn1.ObjectIdentifier{1, 2, 3, 4, 5},
-			extensions:      []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
-			nonce:           big.NewInt(1234),
-			addCertificates: true,
-		},
-		{
-			name:            "Expect no nonce or TSA certificate",
-			policyOID:       asn1.ObjectIdentifier{1, 2, 3, 4, 5},
-			extensions:      []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}},
-			addCertificates: false,
-		},
+	// create request with nonce and certificate, the typical request structure
+	tsNonce := big.NewInt(1234)
+	tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+		Nonce:        tsNonce,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
 	}
 
-	for _, tc := range tests {
-		url := createServer(t)
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
 
-		c, err := client.GetTimestampClient(url, client.WithContentType("application/timestamp-query"))
-		if err != nil {
-			t.Fatalf("unexpected error creating client: %v", err)
-		}
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+	}
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp response: %v", err)
+	}
 
-		// create request with nonce and certificate, the typical request structure
-		tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
-			Hash:         crypto.SHA256,
-			Certificates: tc.addCertificates,
-			Nonce:        tc.nonce,
-		})
-		if err != nil {
-			t.Fatalf("unexpected error creating request: %v", err)
-		}
-		req, err := ts.ParseRequest(tsq)
-		if err != nil {
-			t.Fatalf("unexpected error parsing request: %v", err)
-		}
-		if tc.extensions != nil {
-			req.ExtraExtensions = tc.extensions
-		}
-		if tc.policyOID != nil {
-			req.TSAPolicyOID = tc.policyOID
-		}
-		tsq, err = req.Marshal()
-		if err != nil {
-			t.Fatalf("unexpected error marshalling request: %v", err)
-		}
+	tsr, err := ts.ParseResponse(respBytes.Bytes())
+	if err != nil {
+		t.Fatalf("unexpected error parsing response: %v", err)
+	}
 
-		params := timestamp.NewGetTimestampResponseParams()
-		params.SetTimeout(10 * time.Second)
-		params.Request = io.NopCloser(bytes.NewReader(tsq))
+	// check certificate fields
+	if len(tsr.Certificates) != 1 {
+		t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
+	}
+	if !tsr.AddTSACertificate {
+		t.Fatalf("expected TSA certificate")
+	}
+	// check nonce
+	if tsr.Nonce.Cmp(tsNonce) != 0 {
+		t.Fatalf("expected nonce %d, got %d", tsNonce, tsr.Nonce)
+	}
+	// check hash and hashed message
+	if tsr.HashAlgorithm != crypto.SHA256 {
+		t.Fatalf("unexpected hash algorithm")
+	}
+	hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
+	if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
+		t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
+	}
+	// check time and accuracy
+	if tsr.Time.After(time.Now()) {
+		t.Fatalf("expected time to be set to a previous time")
+	}
+	duration, _ := time.ParseDuration("1s")
+	if tsr.Accuracy != duration {
+		t.Fatalf("expected 1s accuracy, got %v", tsr.Accuracy)
+	}
+	// check serial number
+	if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
+		t.Fatalf("expected serial number, got 0")
+	}
+	// check ordering and qualified defaults
+	if tsr.Qualified {
+		t.Fatalf("tsr should not be qualified")
+	}
+	if tsr.Ordering {
+		t.Fatalf("tsr should not be ordered")
+	}
+	// check policy OID default
+	if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
+		t.Fatalf("unexpected policy ID")
+	}
+	// check for no extensions
+	if len(tsr.Extensions) != 0 {
+		t.Fatalf("expected 0 extensions, got %d", len(tsr.Extensions))
+	}
+}
 
-		var respBytes bytes.Buffer
-		clientOption := func(op *runtime.ClientOperation) {
-			op.ConsumesMediaTypes = []string{"application/timestamp-query"}
-		}
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
-		if err != nil {
-			t.Fatalf("unexpected error getting timestamp response: %v", err)
-		}
+func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
+	url := createServer(t)
 
-		tsr, err := ts.ParseResponse(respBytes.Bytes())
-		if err != nil {
-			t.Fatalf("unexpected error parsing response: %v", err)
-		}
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
 
-		// check certificate fields
-		if !tc.addCertificates {
-			if tsr.AddTSACertificate {
-				t.Fatalf("expected no TSA certificate")
-			}
-			if len(tsr.Certificates) != 0 {
-				t.Fatalf("expected 0 certificates, got %d", len(tsr.Certificates))
-			}
-		}
+	// create request with nonce and certificate, the typical request structure
+	tsNonce := big.NewInt(1234)
+	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+		Nonce:        tsNonce,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
+	// populate additional request parameters for extensions and OID - atypical request structure
+	req, err := ts.ParseRequest(tsq)
+	if err != nil {
+		t.Fatalf("unexpected error parsing request: %v", err)
+	}
+	req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
+	fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+	req.TSAPolicyOID = fakePolicyOID
+	tsq, err = req.Marshal()
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
 
-		if tc.addCertificates {
-			if !tsr.AddTSACertificate {
-				t.Fatalf("expected TSA certificate")
-			}
-			if len(tsr.Certificates) != 1 {
-				t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
-			}
-		}
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
 
-		// check nonce
-		if tc.nonce == nil && tsr.Nonce.Cmp(tc.nonce) != 0 {
-			t.Fatalf("expected nonce %d, got %d", tc.nonce, tsr.Nonce)
-		}
-		// check hash and hashed message
-		if tsr.HashAlgorithm != crypto.SHA256 {
-			t.Fatalf("unexpected hash algorithm")
-		}
-		hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
-		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
-			t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
-		}
-		// check time and accuracy
-		if tsr.Time.After(time.Now()) {
-			t.Fatalf("expected time to be set to a previous time")
-		}
-		duration, _ := time.ParseDuration("1s")
-		if tsr.Accuracy != duration {
-			t.Fatalf("expected 1s accuracy, got %v", tsr.Accuracy)
-		}
-		// check serial number
-		if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
-			t.Fatalf("expected serial number, got 0")
-		}
-		// check ordering and qualified defaults
-		if tsr.Qualified {
-			t.Fatalf("tsr should not be qualified")
-		}
-		if tsr.Ordering {
-			t.Fatalf("tsr should not be ordered")
-		}
-		// check policy OID
-		if (tc.policyOID == nil && !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2})) || (tc.policyOID != nil && !tsr.Policy.Equal(tc.policyOID)) {
-			t.Fatalf("unexpected policy ID")
-		}
-		// check extension is present
-		if (tc.extensions == nil && len(tsr.Extensions) != 0) || (tc.extensions != nil && len(tsr.Extensions) != len(tc.extensions)) {
-			t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
-		}
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+	}
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp response: %v", err)
+	}
+
+	tsr, err := ts.ParseResponse(respBytes.Bytes())
+	if err != nil {
+		t.Fatalf("unexpected error parsing response: %v", err)
+	}
+
+	// check policy OID
+	if !tsr.Policy.Equal(fakePolicyOID) {
+		t.Fatalf("unexpected policy ID")
+	}
+	// check extension is present
+	if len(tsr.Extensions) != 1 {
+		t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+	}
+}
+
+func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
+	url := createServer(t)
+
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
+	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: false,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
+
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+	}
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp response: %v", err)
+	}
+
+	tsr, err := ts.ParseResponse(respBytes.Bytes())
+	if err != nil {
+		t.Fatalf("unexpected error parsing response: %v", err)
+	}
+
+	// check certificate fields
+	if len(tsr.Certificates) != 0 {
+		t.Fatalf("expected 0 certificates, got %d", len(tsr.Certificates))
+	}
+	if tsr.AddTSACertificate {
+		t.Fatalf("expected no TSA certificate")
+	}
+	// check nonce
+	if tsr.Nonce != nil {
+		t.Fatalf("expected no nonce, got %d", tsr.Nonce)
 	}
 }
