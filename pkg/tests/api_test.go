@@ -22,6 +22,7 @@ import (
 	"encoding/asn1"
 	"io"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -73,88 +74,123 @@ func TestGetTimestampCertChain(t *testing.T) {
 	}
 }
 
-func TestGetTimestampResponse(t *testing.T) {
-	url := createServer(t)
+type timestampTestCase struct {
+	name         string
+	reqMediaType string
+	req          []byte
+	nonce        *big.Int
+}
 
-	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
-	}
-
-	// create request with nonce and certificate, the typical request structure
-	tsNonce := big.NewInt(1234)
+func buildTimestampQueryReq(t *testing.T, nonce *big.Int) []byte {
 	tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
 		Hash:         crypto.SHA256,
 		Certificates: true,
-		Nonce:        tsNonce,
+		Nonce:        nonce,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)
 	}
+	return tsq
+}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
-
-	var respBytes bytes.Buffer
-	clientOption := func(op *runtime.ClientOperation) {
-		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
-	}
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+func readRequestFromFile(t *testing.T, path string) []byte {
+	reqBytes, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
+		t.Fatalf("unexpected error reading request from file: %v", err)
+	}
+	return reqBytes
+}
+
+func TestGetTimestampResponse(t *testing.T) {
+	testNonce := big.NewInt(1234)
+
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			req:          buildTimestampQueryReq(t, testNonce),
+			nonce:        testNonce,
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: "application/json",
+			req:          readRequestFromFile(t, "./data/timestamp-req.json"),
+			nonce:        testNonce,
+		},
 	}
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
-	}
+	for _, tc := range tests {
+		url := createServer(t)
 
-	// check certificate fields
-	if len(tsr.Certificates) != 1 {
-		t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
-	}
-	if !tsr.AddTSACertificate {
-		t.Fatalf("expected TSA certificate")
-	}
-	// check nonce
-	if tsr.Nonce.Cmp(tsNonce) != 0 {
-		t.Fatalf("expected nonce %d, got %d", tsNonce, tsr.Nonce)
-	}
-	// check hash and hashed message
-	if tsr.HashAlgorithm != crypto.SHA256 {
-		t.Fatalf("unexpected hash algorithm")
-	}
-	hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
-	if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
-		t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
-	}
-	// check time and accuracy
-	if tsr.Time.After(time.Now()) {
-		t.Fatalf("expected time to be set to a previous time")
-	}
-	duration, _ := time.ParseDuration("1s")
-	if tsr.Accuracy != duration {
-		t.Fatalf("expected 1s accuracy, got %v", tsr.Accuracy)
-	}
-	// check serial number
-	if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
-		t.Fatalf("expected serial number, got 0")
-	}
-	// check ordering and qualified defaults
-	if tsr.Qualified {
-		t.Fatalf("tsr should not be qualified")
-	}
-	if tsr.Ordering {
-		t.Fatalf("tsr should not be ordered")
-	}
-	// check policy OID default
-	if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
-		t.Fatalf("unexpected policy ID")
-	}
-	// check for no extensions
-	if len(tsr.Extensions) != 0 {
-		t.Fatalf("expected 0 extensions, got %d", len(tsr.Extensions))
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("unexpected error creating client: %v", err)
+		}
+
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tc.req))
+
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("unexpected error getting timestamp response: %v", err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("unexpected error parsing response: %v", err)
+		}
+
+		// check certificate fields
+		if len(tsr.Certificates) != 1 {
+			t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
+		}
+		if !tsr.AddTSACertificate {
+			t.Fatalf("expected TSA certificate")
+		}
+		// check nonce
+		if tsr.Nonce.Cmp(tc.nonce) != 0 {
+			t.Fatalf("expected nonce %d, got %d", tc.nonce, tsr.Nonce)
+		}
+		// check hash and hashed message
+		if tsr.HashAlgorithm != crypto.SHA256 {
+			t.Fatalf("unexpected hash algorithm")
+		}
+		hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
+		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
+			t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
+		}
+		// check time and accuracy
+		if tsr.Time.After(time.Now()) {
+			t.Fatalf("expected time to be set to a previous time")
+		}
+		duration, _ := time.ParseDuration("1s")
+		if tsr.Accuracy != duration {
+			t.Fatalf("expected 1s accuracy, got %v", tsr.Accuracy)
+		}
+		// check serial number
+		if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
+			t.Fatalf("expected serial number, got 0")
+		}
+		// check ordering and qualified defaults
+		if tsr.Qualified {
+			t.Fatalf("tsr should not be qualified")
+		}
+		if tsr.Ordering {
+			t.Fatalf("tsr should not be ordered")
+		}
+		// check policy OID default
+		if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
+			t.Fatalf("unexpected policy ID")
+		}
+		// check for no extensions
+		if len(tsr.Extensions) != 0 {
+			t.Fatalf("expected 0 extensions, got %d", len(tsr.Extensions))
+		}
 	}
 }
 
