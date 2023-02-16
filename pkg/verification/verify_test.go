@@ -494,7 +494,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp request: %v", err)
 	}
 
-	req, err := timestamp.ParseASN1Request([]byte(tsq))
+	req, err := timestamp.ParseRequest([]byte(tsq))
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to parse timestamp request: %v", err)
 	}

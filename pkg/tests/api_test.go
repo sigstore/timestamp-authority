@@ -122,7 +122,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating request: %v", err)
 		}
-		req, err := ts.ParseASN1Request(tsq)
+		req, err := ts.ParseRequest(tsq)
 		if err != nil {
 			t.Fatalf("unexpected error parsing request: %v", err)
 		}

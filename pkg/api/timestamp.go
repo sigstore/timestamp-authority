@@ -42,9 +42,9 @@ func getContentType(r *http.Request) (string, error) {
 func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error) {
 	switch contentType {
 	case "json":
-		return timestamp.ParseJSONRequest(reqBytes)
+		return timestamp.ParseRequestFromJSON(reqBytes)
 	case "timestamp-query":
-		return timestamp.ParseASN1Request(reqBytes)
+		return timestamp.ParseRequest(reqBytes)
 	default:
 		return nil, fmt.Errorf("unsupported content type: %s", contentType)
 	}

@@ -10,7 +10,6 @@ bin/
 request.tsq
 response.tsr
 request.json
-response.json
 myblob
 ts_chain.pem
 enc-keyset.cfg
