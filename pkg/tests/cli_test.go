@@ -276,7 +276,7 @@ func outputContains(t *testing.T, output, sub string) {
 }
 
 func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.Int, policyOID asn1.ObjectIdentifier, tsrContainsCerts bool) string {
-	c, err := client.GetTimestampClient(url, client.WithUserAgent("test user agent"), client.WithContentType("application/timestamp-query"))
+	c, err := client.GetTimestampClient(url, client.WithUserAgent("test user agent"), client.WithContentType(client.TimestampQueryMediaType))
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}
