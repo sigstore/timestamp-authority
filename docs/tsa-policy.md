@@ -395,13 +395,6 @@ In particular:
   external organizations supporting the TSA services including
   the applicable policies and practices.
 
-- The TSA shall make available to subscribers and relying parties its
-  practice statement, and other relevant documentation, as necessary,
-  to assess conformance to the time-stamp policy.
-
-  NOTE 2: The TSA is not generally required to make all the details
-  of its practices public.
-
 - Maintainers of the TSA shall have final authority for approving the TSA
   practice statement and ensuring that the practices are properly implemented.
   Maintainers shall also review any changes to the TSA to confirm that they
