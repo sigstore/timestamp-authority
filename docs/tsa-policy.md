@@ -281,12 +281,7 @@ A TSA may define its own policy which enhances the policy defined in this
 document. Such a policy shall incorporate or further constrain the requirements
 identified in this document.
 
-If an accuracy of better than 1 second is provided by a TSA and if all the TSUs
-have that same characteristics, then the accuracy shall be indicated in the
-TSA's disclosure statement (see section [7.1.2](#712-tsa-disclosure-statement)
-that each time-stamp token is issued with an accuracy of better than 1 second.
-
-NOTE 2: It is required that a time-stamp token includes an identifier
+NOTE 1: It is required that a time-stamp token includes an identifier
 for the applicable policy (see section [7.3.1](#731-time-stamp-token)).
 
 ## 5.2. Identification
@@ -358,9 +353,8 @@ private key used to sign the time-stamp token has not been compromised.
 
 ## 6.3. Relying Party Obligations
 
-The terms and conditions made available to relying parties
-(see section [7.1.2](#712-tsa-disclosure-statement) shall include an obligation
-on the relying party that, when relying on a time-stamp token, it shall:
+The terms and conditions made available to relying parties shall include an 
+obligation on the relying party that, when relying on a time-stamp token, it shall:
 
 1. verify that the time-stamp token has been correctly signed and that the
    private key used to sign the time-stamp has not been compromised
@@ -421,16 +415,12 @@ In particular:
   external organizations supporting the TSA services including
   the applicable policies and practices.
 
-- The TSA shall make available to subscribers and relying parties its
-  practice statement, and other relevant documentation, as necessary,
-  to assess conformance to the time-stamp policy.
+- The TSA may make available to subscribers and relying parties its practice
+  statement, and other relevant documentation, as necessary, to assess 
+  conformance to the time-stamp policy.
 
   NOTE 2: The TSA is not generally required to make all the details
   of its practices public.
-
-- The TSA shall disclose to all subscribers and potential relying parties
-  the terms and conditions regarding use of its time-stamping services as
-  specified in section [7.1.2](#712-tsa-disclosure-statement).
 
 - Maintainers of the TSA shall have final authority for approving the TSA
   practice statement and ensuring that the practices are properly implemented.
@@ -440,39 +430,6 @@ In particular:
 - The TSA shall give due notice of changes it intends to make in its practice
   statement and shall, following approval as in (f) above, make the revised
   TSA practice statement immediately available as required under (d) above.
-
-### 7.1.2. TSA Disclosure Statement
-
-The TSA shall disclose to all subscribers and potential relying parties
-the terms and conditions regarding use of its time-stamping services.
-This statement shall at least specify for each time-stamp policy
-supported by the TSA:
-
-- The TSA contact information.
-
-- The time-stamp policy being applied.
-
-- At least one hashing algorithm which may be used to represent the datum
-  being time-stamped. (No hash algorithm is mandated).
-
-- The expected life-time of the signature used to sign the time-stamp token
-  (depends on the hashing algorithm being used, the signature algorithm being
-  used and the private key length).
-
-- The accuracy of the time in the time-stamp tokens with respect to UTC.
-
-- Any limitations on the use of the time-stamping service.
-
-- The subscriber's obligations as defined in section
-  [6.2](#62-subscriber-obligations), if any.
-
-- The relying party's obligations as defined in section
-  [6.3](#63-relying-party-obligations).
-
-- Information on how to verify the time-stamp token such that the relying
-  party is considered to "reasonably rely" on the time-stamp token
-  (see section [6.3](#63-relying-party-obligations))
-  and any possible limitations on the validity period.
 
 ## 7.2. Key Management Life Cycle
 
@@ -671,11 +628,9 @@ TSA General
    security policy or manual) should identify all relevant targets,
    objects and potential threats related to the services provided and
    the safeguards required to avoid or limit the effects of those
-   threats, consistent with the Risk Assessment required under
-   section [7.1.1a](#711-tsa-practice-statement)). It should describe the
-   rules, directives and procedures regarding how the specified services and
-   the associated security assurance are granted in addition to stating
-   policy on incidents and disasters.
+   threats. It should describe the rules, directives and procedures regarding 
+   how the specified services and the associated security assurance are granted 
+   in addition to stating policy on incidents and disasters.
 
 - TSA shall ensure that the security of information is maintained when the
   responsibility for TSA functions has been outsourced to another
@@ -748,9 +703,9 @@ Media handling and security:
 
 System Planning:
 
-1. Capacity demands shall be monitored and projections of future capacity r
-   equirements made to ensure that adequate processing power
-   and storage are available.
+1. Capacity demands shall be monitored and projections of future capacity 
+   requirements made to ensure that adequate processing power and storage 
+   are available.
 
 Incident reporting and response:
 
