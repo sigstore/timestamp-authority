@@ -167,5 +167,5 @@ If using Vault, you may also set `--tink-hcvault-token`. Provide the path to the
 Should you discover any security issues, please refer to Sigstore's [security
 process](https://github.com/sigstore/.github/blob/main/SECURITY.md).
 
-
+Edit
 
