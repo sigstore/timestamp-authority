@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/cors v1.8.3
-	github.com/sigstore/sigstore v1.5.2
+	github.com/sigstore/sigstore v1.6.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
@@ -56,19 +56,19 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/aws/aws-sdk-go v1.44.204 // indirect
+	github.com/aws/aws-sdk-go v1.44.209 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.5 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.18.14 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.14 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.18.15 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.15 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.29 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.30 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.23 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.20.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.18.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.20.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.18.5 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
@@ -125,7 +125,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
-	github.com/theupdateframework/go-tuf v0.5.2-0.20220930112810-3890c1e7ace4 // indirect
+	github.com/theupdateframework/go-tuf v0.5.2 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.mongodb.org/mongo-driver v1.10.1 // indirect
