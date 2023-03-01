@@ -18,6 +18,7 @@ package ntpmonitor
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync/atomic"
 	"time"
 
@@ -151,9 +152,12 @@ func (n *NTPMonitor) Start() {
 
 	delta := time.Duration(n.cfg.MaxTimeDelta) * time.Second
 	log.Logger.Info("ntp monitoring starting")
+
+	//nolint:gosec
+	r := rand.New(rand.NewSource(time.Now().UTC().UnixNano())) // initialize local pseudorandom generator //nolint:gosec
+
 	for n.run.Load() {
-		// Get a random set of servers
-		servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers)
+		servers := RandomChoice(n.cfg.Servers, n.cfg.NumServers, r)
 		responses := n.queryServers(delta, servers)
 
 		// Did enough NTP servers respond?

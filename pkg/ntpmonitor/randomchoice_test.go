@@ -53,8 +53,9 @@ func TestEmptySelection(t *testing.T) {
 		},
 	}
 
+	r := rand.New(rand.NewSource(seed)) // initialize local pseudorandom generator
 	for _, c := range cases {
-		got := RandomChoice(c.input, c.n)
+		got := RandomChoice(c.input, c.n, r)
 		if len(got) != 0 {
 			t.Fail()
 		}
@@ -84,11 +85,10 @@ func TestSelection(t *testing.T) {
 		},
 	}
 
-	// Math.rand is deterministic based on a given seed
-	rand.Seed(seed)
+	r := rand.New(rand.NewSource(seed)) // initialize local pseudorandom generator
 
 	for _, c := range cases {
-		got := RandomChoice(c.input, c.n)
+		got := RandomChoice(c.input, c.n, r)
 		if len(got) != len(c.want) {
 			t.Fail()
 		}

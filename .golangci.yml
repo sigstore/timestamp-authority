@@ -15,26 +15,26 @@
 
 linters:
   enable:
-  - deadcode
-  - errcheck
-  - gofmt
-  - goimports
-  - gosec
-  - gocritic
-  - golint
-  - misspell
+    - errcheck
+    - gofmt
+    - goimports
+    - gosec
+    - gocritic
+    - misspell
+    - revive
+    - unused
 output:
   uniq-by-line: false
 issues:
   exclude-rules:
-  - path: _test\.go
-    linters:
-    - errcheck
-    - gosec
-  - path: pkg/signer/tink.go 
-    linters:
-    - staticcheck
-    text: SA1019
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+    - path: pkg/signer/tink.go
+      linters:
+        - staticcheck
+      text: SA1019
   max-issues-per-linter: 0
   max-same-issues: 0
 run:
