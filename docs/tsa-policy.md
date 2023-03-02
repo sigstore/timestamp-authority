@@ -402,34 +402,34 @@ for providing time-stamping services.
 
 In particular:
 
-- The TSA shall have a risk assessment carried out in order to evaluate
+1.  The TSA shall have a risk assessment carried out in order to evaluate
   business assets and threats to those assets in order to determine the necessary security controls and operational procedures.
 
-- The TSA shall have a statement of the practices and procedures used to
+1. The TSA shall have a statement of the practices and procedures used to
   address all the requirements identified in this time-stamp policy.
 
-  NOTE 1: This policy makes no requirement as to the structure
+   - NOTE 1: This policy makes no requirement as to   the structure
   of the TSA practice statement.
 
-- The TSA's practice statement shall identify the obligations of all
+1. The TSA's practice statement shall identify the obligations of all
   external organizations supporting the TSA services including
   the applicable policies and practices.
 
-- The TSA may make available to subscribers and relying parties its practice
+1. The TSA may make available to subscribers and relying parties its practice
   statement, and other relevant documentation, as necessary, to assess 
   conformance to the time-stamp policy.
 
-  NOTE 2: The TSA is not generally required to make all the details
+   - NOTE 2: The TSA is not generally required to make all the details
   of its practices public.
 
-- Maintainers of the TSA shall have final authority for approving the TSA
+1. Maintainers of the TSA shall have final authority for approving the TSA
   practice statement and ensuring that the practices are properly implemented.
   Maintainers shall also review any changes to the TSA to confirm that they
   follow the approved practice statement.
 
-- The TSA shall give due notice of changes it intends to make in its practice
-  statement and shall, following approval as in (f) above, make the revised
-  TSA practice statement immediately available as required under (d) above.
+1. The TSA shall give due notice of changes it intends to make in its practice
+  statement and shall, following approval as in (5) above, make the revised
+  TSA practice statement immediately available as required under (4) above.
 
 ## 7.2. Key Management Life Cycle
 
