@@ -21,6 +21,8 @@ on:
       - 'main'
       - 'updates'
   pull_request:
+    paths-ignore:
+      - '**.md'
 
 permissions: read-all
 
