@@ -34,8 +34,8 @@ fi
 echo "Signing images with Keyless..."
 readarray -t server_images < <(cat timestampServerImagerefs || true)
 cosign sign --yes -a GIT_HASH="${GIT_HASH}" -a GIT_VERSION="${GIT_VERSION}" "${server_images[@]}"
-cosign verify "${server_images[@]}"
+cosign verify --certificate-identity-regexp ".*" --certificate-oidc-issuer-regexp ".*" "${server_images[@]}"
 
 readarray -t cli_images < <(cat timestampCLIImagerefs || true)
 cosign sign --yes -a GIT_HASH="${GIT_HASH}" -a GIT_VERSION="${GIT_VERSION}" "${cli_images[@]}"
-cosign verify "${cli_images[@]}"
+cosign verify --certificate-identity-regexp ".*" --certificate-oidc-issuer-regexp ".*" "${cli_images[@]}"
