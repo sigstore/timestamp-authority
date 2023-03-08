@@ -46,7 +46,7 @@ func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.
 	case "timestamp-query":
 		return timestamp.ParseRequest(reqBytes)
 	default:
-		return nil, fmt.Errorf("unsupported content type: %s", contentType)
+		return nil, fmt.Errorf("unsupported content type")
 	}
 }
 
