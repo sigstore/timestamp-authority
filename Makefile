@@ -58,42 +58,43 @@ $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A timestamp_server --flag-strategy=pflag
 
 .PHONY: validate-openapi
-validate-openapi: $(SWAGGER)
+validate-openapi: $(SWAGGER) ## Validate OpenAPI spec
 	$(SWAGGER) validate openapi.yaml
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_timestamp_server.go: $(OPENAPIDEPS)
 
-lint:
+lint: ## Go linting
 	$(GOBIN)/golangci-lint run -v ./...
 
-gosec:
+gosec: ## Run gosec
 	$(GOBIN)/gosec ./...
 
-gen: $(GENSRC)
+gen: $(GENSRC) ## Generate code from OpenAPI spec
+
 .PHONY : timestamp-cli
-timestamp-cli: $(SRCS)
+timestamp-cli: $(SRCS) ## Build the TSA CLI
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/timestamp-cli ./cmd/timestamp-cli
 
-timestamp-server: $(SRCS)
+timestamp-server: $(SRCS) ## Build the TSA server 
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o bin/timestamp-server ./cmd/timestamp-server
 
-test: timestamp-cli
+test: timestamp-cli ## Run tests
 	go test ./...
 
-clean:
+clean: ## Clean all builds
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf bin/timestamp-cli bin/timestamp-server
 
-clean-gen: clean
+clean-gen: clean ## Clean generated code
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
 
-up:
+up: ## Run the TSA with Docker Compose
 	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
 	docker-compose -f docker-compose.yml up
 
-ko:
+ko: ## Run Ko
 	# timestamp-server
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-server ko build --bare \
@@ -107,7 +108,7 @@ ko:
 		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
 
 .PHONY: ko-local
-ko-local:
+ko-local: ## Run Ko locally
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
@@ -129,10 +130,10 @@ $(SWAGGER): $(TOOLS_DIR)/go.mod
 # help
 ##################
 
-help: # Display help
+help: ## Display help
 	@awk -F ':|##' \
-		'/^[^\t].+?:.*?##/ (\
+		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
-		)' $(MAKEFILE_LIST) | sort
+		}' $(MAKEFILE_LIST) | sort
 
 include release/release.mk
