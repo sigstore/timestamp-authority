@@ -545,7 +545,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 	root := certChain[2]
 
 	// invalidate the intermediate certificate
-	var invalidIntermediate x509.Certificate = *certChain[1]
+	var invalidIntermediate = *certChain[1]
 	invalidIntermediate.RawIssuer = nil
 	invalidIntermediate.Issuer = pkix.Name{}
 

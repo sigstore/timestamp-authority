@@ -1,3 +1,21 @@
+# 1.0.0-rc.1
+
+_Note: This is a prerelease for 1.0. Please try it out and file issues!_
+
+## Changes
+
+* Upgrade to go 1.20.1 (https://github.com/sigstore/timestamp-authority/pull/245)
+
+### Documentation
+
+* Update policy (https://github.com/sigstore/timestamp-authority/pull/251, https://github.com/sigstore/timestamp-authority/pull/262)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior
+* Hayden B
+* Meredith Lancaster
+
 # 1.0.0-rc.0
 
 _Note: This is a prerelease for 1.0. Please try it out and file issues!_
