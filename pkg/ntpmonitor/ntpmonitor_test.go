@@ -143,45 +143,55 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name             string
-		client           MockNTPClient
-		expectTestToPass bool
+		name                          string
+		client                        MockNTPClient
+		config                        Config
+		expectedSuccessfulMetricCount int
+		expectedFailedMetricCount     int
+		expectTestToPass              bool
 	}{
 		{
-			name:             "Successfully query NTP server",
-			client:           mockNTP,
-			expectTestToPass: true,
+			name:   "Successfully query NTP server",
+			client: mockNTP,
+			config: Config{
+				Servers:         []string{"s1"},
+				NumServers:      1,
+				RequestAttempts: 1,
+				ServerThreshold: 1,
+				RequestTimeout:  1,
+				MaxTimeDelta:    1,
+			},
+			expectedSuccessfulMetricCount: 1,
+			expectedFailedMetricCount:     0,
+			expectTestToPass:              true,
 		},
 		{
-			name:             "Fail to query NTP server",
-			client:           failNTP,
-			expectTestToPass: false,
+			name:   "Fail to query NTP server",
+			client: failNTP,
+			config: Config{
+				Servers:         []string{"s1"},
+				NumServers:      1,
+				RequestAttempts: 3,
+				ServerThreshold: 1,
+				RequestTimeout:  5,
+				MaxTimeDelta:    6,
+			},
+			expectedSuccessfulMetricCount: 0,
+			expectedFailedMetricCount:     3,
+			expectTestToPass:              false,
 		},
 	}
 
-	// There does not seem to be a way to reset the metric counter for testing
-	// purposes. To test that the metric counter value is incrementing by one
-	// as expected, we can set this variable to zero before the test for loop
-	// and increment it the call to monitor.queryNTPServer. We then check that
-	// the metric value has only increased by one as expected
-	expectedMetricValue := 0
 	for _, tc := range testCases {
-		monitor, err := NewFromConfigWithClient(&Config{
-			Servers:         []string{"s1"},
-			NumServers:      1,
-			RequestAttempts: 1,
-			ServerThreshold: 1,
-			RequestTimeout:  1,
-			MaxTimeDelta:    1,
-		}, tc.client)
+		// reset the CounterVec before each test case so we can check for
+		// the expected metric count
+		pkgapi.MetricNTPSyncCount.Reset()
+		monitor, err := NewFromConfigWithClient(&tc.config, tc.client)
 		if err != nil {
 			t.Fatalf("unexpectedly failed to create NTP monitor: %v", err)
 		}
 
 		resp, err := monitor.queryNTPServer("s1")
-		// increment the expected metric value
-		expectedMetricValue++
-
 		if tc.expectTestToPass && err != nil {
 			t.Errorf("test '%s' unexpectedly failed with non-nil error: %v", tc.name, err)
 		}
@@ -192,9 +202,20 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 			t.Errorf("test '%s' unexpectedly passed with a nil error", tc.name)
 		}
 		// check that the actual metric value was incremented by one as expected
-		actualMetricCount := testutil.CollectAndCount(pkgapi.MetricNTPSyncCount)
-		if expectedMetricValue != actualMetricCount {
-			t.Errorf("test '%s' unexpectedly failed with wrong metric value %d, expected %d", tc.name, actualMetricCount, expectedMetricValue)
+		successfulMetricCount := testutil.ToFloat64(pkgapi.MetricNTPSyncCount.With(map[string]string{
+			"failed": "false",
+			"host":   "s1",
+		}))
+		if tc.expectedSuccessfulMetricCount != int(successfulMetricCount) {
+			t.Errorf("test '%s' unexpectedly failed with wrong successful metric value %d, expected %d", tc.name, int(successfulMetricCount), tc.expectedSuccessfulMetricCount)
+		}
+		// check that the actual metric value was incremented by one as expected
+		failedMetricCount := testutil.ToFloat64(pkgapi.MetricNTPSyncCount.With(map[string]string{
+			"failed": "true",
+			"host":   "s1",
+		}))
+		if tc.expectedFailedMetricCount != int(failedMetricCount) {
+			t.Errorf("test '%s' unexpectedly failed with wrong failed metric value %d, expected %d", tc.name, int(failedMetricCount), tc.expectedFailedMetricCount)
 		}
 	}
 }
