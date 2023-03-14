@@ -83,7 +83,9 @@ var serveCmd = &cobra.Command{
 			log.Logger.Info("ntp monitoring disabled")
 		} else {
 			ntpMonitoring := viper.GetString("ntp-monitoring")
-			log.Logger.Infof("ntp monitoring: %s", ntpMonitoring)
+			if ntpMonitoring != "" {
+				log.Logger.Infof("using custom ntp monitoring config: %s", ntpMonitoring)
+			}
 
 			go func() {
 				ntpm, err = ntpmonitor.New(ntpMonitoring)
