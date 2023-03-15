@@ -150,6 +150,7 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
 github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3 h1:rjCXeRWazGsbcBlExMcAW8H1LGdgJ9r619y7+aeKgds=
 github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
 github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi/U=
@@ -368,6 +369,8 @@ github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hashicorp/vault/api v1.9.0 h1:ab7dI6W8DuCY7yCU8blo0UCYl2oHre/dloCmzMWg9w8=
 github.com/hashicorp/vault/api v1.9.0/go.mod h1:lloELQP4EyhjnCQhF8agKvWIVTmxbpEJj70b98959sM=
+github.com/haydentherapper/timestamp v0.0.0-20230224185135-b388323cd66c h1:9CAo31UQ+4ncno/dy8vYX7hXKJtTrXSEOnh2iDqR72Q=
+github.com/haydentherapper/timestamp v0.0.0-20230224185135-b388323cd66c/go.mod h1:6V2ND8Yf8TOJ4h+9pmUlx8kXvNLBB2QplToVVZQ3rF0=
 github.com/honeycombio/beeline-go v1.10.0 h1:cUDe555oqvw8oD76BQJ8alk7FP0JZ/M/zXpNvOEDLDc=
 github.com/honeycombio/libhoney-go v1.16.0 h1:kPpqoz6vbOzgp7jC6SR7SkNj7rua7rgxvznI6M3KdHc=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -421,8 +424,6 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.6/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/malancas/timestamp v0.0.0-20230216175005-71db12494ea9 h1:2iBXwoMYzXzFWmTENxgYPlVPsnGMqvuYW+19wLkmc/k=
-github.com/malancas/timestamp v0.0.0-20230216175005-71db12494ea9/go.mod h1:gPUr3tykDzAjX93+HPDiuHryLHoWAaXa/pA7Uo5bW+8=
 github.com/markbates/oncer v0.0.0-20181203154359-bf2de49a0be2/go.mod h1:Ld9puTsIW75CHf65OeIOkyKbteujpZVXDpWK6YGZbxE=
 github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kNSCBdG0=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
