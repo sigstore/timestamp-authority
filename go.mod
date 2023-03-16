@@ -3,7 +3,7 @@ module github.com/sigstore/timestamp-authority
 go 1.20
 
 require (
-	cloud.google.com/go/security v1.12.0
+	cloud.google.com/go/security v1.13.0
 	github.com/beevik/ntp v0.3.0
 	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
@@ -143,7 +143,7 @@ require (
 	golang.org/x/time v0.2.0 // indirect
 	google.golang.org/api v0.112.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230303212802-e74f57abe488 // indirect
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
