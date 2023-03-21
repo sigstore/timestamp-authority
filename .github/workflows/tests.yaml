@@ -21,6 +21,11 @@ on:
       - 'main'
       - 'updates'
   pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'CHANGELOG.md'
 
 permissions: read-all
 
