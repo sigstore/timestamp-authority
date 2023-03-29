@@ -16,9 +16,12 @@ package api
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/asn1"
+	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +32,49 @@ import (
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
+
+type request struct {
+	Certificates  bool                  `json:"certificates"`
+	HashAlgorithm string                `json:"hashAlgorithm"`
+	HashedMessage []byte                `json:"hashedMessage"`
+	Nonce         *big.Int              `json:"nonce"`
+	TSAPolicyOID  asn1.ObjectIdentifier `json:"tsaPolicyOID"`
+}
+
+func GetHashAlgo(algo string) (crypto.Hash, error) {
+	switch algo {
+	case "sha256":
+		return crypto.SHA256, nil
+	case "sha384":
+		return crypto.SHA384, nil
+	case "sha512":
+		return crypto.SHA512, nil
+	default:
+		return 0, fmt.Errorf("unsupported hash algorithm: %s", algo)
+	}
+}
+
+func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
+	var req request
+	if err := json.Unmarshal(reqBytes, &req); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON request into Timestamp: %v", err)
+	}
+
+	hashAlgo, err := GetHashAlgo(req.HashAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err)
+	}
+
+	tsRequest := timestamp.Request{
+		Certificates:  req.Certificates,
+		HashAlgorithm: hashAlgo,
+		HashedMessage: req.HashedMessage,
+		Nonce:         req.Nonce,
+		TSAPolicyOID:  req.TSAPolicyOID,
+	}
+
+	return &tsRequest, nil
+}
 
 func getContentType(r *http.Request) (string, error) {
 	contentTypeHeader := r.Header.Get("Content-Type")
@@ -42,7 +88,7 @@ func getContentType(r *http.Request) (string, error) {
 func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error) {
 	switch contentType {
 	case "json":
-		return timestamp.ParseRequestFromJSON(reqBytes)
+		return parseJSONRequest(reqBytes)
 	case "timestamp-query":
 		return timestamp.ParseRequest(reqBytes)
 	default:

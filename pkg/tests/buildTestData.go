@@ -16,39 +16,15 @@ package tests
 
 import (
 	"crypto"
-	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/json"
 	"io"
-	"math/big"
 	"testing"
 
 	"github.com/digitorus/timestamp"
 )
 
-type messageImprint struct {
-	HashAlgorithm pkix.AlgorithmIdentifier `json:"hashAlgorithm"`
-	HashedMessage []byte                   `json:"hashedMessage"`
-}
-
-type tsRequest struct {
-	Version        int                   `json:"version"`
-	MessageImprint messageImprint        `json:"messageImprint"`
-	ReqPolicy      asn1.ObjectIdentifier `json:"reqPolicy,omitempty"`
-	Nonce          *big.Int              `json:"nonce,omitempty"`
-	CertReq        bool                  `json:"certReq,omitempty"`
-	Extensions     []pkix.Extension      `json:"extensions,omitempty"`
-}
-
-type requestOptions struct {
-	Nonce        *big.Int
-	IncludeCerts bool
-	Extensions   []pkix.Extension
-	PolicyOID    asn1.ObjectIdentifier
-}
-
-func buildJSONReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
-	h := crypto.SHA256.New()
+func buildJSONReq(t *testing.T, r io.Reader, opts timestamp.RequestOptions) []byte {
+	h := opts.Hash.New()
 
 	b := make([]byte, h.Size())
 	for {
@@ -65,18 +41,12 @@ func buildJSONReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
 
 	finished := h.Sum(nil)
 
-	req := tsRequest{
-		Version: 1,
-		CertReq: opts.IncludeCerts,
-		MessageImprint: messageImprint{
-			HashAlgorithm: pkix.AlgorithmIdentifier{
-				Algorithm: asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1},
-			},
-			HashedMessage: finished,
-		},
-		Nonce:      opts.Nonce,
-		Extensions: opts.Extensions,
-		ReqPolicy:  opts.PolicyOID,
+	req := timestamp.Request{
+		Certificates:  opts.Certificates,
+		HashAlgorithm: crypto.SHA256,
+		HashedMessage: finished,
+		Nonce:         opts.Nonce,
+		TSAPolicyOID:  opts.TSAPolicyOID,
 	}
 
 	marshalled, err := json.Marshal(req)
@@ -86,12 +56,12 @@ func buildJSONReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
 	return marshalled
 }
 
-func buildTimestampQueryReq(t *testing.T, r io.Reader, opts requestOptions) []byte {
+func buildTimestampQueryReq(t *testing.T, r io.Reader, opts timestamp.RequestOptions) []byte {
 	tsq, err := timestamp.CreateRequest(r, &timestamp.RequestOptions{
 		Hash:         crypto.SHA256,
-		Certificates: opts.IncludeCerts,
+		Certificates: opts.Certificates,
 		Nonce:        opts.Nonce,
-		TSAPolicyOID: opts.PolicyOID,
+		TSAPolicyOID: opts.TSAPolicyOID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error creating request: %v", err)

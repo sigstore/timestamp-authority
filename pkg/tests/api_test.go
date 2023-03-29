@@ -87,11 +87,11 @@ func TestGetTimestampResponse(t *testing.T) {
 	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
 	includeCerts := true
-	opts := requestOptions{
+	opts := ts.RequestOptions{
 		Nonce:        testNonce,
-		IncludeCerts: includeCerts,
-		Extensions:   nil,
-		PolicyOID:    nil,
+		Certificates: includeCerts,
+		TSAPolicyOID: nil,
+		Hash:         crypto.SHA256,
 	}
 
 	tests := []timestampTestCase{
@@ -189,14 +189,13 @@ func TestGetTimestampResponse(t *testing.T) {
 func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	testArtifact := "blob"
 	testNonce := big.NewInt(1234)
-	testExtensions := []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
 	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
 
-	opts := requestOptions{
+	opts := ts.RequestOptions{
 		Nonce:        testNonce,
-		IncludeCerts: false,
-		Extensions:   testExtensions,
-		PolicyOID:    testPolicyOID,
+		Certificates: false,
+		TSAPolicyOID: testPolicyOID,
+		Hash:         crypto.SHA256,
 	}
 
 	tests := []timestampTestCase{
@@ -205,7 +204,6 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 			reqMediaType: client.TimestampQueryMediaType,
 			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
 			nonce:        testNonce,
-			extensions:   testExtensions,
 			policyOID:    testPolicyOID,
 		},
 		{
@@ -213,7 +211,6 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 			reqMediaType: client.JSONMediaType,
 			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
 			nonce:        testNonce,
-			extensions:   testExtensions,
 			policyOID:    testPolicyOID,
 		},
 	}
@@ -260,22 +257,18 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 
 		// check policy OID
 		if !tsr.Policy.Equal(tc.policyOID) {
-			t.Fatalf("unexpected policy ID")
-		}
-		// check extension is present
-		if len(tsr.Extensions) != 1 {
-			t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+			t.Fatalf("unexpected policy ID. expected %v, got %v", tc.policyOID, tsr.Policy)
 		}
 	}
 }
 
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	testArtifact := "blob"
-	opts := requestOptions{
+	opts := ts.RequestOptions{
 		Nonce:        nil,
-		IncludeCerts: false,
-		Extensions:   nil,
-		PolicyOID:    nil,
+		Certificates: false,
+		TSAPolicyOID: nil,
+		Hash:         crypto.SHA256,
 	}
 
 	tests := []timestampTestCase{
