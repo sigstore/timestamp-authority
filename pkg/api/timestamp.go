@@ -23,6 +23,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,12 +34,12 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
-type request struct {
-	Certificates  bool                  `json:"certificates"`
-	HashAlgorithm string                `json:"hashAlgorithm"`
-	HashedMessage []byte                `json:"hashedMessage"`
-	Nonce         *big.Int              `json:"nonce"`
-	TSAPolicyOID  asn1.ObjectIdentifier `json:"tsaPolicyOID"`
+type JsonRequest struct {
+	Artifact      string   `json:"artifact"`
+	Certificates  bool     `json:"certificates"`
+	HashAlgorithm string   `json:"hashAlgorithm"`
+	Nonce         *big.Int `json:"nonce"`
+	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
 func GetHashAlgo(algo string) (crypto.Hash, error) {
@@ -55,9 +56,9 @@ func GetHashAlgo(algo string) (crypto.Hash, error) {
 }
 
 func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
-	var req request
+	var req JsonRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON request into Timestamp: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON into request: %v", err)
 	}
 
 	hashAlgo, err := GetHashAlgo(req.HashAlgorithm)
@@ -65,15 +66,29 @@ func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
 		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err)
 	}
 
-	tsRequest := timestamp.Request{
-		Certificates:  req.Certificates,
-		HashAlgorithm: hashAlgo,
-		HashedMessage: req.HashedMessage,
-		Nonce:         req.Nonce,
-		TSAPolicyOID:  req.TSAPolicyOID,
+	var oidInts []int
+	for _, v := range strings.Split(req.TSAPolicyOID, ".") {
+		i, _ := strconv.Atoi(v)
+		oidInts = append(oidInts, i)
 	}
 
-	return &tsRequest, nil
+	opts := timestamp.RequestOptions{
+		Certificates: req.Certificates,
+		Hash:         hashAlgo,
+		Nonce:        req.Nonce,
+		TSAPolicyOID: oidInts,
+	}
+	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Request from JSON: %v", err)
+	}
+
+	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
+	}
+
+	return tsRequest, nil
 }
 
 func getContentType(r *http.Request) (string, error) {

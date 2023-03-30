@@ -20,9 +20,9 @@ import (
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"fmt"
 	"io"
 	"math/big"
-	"strings"
 	"testing"
 	"time"
 
@@ -81,33 +81,37 @@ type timestampTestCase struct {
 	includeCerts bool
 	extensions   []pkix.Extension
 	policyOID    asn1.ObjectIdentifier
+	hash         crypto.Hash
 }
 
 func TestGetTimestampResponse(t *testing.T) {
 	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
 	includeCerts := true
+	testHash := crypto.SHA256
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
 		Certificates: includeCerts,
 		TSAPolicyOID: nil,
-		Hash:         crypto.SHA256,
+		Hash:         testHash,
 	}
 
 	tests := []timestampTestCase{
 		{
 			name:         "Timestamp Query Request",
 			reqMediaType: client.TimestampQueryMediaType,
-			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildTimestampQueryReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
+			hash:         testHash,
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
+			hash:         testHash,
 		},
 	}
 
@@ -149,11 +153,12 @@ func TestGetTimestampResponse(t *testing.T) {
 			t.Fatalf("expected nonce %d, got %d", tc.nonce, tsr.Nonce)
 		}
 		// check hash and hashed message
-		if tsr.HashAlgorithm != crypto.SHA256 {
+		if tsr.HashAlgorithm != tc.hash {
 			t.Fatalf("unexpected hash algorithm")
 		}
 		hashedMessage := sha256.Sum256([]byte(testArtifact))
 		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
+			fmt.Printf("\n MESSAGES: %x, %x \n", tsr.HashedMessage, hashedMessage[:])
 			t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
 		}
 		// check time and accuracy
@@ -202,14 +207,14 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 		{
 			name:         "Timestamp Query Request",
 			reqMediaType: client.TimestampQueryMediaType,
-			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildTimestampQueryReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			policyOID:    testPolicyOID,
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			policyOID:    testPolicyOID,
 		},
@@ -275,12 +280,12 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 		{
 			name:         "Timestamp Query Request",
 			reqMediaType: client.TimestampQueryMediaType,
-			req:          buildTimestampQueryReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildTimestampQueryReq(t, []byte(testArtifact), opts),
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, strings.NewReader(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), opts),
 		},
 	}
 
