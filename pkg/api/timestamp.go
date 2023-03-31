@@ -34,7 +34,7 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
 
-type JsonRequest struct {
+type JSONRequest struct {
 	Artifact      string   `json:"artifact"`
 	Certificates  bool     `json:"certificates"`
 	HashAlgorithm string   `json:"hashAlgorithm"`
@@ -56,7 +56,7 @@ func GetHashAlgo(algo string) (crypto.Hash, error) {
 }
 
 func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
-	var req JsonRequest
+	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON into request: %v", err)
 	}

@@ -25,21 +25,8 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/api"
 )
 
-func hashToStr(h crypto.Hash) string {
-	switch h {
-	case crypto.SHA256:
-		return "sha256"
-	case crypto.SHA384:
-		return "sha384"
-	case crypto.SHA512:
-		return "sha512"
-	default:
-		return ""
-	}
-}
-
 func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlgo string, nonce *big.Int, oidStr string) []byte {
-	jsonReq := api.JsonRequest{
+	jsonReq := api.JSONRequest{
 		Certificates:  includeCerts,
 		HashAlgorithm: hashAlgo,
 		Artifact:      string(artifact),
