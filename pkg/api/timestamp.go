@@ -123,7 +123,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 
 	contentType, err := getContentType(params.HTTPRequest)
 	if err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+		return handleTimestampAPIError(params, http.StatusUnsupportedMediaType, err, failedToGenerateTimestampResponse)
 	}
 
 	req, err := requestBodyToTimestampReq(requestBytes, contentType)
