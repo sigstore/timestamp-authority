@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"fmt"
 	"io"
 	"math/big"
 	"testing"
@@ -159,7 +158,6 @@ func TestGetTimestampResponse(t *testing.T) {
 		}
 		hashedMessage := sha256.Sum256([]byte(testArtifact))
 		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
-			fmt.Printf("\n MESSAGES: %x, %x \n", tsr.HashedMessage, hashedMessage[:])
 			t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
 		}
 		// check time and accuracy
