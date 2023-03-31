@@ -56,11 +56,14 @@ func GetHashAlgo(algo string) (crypto.Hash, error) {
 }
 
 func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
+	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON into request: %v", err)
 	}
 
+	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
+	// fields into a a timestamp.RequestOptions struct
 	hashAlgo, err := GetHashAlgo(req.HashAlgorithm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err)
@@ -82,11 +85,14 @@ func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
 		Nonce:        req.Nonce,
 		TSAPolicyOID: oidInts,
 	}
+
+	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
 	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Request from JSON: %v", err)
 	}
 
+	// parse the DER encoded timestamp request into a timestamp.Request struct
 	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
