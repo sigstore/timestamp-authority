@@ -17,9 +17,8 @@ package tests
 import (
 	"bytes"
 	"crypto"
-	"encoding/asn1"
 	"encoding/json"
-	"strings"
+	"math/big"
 	"testing"
 
 	"github.com/digitorus/timestamp"
@@ -39,17 +38,13 @@ func hashToStr(h crypto.Hash) string {
 	}
 }
 
-func oidStr(oid asn1.ObjectIdentifier) string {
-	return strings.Join(oid, ".")
-}
-
-func buildJSONReq(t *testing.T, artifact []byte, opts timestamp.RequestOptions) []byte {
+func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlgo string, nonce *big.Int, oidStr string) []byte {
 	jsonReq := api.JsonRequest{
-		Certificates:  opts.Certificates,
-		HashAlgorithm: hashToStr(opts.Hash),
+		Certificates:  includeCerts,
+		HashAlgorithm: hashAlgo,
 		Artifact:      string(artifact),
-		Nonce:         opts.Nonce,
-		TSAPolicyOID:  opts.TSAPolicyOID,
+		Nonce:         nonce,
+		TSAPolicyOID:  oidStr,
 	}
 
 	marshalled, err := json.Marshal(jsonReq)

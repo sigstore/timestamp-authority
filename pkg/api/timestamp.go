@@ -67,9 +67,13 @@ func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
 	}
 
 	var oidInts []int
-	for _, v := range strings.Split(req.TSAPolicyOID, ".") {
-		i, _ := strconv.Atoi(v)
-		oidInts = append(oidInts, i)
+	if req.TSAPolicyOID == "" {
+		oidInts = nil
+	} else {
+		for _, v := range strings.Split(req.TSAPolicyOID, ".") {
+			i, _ := strconv.Atoi(v)
+			oidInts = append(oidInts, i)
+		}
 	}
 
 	opts := timestamp.RequestOptions{

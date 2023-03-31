@@ -88,6 +88,7 @@ func TestGetTimestampResponse(t *testing.T) {
 	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
 	includeCerts := true
+	testHashStr := "sha256"
 	testHash := crypto.SHA256
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
@@ -108,7 +109,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, []byte(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, ""),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
 			hash:         testHash,
@@ -195,6 +196,9 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	testArtifact := "blob"
 	testNonce := big.NewInt(1234)
 	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+	oidStr := "1.2.3.4.5"
+	includeCerts := true
+	testHashStr := "sha256"
 
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
@@ -214,7 +218,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, []byte(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, oidStr),
 			nonce:        testNonce,
 			policyOID:    testPolicyOID,
 		},
@@ -269,9 +273,13 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	testArtifact := "blob"
+	includeCerts := false
+	testHashStr := "sha256"
+	oidStr := "1.2.3.4"
+
 	opts := ts.RequestOptions{
 		Nonce:        nil,
-		Certificates: false,
+		Certificates: includeCerts,
 		TSAPolicyOID: nil,
 		Hash:         crypto.SHA256,
 	}
@@ -285,7 +293,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			req:          buildJSONReq(t, []byte(testArtifact), opts),
+			req:          buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, nil, oidStr),
 		},
 	}
 
