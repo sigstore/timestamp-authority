@@ -55,7 +55,7 @@ func GetHashAlgo(algo string) (crypto.Hash, error) {
 	}
 }
 
-func parseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
+func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
 	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
@@ -113,7 +113,7 @@ func getContentType(r *http.Request) (string, error) {
 func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error) {
 	switch contentType {
 	case "json":
-		return parseJSONRequest(reqBytes)
+		return ParseJSONRequest(reqBytes)
 	case "timestamp-query":
 		return timestamp.ParseRequest(reqBytes)
 	default:
