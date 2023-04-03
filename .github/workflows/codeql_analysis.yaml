@@ -17,16 +17,9 @@ name: CodeQL
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ main ]
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'CHANGELOG.md'
   schedule:
     - cron: '45 10 * * 1'
 
@@ -34,9 +27,28 @@ permissions:
   contents: read
 
 jobs:
+  # job detects file changes that require running codeql
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      runcodeql: ${{ steps.filter.outputs.runcodeql }}
+    steps:
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          runcodeql:
+            - '**.go'
+            - 'go.mod'
+            - 'go.sum'
+            - 'CHANGELOG.md'
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
     permissions:
       security-events: write
     strategy:

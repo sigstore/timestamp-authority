@@ -21,17 +21,30 @@ on:
       - 'main'
       - 'updates'
   pull_request:
-    paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'CHANGELOG.md'
-
 permissions: read-all
 
 jobs:
+  # job detects file changes that require running codeql
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      runtests: ${{ steps.filter.outputs.runtests }}
+    steps:
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          runtests:
+            - '**.go'
+            - 'go.mod'
+            - 'go.sum'
+            - 'CHANGELOG.md'
   unit-tests:
     name: Run unit tests
+    needs: changes
+    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -73,6 +86,8 @@ jobs:
 
   license-check:
     name: license boilerplate check
+    needs: changes
+    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
@@ -89,6 +104,8 @@ jobs:
 
   golangci:
     name: lint
+    needs: changes
+    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
