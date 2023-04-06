@@ -24,7 +24,7 @@ on:
 permissions: read-all
 
 jobs:
-  # job detects file changes that require running codeql
+  # job detects file changes that require running Go tests and analysis
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -44,7 +44,7 @@ jobs:
   unit-tests:
     name: Run unit tests
     needs: changes
-    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
+    if: ${{ needs.changes.outputs.runtests == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -103,7 +103,7 @@ jobs:
   golangci:
     name: lint
     needs: changes
-    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
+    if: ${{ needs.changes.outputs.runtests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
