@@ -39,7 +39,7 @@ jobs:
       id: filter
       with:
         filters: |
-          runcodeql:
+          go:
             - '**.go'
             - 'go.mod'
             - 'go.sum'
@@ -48,13 +48,12 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.runcodeql == 'true' }}
     permissions:
       security-events: write
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'go' ]
+        language: [ ${{ fromJSON(needs.changes.outputs.runcodeql) }} ]
     steps:
     - name: Checkout repository
       uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
