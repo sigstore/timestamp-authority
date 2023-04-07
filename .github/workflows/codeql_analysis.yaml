@@ -27,13 +27,12 @@ permissions:
   contents: read
 
 jobs:
-  # job detects file changes that require running codeql
   changes:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
-      runcodeql: ${{ steps.filter.outputs.runcodeql }}
+      runcodeql: ${{ steps.filter.outputs.changes }}
     steps:
     - uses: dorny/paths-filter@v2
       id: filter
@@ -53,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ${{ fromJSON(needs.changes.outputs.runcodeql) || [] }}
+        language: ${{ fromJSON(needs.changes.outputs.runcodeql) }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
