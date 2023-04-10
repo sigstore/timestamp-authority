@@ -10,7 +10,7 @@ The timestamp structure conforms to the updates in [RFC 5816](https://datatracke
 ## Security model
 
 [Trusted timestamping](https://en.wikipedia.org/wiki/Trusted_timestamping) is a process that has been around for some time.
-It provides a timestamp record of when a documented was created or modified.
+It provides a timestamp record of when a document was created or modified.
 
 A timestamp authority creates signed timestamps using public key infrastructure. The operator of the timestamp
 authority must secure the signing key material to prevent unauthorized timestamp signing.
