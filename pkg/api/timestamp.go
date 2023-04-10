@@ -58,18 +58,18 @@ func GetHashAlg(alg string) (crypto.Hash, error) {
 	}
 }
 
-func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error, string) {
+func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON into request: %v", err), failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse JSON into request: %v", err)
 	}
 
 	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
 	// fields into a a timestamp.RequestOptions struct
 	hashAlgo, err := GetHashAlg(req.HashAlgorithm)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err), failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse hash algorithm: %v", err)
 	}
 
 	var oidInts []int
@@ -92,30 +92,30 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error, string) {
 	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
 	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Request from JSON: %v", err), failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to create Request from JSON: %v", err)
 	}
 
 	// parse the DER encoded timestamp request into a timestamp.Request struct
 	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Request from Request bytes: %v", err), failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
 	}
 
-	return tsRequest, nil, ""
+	return tsRequest, "", nil
 }
 
-func ParseDERRequest(reqBytes []byte) (*timestamp.Request, error, string) {
+func ParseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	parsed, err := timestamp.ParseRequest(reqBytes)
 	if err != nil {
-		return nil, err, failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, err
 	}
 
 	// verify that the request's hash algorithm is supported
 	if err := verification.VerifyRequest(parsed); err != nil {
-		return nil, err, weakHashAlgorithmTimestampRequest
+		return nil, weakHashAlgorithmTimestampRequest, err
 	}
 
-	return parsed, nil, ""
+	return parsed, "", nil
 }
 
 func getContentType(r *http.Request) (string, error) {
@@ -127,14 +127,14 @@ func getContentType(r *http.Request) (string, error) {
 	return splitHeader[1], nil
 }
 
-func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error, string) {
+func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, string, error) {
 	switch contentType {
 	case "json":
 		return ParseJSONRequest(reqBytes)
 	case "timestamp-query":
 		return ParseDERRequest(reqBytes)
 	default:
-		return nil, fmt.Errorf("unsupported content type"), failedToGenerateTimestampResponse
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("unsupported content type")
 	}
 }
 
@@ -149,7 +149,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusUnsupportedMediaType, err, failedToGenerateTimestampResponse)
 	}
 
-	req, err, errMsg := requestBodyToTimestampReq(requestBytes, contentType)
+	req, errMsg, err := requestBodyToTimestampReq(requestBytes, contentType)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, errMsg)
 	}
