@@ -237,7 +237,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 				t.Fatalf("unexpected error parsing request: %v", err)
 			}
 		} else {
-			req, err = api.ParseJSONRequest(tc.reqBytes)
+			req, err, _ = api.ParseJSONRequest(tc.reqBytes)
 			if err != nil {
 				t.Fatalf("unexpected error parsing request: %v", err)
 			}

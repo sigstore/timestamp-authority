@@ -42,31 +42,34 @@ type JSONRequest struct {
 	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
-func GetHashAlgo(algo string) (crypto.Hash, error) {
-	switch algo {
+func GetHashAlg(alg string) (crypto.Hash, error) {
+	lowercaseAlg := strings.ToLower(alg)
+	switch lowercaseAlg {
 	case "sha256":
 		return crypto.SHA256, nil
 	case "sha384":
 		return crypto.SHA384, nil
 	case "sha512":
 		return crypto.SHA512, nil
+	case "sha1":
+		return 0, verification.ErrWeakHashAlg
 	default:
-		return 0, fmt.Errorf("unsupported hash algorithm: %s", algo)
+		return 0, fmt.Errorf("unsupported hash algorithm: %s", alg)
 	}
 }
 
-func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
+func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error, string) {
 	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON into request: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON into request: %v", err), failedToGenerateTimestampResponse
 	}
 
 	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
 	// fields into a a timestamp.RequestOptions struct
-	hashAlgo, err := GetHashAlgo(req.HashAlgorithm)
+	hashAlgo, err := GetHashAlg(req.HashAlgorithm)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err)
+		return nil, fmt.Errorf("failed to parse hash algorithm: %v", err), failedToGenerateTimestampResponse
 	}
 
 	var oidInts []int
@@ -89,16 +92,30 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, error) {
 	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
 	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Request from JSON: %v", err)
+		return nil, fmt.Errorf("failed to create Request from JSON: %v", err), failedToGenerateTimestampResponse
 	}
 
 	// parse the DER encoded timestamp request into a timestamp.Request struct
 	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
+		return nil, fmt.Errorf("failed to parse Request from Request bytes: %v", err), failedToGenerateTimestampResponse
 	}
 
-	return tsRequest, nil
+	return tsRequest, nil, ""
+}
+
+func ParseDERRequest(reqBytes []byte) (*timestamp.Request, error, string) {
+	parsed, err := timestamp.ParseRequest(reqBytes)
+	if err != nil {
+		return nil, err, failedToGenerateTimestampResponse
+	}
+
+	// verify that the request's hash algorithm is supported
+	if err := verification.VerifyRequest(parsed); err != nil {
+		return nil, err, weakHashAlgorithmTimestampRequest
+	}
+
+	return parsed, nil, ""
 }
 
 func getContentType(r *http.Request) (string, error) {
@@ -110,14 +127,14 @@ func getContentType(r *http.Request) (string, error) {
 	return splitHeader[1], nil
 }
 
-func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error) {
+func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, error, string) {
 	switch contentType {
 	case "json":
 		return ParseJSONRequest(reqBytes)
 	case "timestamp-query":
-		return timestamp.ParseRequest(reqBytes)
+		return ParseDERRequest(reqBytes)
 	default:
-		return nil, fmt.Errorf("unsupported content type")
+		return nil, fmt.Errorf("unsupported content type"), failedToGenerateTimestampResponse
 	}
 }
 
@@ -132,13 +149,9 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusUnsupportedMediaType, err, failedToGenerateTimestampResponse)
 	}
 
-	req, err := requestBodyToTimestampReq(requestBytes, contentType)
+	req, err, errMsg := requestBodyToTimestampReq(requestBytes, contentType)
 	if err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
-	}
-
-	if err := verification.VerifyRequest(req); err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, weakHashAlgorithmTimestampRequest)
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, errMsg)
 	}
 
 	policyID := req.TSAPolicyOID
