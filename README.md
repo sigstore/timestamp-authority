@@ -101,11 +101,11 @@ The service expects the JSON body to be in the shape:
 
 ```
 {
-	"artifact": "myblob",
+  "artifact": "myblob",
   "certificates": true,
-	"hashAlgorithm": "sha256",
-	"nonce": 1123343434,
-	"tsaPolicyOID": "1.2.3.4"
+  "hashAlgorithm": "sha256",
+  "nonce": 1123343434,
+  "tsaPolicyOID": "1.2.3.4"
 }
 ```
 
