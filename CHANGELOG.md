@@ -1,3 +1,9 @@
+# 1.0.0
+
+1.0 release of the timestamp authority. No changes from the previous release candidate.
+
+Thank you to all contributors!
+
 # 1.0.0-rc.1
 
 _Note: This is a prerelease for 1.0. Please try it out and file issues!_
