@@ -42,19 +42,19 @@ type JSONRequest struct {
 	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
-func GetHashAlg(alg string) (crypto.Hash, error) {
+func GetHashAlg(alg string) (crypto.Hash, string, error) {
 	lowercaseAlg := strings.ToLower(alg)
 	switch lowercaseAlg {
 	case "sha256":
-		return crypto.SHA256, nil
+		return crypto.SHA256, "", nil
 	case "sha384":
-		return crypto.SHA384, nil
+		return crypto.SHA384, "", nil
 	case "sha512":
-		return crypto.SHA512, nil
+		return crypto.SHA512, "", nil
 	case "sha1":
-		return 0, verification.ErrWeakHashAlg
+		return 0, weakHashAlgorithmTimestampRequest, verification.ErrWeakHashAlg
 	default:
-		return 0, fmt.Errorf("unsupported hash algorithm: %s", alg)
+		return 0, failedToGenerateTimestampResponse, fmt.Errorf("unsupported hash algorithm: %s", alg)
 	}
 }
 
@@ -67,9 +67,9 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 
 	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
 	// fields into a a timestamp.RequestOptions struct
-	hashAlgo, err := GetHashAlg(req.HashAlgorithm)
+	hashAlgo, errMsg, err := GetHashAlg(req.HashAlgorithm)
 	if err != nil {
-		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse hash algorithm: %v", err)
+		return nil, errMsg, fmt.Errorf("failed to parse hash algorithm: %v", err)
 	}
 
 	var oidInts []int
