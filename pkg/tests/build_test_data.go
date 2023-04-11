@@ -16,7 +16,6 @@ package tests
 
 import (
 	"bytes"
-	"crypto"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -25,10 +24,10 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/api"
 )
 
-func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlgo string, nonce *big.Int, oidStr string) []byte {
+func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlg string, nonce *big.Int, oidStr string) []byte {
 	jsonReq := api.JSONRequest{
 		Certificates:  includeCerts,
-		HashAlgorithm: hashAlgo,
+		HashAlgorithm: hashAlg,
 		Artifact:      string(artifact),
 		Nonce:         nonce,
 		TSAPolicyOID:  oidStr,
@@ -43,7 +42,7 @@ func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlgo str
 
 func buildTimestampQueryReq(t *testing.T, artifact []byte, opts timestamp.RequestOptions) []byte {
 	tsq, err := timestamp.CreateRequest(bytes.NewReader(artifact), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
+		Hash:         opts.Hash,
 		Certificates: opts.Certificates,
 		Nonce:        opts.Nonce,
 		TSAPolicyOID: opts.TSAPolicyOID,

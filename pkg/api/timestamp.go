@@ -52,7 +52,7 @@ func GetHashAlg(alg string) (crypto.Hash, string, error) {
 	case "sha512":
 		return crypto.SHA512, "", nil
 	case "sha1":
-		return 0, weakHashAlgorithmTimestampRequest, verification.ErrWeakHashAlg
+		return 0, WeakHashAlgorithmTimestampRequest, verification.ErrWeakHashAlg
 	default:
 		return 0, failedToGenerateTimestampResponse, fmt.Errorf("unsupported hash algorithm: %s", alg)
 	}
@@ -112,7 +112,7 @@ func ParseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 
 	// verify that the request's hash algorithm is supported
 	if err := verification.VerifyRequest(parsed); err != nil {
-		return nil, weakHashAlgorithmTimestampRequest, err
+		return nil, WeakHashAlgorithmTimestampRequest, err
 	}
 
 	return parsed, "", nil

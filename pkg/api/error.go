@@ -29,7 +29,7 @@ import (
 
 const (
 	failedToGenerateTimestampResponse = "Error generating timestamp response"
-	weakHashAlgorithmTimestampRequest = "Weak hash algorithm in timestamp request"
+	WeakHashAlgorithmTimestampRequest = "Weak hash algorithm in timestamp request"
 )
 
 func errorMsg(message string, code int) *models.Error {
