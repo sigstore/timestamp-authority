@@ -16,16 +16,128 @@ package api
 
 import (
 	"bytes"
+	"crypto"
 	"encoding/asn1"
+	"encoding/json"
+	"fmt"
 	"io"
+	"math/big"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/pkg/errors"
 	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/verification"
 )
+
+type JSONRequest struct {
+	Artifact      string   `json:"artifact"`
+	Certificates  bool     `json:"certificates"`
+	HashAlgorithm string   `json:"hashAlgorithm"`
+	Nonce         *big.Int `json:"nonce"`
+	TSAPolicyOID  string   `json:"tsaPolicyOID"`
+}
+
+func getHashAlg(alg string) (crypto.Hash, string, error) {
+	lowercaseAlg := strings.ToLower(alg)
+	switch lowercaseAlg {
+	case "sha256":
+		return crypto.SHA256, "", nil
+	case "sha384":
+		return crypto.SHA384, "", nil
+	case "sha512":
+		return crypto.SHA512, "", nil
+	case "sha1":
+		return 0, WeakHashAlgorithmTimestampRequest, verification.ErrWeakHashAlg
+	default:
+		return 0, failedToGenerateTimestampResponse, fmt.Errorf("unsupported hash algorithm: %s", alg)
+	}
+}
+
+// ParseJSONRequest parses a JSON request into a timestamp.Request struct
+func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
+	// unmarshal the request bytes into a JSONRequest struct
+	var req JSONRequest
+	if err := json.Unmarshal(reqBytes, &req); err != nil {
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse JSON into request: %v", err)
+	}
+
+	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
+	// fields into a a timestamp.RequestOptions struct
+	hashAlgo, errMsg, err := getHashAlg(req.HashAlgorithm)
+	if err != nil {
+		return nil, errMsg, fmt.Errorf("failed to parse hash algorithm: %v", err)
+	}
+
+	var oidInts []int
+	if req.TSAPolicyOID == "" {
+		oidInts = nil
+	} else {
+		for _, v := range strings.Split(req.TSAPolicyOID, ".") {
+			i, _ := strconv.Atoi(v)
+			oidInts = append(oidInts, i)
+		}
+	}
+
+	opts := timestamp.RequestOptions{
+		Certificates: req.Certificates,
+		Hash:         hashAlgo,
+		Nonce:        req.Nonce,
+		TSAPolicyOID: oidInts,
+	}
+
+	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
+	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
+	if err != nil {
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to create Request from JSON: %v", err)
+	}
+
+	// parse the DER encoded timestamp request into a timestamp.Request struct
+	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
+	if err != nil {
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
+	}
+
+	return tsRequest, "", nil
+}
+
+func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
+	parsed, err := timestamp.ParseRequest(reqBytes)
+	if err != nil {
+		return nil, failedToGenerateTimestampResponse, err
+	}
+
+	// verify that the request's hash algorithm is supported
+	if err := verification.VerifyRequest(parsed); err != nil {
+		return nil, WeakHashAlgorithmTimestampRequest, err
+	}
+
+	return parsed, "", nil
+}
+
+func getContentType(r *http.Request) (string, error) {
+	contentTypeHeader := r.Header.Get("Content-Type")
+	splitHeader := strings.Split(contentTypeHeader, "application/")
+	if len(splitHeader) != 2 {
+		return "", errors.New("expected header value to be split into two pieces")
+	}
+	return splitHeader[1], nil
+}
+
+func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, string, error) {
+	switch contentType {
+	case "json":
+		return ParseJSONRequest(reqBytes)
+	case "timestamp-query":
+		return parseDERRequest(reqBytes)
+	default:
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("unsupported content type")
+	}
+}
 
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
 	requestBytes, err := io.ReadAll(params.Request)
@@ -33,13 +145,14 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
-	req, err := timestamp.ParseRequest(requestBytes)
+	contentType, err := getContentType(params.HTTPRequest)
 	if err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+		return handleTimestampAPIError(params, http.StatusUnsupportedMediaType, err, failedToGenerateTimestampResponse)
 	}
 
-	if err := verification.VerifyRequest(req); err != nil {
-		return handleTimestampAPIError(params, http.StatusBadRequest, err, weakHashAlgorithmTimestampRequest)
+	req, errMsg, err := requestBodyToTimestampReq(requestBytes, contentType)
+	if err != nil {
+		return handleTimestampAPIError(params, http.StatusBadRequest, err, errMsg)
 	}
 
 	policyID := req.TSAPolicyOID

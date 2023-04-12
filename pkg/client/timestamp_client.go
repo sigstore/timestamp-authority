@@ -36,6 +36,7 @@ func GetTimestampClient(timestampServerURL string, opts ...Option) (*client.Time
 	rt.Producers["application/json"] = runtime.JSONProducer()
 	// Output from server
 	rt.Consumers["application/timestamp-reply"] = runtime.ByteStreamConsumer()
+	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
 
 	rt.Transport = createRoundTripper(rt.Transport, o)

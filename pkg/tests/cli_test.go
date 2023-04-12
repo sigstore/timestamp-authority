@@ -276,7 +276,7 @@ func outputContains(t *testing.T, output, sub string) {
 }
 
 func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.Int, policyOID asn1.ObjectIdentifier, tsrContainsCerts bool) string {
-	c, err := client.GetTimestampClient(url)
+	c, err := client.GetTimestampClient(url, client.WithUserAgent("test user agent"), client.WithContentType(client.TimestampQueryMediaType))
 	if err != nil {
 		t.Fatalf("unexpected error creating client: %v", err)
 	}
@@ -325,7 +325,7 @@ type certChainPEMFiles struct {
 	certChainPath         string
 }
 
-// getCertChainPEM returns the path of a pem file containaing
+// getCertChainPEM returns the path of a pem file containing
 // the leaf certificate and the path of a pem file containing the
 // root and intermediate certificates. Used to verify a signed timestamp
 func writeCertChainToPEMFiles(t *testing.T, restapiURL string) certChainPEMFiles {

@@ -16,7 +16,6 @@ package verification
 
 import (
 	"crypto"
-	"strings"
 	"testing"
 
 	"github.com/digitorus/timestamp"
@@ -33,7 +32,7 @@ func TestVerifyRequest(t *testing.T) {
 	}
 
 	tsReq.HashAlgorithm = crypto.SHA1
-	if err := VerifyRequest(tsReq); err == nil || !strings.Contains(err.Error(), "weak hash algorithm") {
+	if err := VerifyRequest(tsReq); err != ErrWeakHashAlg {
 		t.Fatalf("expected error with weak hash algorithm, got %v", err)
 	}
 }

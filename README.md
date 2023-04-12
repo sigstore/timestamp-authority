@@ -91,6 +91,24 @@ To fetch a timestamp with `openssl` and `curl`:
      is included.
 1. Inspect timestamp: `openssl ts -reply -in response.tsr -text`
 
+### Making a request with JSON
+
+If you would like to make a request for a timestamp using a JSON based request, you can do with:
+
+`curl -sSH "Content-Type: application/json" -d @request.json http://localhost:3000/api/v1/timestamp -o response.tsr`
+
+The service expects the JSON body to be in the shape:
+
+```
+{
+  "artifact": "myblob",
+  "certificates": true,
+  "hashAlgorithm": "sha256",
+  "nonce": 1123343434,
+  "tsaPolicyOID": "1.2.3.4"
+}
+```
+
 ## Production deployment
 
 To deploy to production, the timestamp authority currently supports signing with Cloud KMS or

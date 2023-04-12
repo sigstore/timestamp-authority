@@ -9,6 +9,7 @@ hack/tools/bin/*
 bin/
 request.tsq
 response.tsr
+request.json
 myblob
 ts_chain.pem
 enc-keyset.cfg

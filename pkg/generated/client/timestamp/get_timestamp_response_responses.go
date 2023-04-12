@@ -111,6 +111,11 @@ func (o *GetTimestampResponseCreated) IsCode(code int) bool {
 	return code == 201
 }
 
+// Code gets the status code for the get timestamp response created response
+func (o *GetTimestampResponseCreated) Code() int {
+	return 201
+}
+
 func (o *GetTimestampResponseCreated) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
 }
@@ -170,6 +175,11 @@ func (o *GetTimestampResponseBadRequest) IsServerError() bool {
 // IsCode returns true when this get timestamp response bad request response a status code equal to that given
 func (o *GetTimestampResponseBadRequest) IsCode(code int) bool {
 	return code == 400
+}
+
+// Code gets the status code for the get timestamp response bad request response
+func (o *GetTimestampResponseBadRequest) Code() int {
+	return 400
 }
 
 func (o *GetTimestampResponseBadRequest) Error() string {
@@ -234,6 +244,11 @@ func (o *GetTimestampResponseNotImplemented) IsCode(code int) bool {
 	return code == 501
 }
 
+// Code gets the status code for the get timestamp response not implemented response
+func (o *GetTimestampResponseNotImplemented) Code() int {
+	return 501
+}
+
 func (o *GetTimestampResponseNotImplemented) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
 }
@@ -265,11 +280,6 @@ type GetTimestampResponseDefault struct {
 	Payload *models.Error
 }
 
-// Code gets the status code for the get timestamp response default response
-func (o *GetTimestampResponseDefault) Code() int {
-	return o._statusCode
-}
-
 // IsSuccess returns true when this get timestamp response default response has a 2xx status code
 func (o *GetTimestampResponseDefault) IsSuccess() bool {
 	return o._statusCode/100 == 2
@@ -293,6 +303,11 @@ func (o *GetTimestampResponseDefault) IsServerError() bool {
 // IsCode returns true when this get timestamp response default response a status code equal to that given
 func (o *GetTimestampResponseDefault) IsCode(code int) bool {
 	return o._statusCode == code
+}
+
+// Code gets the status code for the get timestamp response default response
+func (o *GetTimestampResponseDefault) Code() int {
+	return o._statusCode
 }
 
 func (o *GetTimestampResponseDefault) Error() string {

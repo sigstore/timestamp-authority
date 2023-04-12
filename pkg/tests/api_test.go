@@ -28,9 +28,12 @@ import (
 
 	ts "github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/timestamp-authority/pkg/api"
 	"github.com/sigstore/timestamp-authority/pkg/client"
 	"github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/pkg/x509"
+
+	"github.com/go-openapi/runtime"
 )
 
 // TestSigner encapsulates a public key for verification
@@ -71,184 +74,320 @@ func TestGetTimestampCertChain(t *testing.T) {
 	}
 }
 
+type timestampTestCase struct {
+	name         string
+	reqMediaType string
+	reqBytes     []byte
+	nonce        *big.Int
+	includeCerts bool
+	policyOID    asn1.ObjectIdentifier
+	hash         crypto.Hash
+}
+
 func TestGetTimestampResponse(t *testing.T) {
-	url := createServer(t)
-
-	c, err := client.GetTimestampClient(url)
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
+	testArtifact := "blobblobblobblobblobblobblobblobblob"
+	testNonce := big.NewInt(1234)
+	includeCerts := true
+	testHashStr := "sha256"
+	testHash := crypto.SHA256
+	opts := ts.RequestOptions{
+		Nonce:        testNonce,
+		Certificates: includeCerts,
+		TSAPolicyOID: nil,
+		Hash:         testHash,
 	}
 
-	// create request with nonce and certificate, the typical request structure
-	tsNonce := big.NewInt(1234)
-	tsq, err := ts.CreateRequest(strings.NewReader("blobblobblobblobblobblobblobblobblob"), &ts.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-		Nonce:        tsNonce,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
+			nonce:        testNonce,
+			includeCerts: includeCerts,
+			hash:         testHash,
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, ""),
+			nonce:        testNonce,
+			includeCerts: includeCerts,
+			hash:         testHash,
+		},
 	}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
+	for _, tc := range tests {
+		url := createServer(t)
 
-	var respBytes bytes.Buffer
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
-	}
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error creating client: %v", tc.name, err)
+		}
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
-	}
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tc.reqBytes))
 
-	// check certificate fields
-	if len(tsr.Certificates) != 1 {
-		t.Fatalf("expected 1 certificate, got %d", len(tsr.Certificates))
-	}
-	if !tsr.AddTSACertificate {
-		t.Fatalf("expected TSA certificate")
-	}
-	// check nonce
-	if tsr.Nonce.Cmp(tsNonce) != 0 {
-		t.Fatalf("expected nonce %d, got %d", tsNonce, tsr.Nonce)
-	}
-	// check hash and hashed message
-	if tsr.HashAlgorithm != crypto.SHA256 {
-		t.Fatalf("unexpected hash algorithm")
-	}
-	hashedMessage := sha256.Sum256([]byte("blobblobblobblobblobblobblobblobblob"))
-	if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
-		t.Fatalf("expected hashed messages to be equal: %v %v", tsr.HashedMessage, hashedMessage)
-	}
-	// check time and accuracy
-	if tsr.Time.After(time.Now()) {
-		t.Fatalf("expected time to be set to a previous time")
-	}
-	duration, _ := time.ParseDuration("1s")
-	if tsr.Accuracy != duration {
-		t.Fatalf("expected 1s accuracy, got %v", tsr.Accuracy)
-	}
-	// check serial number
-	if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
-		t.Fatalf("expected serial number, got 0")
-	}
-	// check ordering and qualified defaults
-	if tsr.Qualified {
-		t.Fatalf("tsr should not be qualified")
-	}
-	if tsr.Ordering {
-		t.Fatalf("tsr should not be ordered")
-	}
-	// check policy OID default
-	if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
-		t.Fatalf("unexpected policy ID")
-	}
-	// check for no extensions
-	if len(tsr.Extensions) != 0 {
-		t.Fatalf("expected 0 extensions, got %d", len(tsr.Extensions))
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error parsing response: %v", tc.name, err)
+		}
+
+		// check certificate fields
+		if len(tsr.Certificates) != 1 {
+			t.Fatalf("test '%s': expected 1 certificate, got %d", tc.name, len(tsr.Certificates))
+		}
+		if !tsr.AddTSACertificate {
+			t.Fatalf("test '%s': expected TSA certificate", tc.name)
+		}
+		// check nonce
+		if tsr.Nonce.Cmp(tc.nonce) != 0 {
+			t.Fatalf("test '%s': expected nonce %d, got %d", tc.name, tc.nonce, tsr.Nonce)
+		}
+		// check hash and hashed message
+		if tsr.HashAlgorithm != tc.hash {
+			t.Fatalf("test '%s': unexpected hash algorithm", tc.name)
+		}
+		hashedMessage := sha256.Sum256([]byte(testArtifact))
+		if !bytes.Equal(tsr.HashedMessage, hashedMessage[:]) {
+			t.Fatalf("test '%s': expected hashed messages to be equal: %v %v", tc.name, tsr.HashedMessage, hashedMessage)
+		}
+		// check time and accuracy
+		if tsr.Time.After(time.Now()) {
+			t.Fatalf("test '%s': expected time to be set to a previous time", tc.name)
+		}
+		duration, _ := time.ParseDuration("1s")
+		if tsr.Accuracy != duration {
+			t.Fatalf("test '%s': expected 1s accuracy, got %v", tc.name, tsr.Accuracy)
+		}
+		// check serial number
+		if tsr.SerialNumber.Cmp(big.NewInt(0)) == 0 {
+			t.Fatalf("test '%s': expected serial number, got 0", tc.name)
+		}
+		// check ordering and qualified defaults
+		if tsr.Qualified {
+			t.Fatalf("test '%s': tsr should not be qualified", tc.name)
+		}
+		if tsr.Ordering {
+			t.Fatalf("test '%s': tsr should not be ordered", tc.name)
+		}
+		// check policy OID default
+		if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
+			t.Fatalf("test '%s': unexpected policy ID", tc.name)
+		}
+		// check for no extensions
+		if len(tsr.Extensions) != 0 {
+			t.Fatalf("test '%s': expected 0 extensions, got %d", tc.name, len(tsr.Extensions))
+		}
 	}
 }
 
 func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
-	url := createServer(t)
+	testArtifact := "blob"
+	testNonce := big.NewInt(1234)
+	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+	oidStr := "1.2.3.4.5"
+	includeCerts := true
+	testHashStr := "sha256"
 
-	c, err := client.GetTimestampClient(url)
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
-	}
-
-	// create request with nonce and certificate, the typical request structure
-	tsNonce := big.NewInt(1234)
-	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
+	opts := ts.RequestOptions{
+		Nonce:        testNonce,
+		TSAPolicyOID: testPolicyOID,
 		Hash:         crypto.SHA256,
-		Certificates: true,
-		Nonce:        tsNonce,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
-	}
-	// populate additional request parameters for extensions and OID - atypical request structure
-	req, err := ts.ParseRequest(tsq)
-	if err != nil {
-		t.Fatalf("unexpected error parsing request: %v", err)
-	}
-	req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
-	fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
-	req.TSAPolicyOID = fakePolicyOID
-	tsq, err = req.Marshal()
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
 	}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
-
-	var respBytes bytes.Buffer
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
+			nonce:        testNonce,
+			policyOID:    testPolicyOID,
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, oidStr),
+			nonce:        testNonce,
+			policyOID:    testPolicyOID,
+		},
 	}
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
-	}
+	for _, tc := range tests {
+		url := createServer(t)
 
-	// check policy OID
-	if !tsr.Policy.Equal(fakePolicyOID) {
-		t.Fatalf("unexpected policy ID")
-	}
-	// check extension is present
-	if len(tsr.Extensions) != 1 {
-		t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error creating client: %v", tc.name, err)
+		}
+
+		// populate additional request parameters for extensions and OID - atypical request structure
+		var req *ts.Request
+		if tc.reqMediaType == client.TimestampQueryMediaType {
+			req, err = ts.ParseRequest(tc.reqBytes)
+			if err != nil {
+				t.Fatalf("test '%s': unexpected error parsing request: %v", tc.name, err)
+			}
+		} else {
+			req, _, err = api.ParseJSONRequest(tc.reqBytes)
+			if err != nil {
+				t.Fatalf("test '%s': unexpected error parsing request: %v", tc.name, err)
+			}
+		}
+		req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
+		fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+		req.TSAPolicyOID = fakePolicyOID
+		tsq, err := req.Marshal()
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error creating request: %v", tc.name, err)
+		}
+
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error parsing response: %v", tc.name, err)
+		}
+
+		// check policy OID
+		if !tsr.Policy.Equal(fakePolicyOID) {
+			t.Fatalf("test '%s': unexpected policy ID", tc.name)
+		}
+		// check extension is present
+		if len(tsr.Extensions) != 1 {
+			t.Fatalf("test '%s': expected 1 extension, got %d", tc.name, len(tsr.Extensions))
+		}
 	}
 }
 
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
-	url := createServer(t)
+	testArtifact := "blob"
+	includeCerts := false
+	testHashStr := "sha256"
+	oidStr := "1.2.3.4"
 
-	c, err := client.GetTimestampClient(url)
-	if err != nil {
-		t.Fatalf("unexpected error creating client: %v", err)
-	}
-
-	tsq, err := ts.CreateRequest(strings.NewReader("blob"), &ts.RequestOptions{
+	opts := ts.RequestOptions{
+		Certificates: includeCerts,
 		Hash:         crypto.SHA256,
-		Certificates: false,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating request: %v", err)
 	}
 
-	params := timestamp.NewGetTimestampResponseParams()
-	params.SetTimeout(10 * time.Second)
-	params.Request = io.NopCloser(bytes.NewReader(tsq))
-
-	var respBytes bytes.Buffer
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp response: %v", err)
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, nil, oidStr),
+		},
 	}
 
-	tsr, err := ts.ParseResponse(respBytes.Bytes())
-	if err != nil {
-		t.Fatalf("unexpected error parsing response: %v", err)
+	for _, tc := range tests {
+		url := createServer(t)
+
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error creating client: %v", tc.name, err)
+		}
+
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tc.reqBytes))
+
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
+		}
+
+		tsr, err := ts.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error parsing response: %v", tc.name, err)
+		}
+
+		// check certificate fields
+		if len(tsr.Certificates) != 0 {
+			t.Fatalf("test '%s': expected 0 certificates, got %d", tc.name, len(tsr.Certificates))
+		}
+		if tsr.AddTSACertificate {
+			t.Fatalf("test '%s': expected no TSA certificate", tc.name)
+		}
+		// check nonce
+		if tsr.Nonce != nil {
+			t.Fatalf("test '%s': expected no nonce, got %d", tc.name, tsr.Nonce)
+		}
+	}
+}
+
+func TestUnsupportedHashAlgorithm(t *testing.T) {
+	testArtifact := "blob"
+	testHashStr := "sha1"
+
+	opts := ts.RequestOptions{
+		Hash: crypto.SHA1,
 	}
 
-	// check certificate fields
-	if len(tsr.Certificates) != 0 {
-		t.Fatalf("expected 0 certificates, got %d", len(tsr.Certificates))
+	tests := []timestampTestCase{
+		{
+			name:         "Timestamp Query Request",
+			reqMediaType: client.TimestampQueryMediaType,
+			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
+		},
+		{
+			name:         "JSON Request",
+			reqMediaType: client.JSONMediaType,
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), false, testHashStr, nil, "1.2.3.4"),
+		},
 	}
-	if tsr.AddTSACertificate {
-		t.Fatalf("expected no TSA certificate")
-	}
-	// check nonce
-	if tsr.Nonce != nil {
-		t.Fatalf("expected no nonce, got %d", tsr.Nonce)
+
+	for _, tc := range tests {
+		url := createServer(t)
+
+		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+		if err != nil {
+			t.Fatalf("test '%s': unexpected error creating client: %v", tc.name, err)
+		}
+
+		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(10 * time.Second)
+		params.Request = io.NopCloser(bytes.NewReader(tc.reqBytes))
+
+		var respBytes bytes.Buffer
+		clientOption := func(op *runtime.ClientOperation) {
+			op.ConsumesMediaTypes = []string{tc.reqMediaType}
+		}
+		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		if err == nil {
+			t.Fatalf("test '%s': expected error to occur while parsing request", tc.name)
+		}
+
+		if !strings.Contains(err.Error(), api.WeakHashAlgorithmTimestampRequest) {
+			t.Fatalf("test '%s': error message should contain message about weak hash algorithm: %v", tc.name, err)
+		}
 	}
 }
