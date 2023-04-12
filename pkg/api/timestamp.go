@@ -42,7 +42,7 @@ type JSONRequest struct {
 	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
-func GetHashAlg(alg string) (crypto.Hash, string, error) {
+func getHashAlg(alg string) (crypto.Hash, string, error) {
 	lowercaseAlg := strings.ToLower(alg)
 	switch lowercaseAlg {
 	case "sha256":
@@ -58,6 +58,7 @@ func GetHashAlg(alg string) (crypto.Hash, string, error) {
 	}
 }
 
+// ParseJSONRequest parses a JSON request into a timestamp.Request struct
 func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
@@ -67,7 +68,7 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 
 	// after unmarshalling, parse the JSONRequest.Artifact into a Reader and parse the remaining
 	// fields into a a timestamp.RequestOptions struct
-	hashAlgo, errMsg, err := GetHashAlg(req.HashAlgorithm)
+	hashAlgo, errMsg, err := getHashAlg(req.HashAlgorithm)
 	if err != nil {
 		return nil, errMsg, fmt.Errorf("failed to parse hash algorithm: %v", err)
 	}
@@ -104,7 +105,7 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	return tsRequest, "", nil
 }
 
-func ParseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
+func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	parsed, err := timestamp.ParseRequest(reqBytes)
 	if err != nil {
 		return nil, failedToGenerateTimestampResponse, err
@@ -132,7 +133,7 @@ func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.
 	case "json":
 		return ParseJSONRequest(reqBytes)
 	case "timestamp-query":
-		return ParseDERRequest(reqBytes)
+		return parseDERRequest(reqBytes)
 	default:
 		return nil, failedToGenerateTimestampResponse, fmt.Errorf("unsupported content type")
 	}
