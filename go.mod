@@ -28,7 +28,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.29.1
+	go.step.sm/crypto v0.29.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.9.0
 	google.golang.org/protobuf v1.30.0
@@ -56,7 +56,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.44.239 // indirect
+	github.com/aws/aws-sdk-go v1.44.240 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.8 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.18.21 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.20 // indirect
@@ -90,6 +90,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-containerregistry v0.14.0 // indirect
+	github.com/google/s2a-go v0.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
@@ -141,9 +142,9 @@ require (
 	golang.org/x/term v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.2.0 // indirect
-	google.golang.org/api v0.116.0 // indirect
+	google.golang.org/api v0.117.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633 // indirect
+	google.golang.org/genproto v0.0.0-20230403163135-c38d8f061ccd // indirect
 	google.golang.org/grpc v1.54.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
