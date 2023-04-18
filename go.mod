@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.3
 	github.com/go-openapi/loads v0.21.2
-	github.com/go-openapi/runtime v0.25.0
+	github.com/go-openapi/runtime v0.26.0
 	github.com/go-openapi/spec v0.20.8
 	github.com/go-openapi/strfmt v0.21.7
 	github.com/go-openapi/swag v0.22.3
@@ -84,7 +84,7 @@ require (
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
-	github.com/go-openapi/validate v0.22.0 // indirect
+	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
@@ -131,8 +131,8 @@ require (
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/otel v1.11.1 // indirect
-	go.opentelemetry.io/otel/trace v1.11.1 // indirect
+	go.opentelemetry.io/otel v1.14.0 // indirect
+	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
