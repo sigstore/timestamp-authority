@@ -24,6 +24,7 @@ services:
       "--host=0.0.0.0",
       "--port=3000",
       "--timestamp-signer=memory",
+      "--signer-hash-function=sha256",
       # Uncomment this for production logging
       # "--log-type=prod",
       ]
