@@ -50,12 +50,15 @@ import (
 To run:
 go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
   --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+  --intermediate-hash-function="sha256" \
   --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
+  --leaf-hash-function="sha256" \
   --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
   --output="chain.crt.pem"
 
 go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
   --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+  --intermediate-hash-function="sha256" \
   --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
   --tink-keyset-path="enc-keyset.cfg" \
   --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
