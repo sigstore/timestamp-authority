@@ -71,17 +71,37 @@ var (
 	// likely the root CA
 	gcpCaParent = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA")
 	// key only used for fetching intermediate certificate from root and signing leaf certificate
-	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	intermediateKMSKey   = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	intermediateHashFunc = flag.String("intermediate-hash-function", "", "Hash function used by the intermediate key. Valid options include: [sha256, sha384, sha512]")
 	// leafKMSKey or Tink flags required
 	leafKMSKey     = flag.String("leaf-kms-resource", "", "Resource path to the asymmetric signing KMS key for the leaf, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	leafHashFunc   = flag.String("leaf-hash-function", "", "Hash function used by the leaf key. Valid options include: [sha256, sha384, sha512]")
 	tinkKeysetPath = flag.String("tink-keyset-path", "", "Path to Tink keyset")
 	tinkKmsKey     = flag.String("tink-kms-resource", "", "Resource path to symmetric encryption KMS key to decrypt Tink keyset, starting with gcp-kms:// or aws-kms://")
 	outputPath     = flag.String("output", "", "Path to the output file")
 )
 
+func getHashFunc(hashFuncStr string) (crypto.Hash, error) {
+	switch hashFuncStr {
+	case "sha256":
+		return crypto.SHA256, nil
+	case "sha384":
+		return crypto.SHA384, nil
+	case "sha512":
+		return crypto.SHA512, nil
+	default:
+		return 0, fmt.Errorf("invalid hash algorithm - must be either sha256, sha384, or sha512")
+	}
+}
+
 func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leafKMSKey, tinkKeysetPath, tinkKmsKey string,
 	client *privateca.CertificateAuthorityClient) ([]*x509.Certificate, error) {
-	intermediateKMSSigner, err := kms.Get(ctx, intermediateKMSKey, crypto.SHA256)
+	intermediateHash, err := getHashFunc(*intermediateHashFunc)
+	if err != nil {
+		return nil, err
+	}
+
+	intermediateKMSSigner, err := kms.Get(ctx, intermediateKMSKey, intermediateHash)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +192,11 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 	// generate leaf certificate
 	var leafKMSSigner crypto.Signer
 	if len(leafKMSKey) > 0 {
-		kmsSigner, err := kms.Get(ctx, leafKMSKey, crypto.SHA256)
+		leafHash, err := getHashFunc(*leafHashFunc)
+		if err != nil {
+			return nil, err
+		}
+		kmsSigner, err := kms.Get(ctx, leafKMSKey, leafHash)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +219,7 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 		if err != nil {
 			return nil, err
 		}
-		leafKMSSigner, err = signer.KeyHandleToSigner(kh)
+		leafKMSSigner, err = signer.KeyHandleToSigner(kh, crypto.SHA512)
 		if err != nil {
 			return nil, err
 		}
