@@ -34,7 +34,7 @@ func getCurveFromSigner(signer crypto.Signer) (elliptic.Curve, error) {
 	// the in-memory cert chain uses ECDSA keys, so we cast the public key to an ECDSA key
 	pub, ok := signer.Public().(*ecdsa.PublicKey)
 	if !ok {
-		return nil, errors.New("signer is not an ECDSA key")
+		return nil, errors.New("casting signer's public key to an ECDSA key")
 	}
 	return pub.Curve, nil
 }

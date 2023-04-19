@@ -51,7 +51,7 @@ func NewFileSigner(keyPath, keyPass string, hashFunc crypto.Hash) (*File, error)
 		return &File{signer}, nil
 	case ed25519.PrivateKey:
 		if hashFunc != crypto.SHA512 {
-			fmt.Printf("ed25519 only supports SHA512, specified hash func is %s. Using SHA512\n", hashFunc)
+			fmt.Printf("Ed25519 only supports SHA512, specified hash func is %s. Using hash function specified by Ed25519\n", hashFunc)
 		}
 		signer, err := signature.LoadED25519SignerVerifier(pk)
 		if err != nil {

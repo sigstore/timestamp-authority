@@ -130,7 +130,7 @@ func KeyHandleToSigner(kh *keyset.Handle, hashFunc crypto.Hash) (crypto.Signer, 
 		return p, nil
 	case ed25519SignerTypeURL:
 		if hashFunc != crypto.SHA512 {
-			fmt.Printf("ed25519 only supports SHA512, specified hash func is %s. Using SHA512\n", hashFunc)
+			fmt.Printf("Ed25519 only supports SHA512, specified hash func is %s. Using hash function specified by Ed25519\n", hashFunc)
 		}
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L47
 		privKey := new(ed25519pb.Ed25519PrivateKey)
