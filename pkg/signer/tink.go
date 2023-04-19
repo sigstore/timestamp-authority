@@ -51,7 +51,7 @@ var (
 )
 
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
+func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD, hashFunc crypto.Hash) (crypto.Signer, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.A
 	if err != nil {
 		return nil, err
 	}
-	signer, err := KeyHandleToSigner(kh)
+	signer, err := KeyHandleToSigner(kh, hashFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD,
 
 // KeyHandleToSigner converts a key handle to the crypto.Signer interface.
 // Heavily pulls from Tink's signature and subtle packages.
-func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
+func KeyHandleToSigner(kh *keyset.Handle, hashFunc crypto.Hash) (crypto.Signer, error) {
 	// extract the key material from the key handle
 	ks := insecurecleartextkeyset.KeysetMaterial(kh)
 
@@ -129,6 +129,9 @@ func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
 		p.PublicKey.X, p.PublicKey.Y = c.ScalarBaseMult(privKey.GetKeyValue())
 		return p, nil
 	case ed25519SignerTypeURL:
+		if hashFunc != crypto.SHA512 {
+			fmt.Printf("ed25519 only supports SHA512, specified hash func is %s. Using SHA512\n", hashFunc)
+		}
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L47
 		privKey := new(ed25519pb.Ed25519PrivateKey)
 		if err := proto.Unmarshal(k.GetValue(), privKey); err != nil {

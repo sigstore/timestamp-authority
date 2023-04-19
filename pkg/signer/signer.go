@@ -59,7 +59,11 @@ func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeyset
 		sv, _, err := signature.NewECDSASignerVerifier(curve, rand.Reader, hashFunc)
 		return sv, err
 	case FileScheme:
-		return NewFileSigner(fileSignerPath, fileSignerPasswd)
+		hashFunc, _, err := getHashFuncEllipticCurve(signerHashFunc)
+		if err != nil {
+			return nil, err
+		}
+		return NewFileSigner(fileSignerPath, fileSignerPasswd, hashFunc)
 	case KMSScheme:
 		hashFunc, _, err := getHashFuncEllipticCurve(signerHashFunc)
 		if err != nil {
@@ -76,7 +80,11 @@ func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeyset
 		if err != nil {
 			return nil, err
 		}
-		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey)
+		hashFunc, _, err := getHashFuncEllipticCurve(signerHashFunc)
+		if err != nil {
+			return nil, err
+		}
+		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey, hashFunc)
 	default:
 		return nil, fmt.Errorf("unsupported signer type: %s", signer)
 	}

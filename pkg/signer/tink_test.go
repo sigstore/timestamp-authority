@@ -16,6 +16,7 @@ package signer
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -53,7 +54,7 @@ func TestNewTinkSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating ECDSA key handle: %v", err)
 	}
-	khsigner, err := KeyHandleToSigner(kh)
+	khsigner, err := KeyHandleToSigner(kh, crypto.SHA512)
 	if err != nil {
 		t.Fatalf("error converting ECDSA key handle to signer: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestNewTinkSigner(t *testing.T) {
 		t.Fatalf("error writing enc keyset: %v", err)
 	}
 
-	signer, err := NewTinkSigner(context.TODO(), keysetPath, a)
+	signer, err := NewTinkSigner(context.TODO(), keysetPath, a, crypto.SHA512)
 	if err != nil {
 		t.Fatalf("unexpected error creating Tink signer: %v", err)
 	}
@@ -89,7 +90,7 @@ func TestNewTinkSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating AEAD key: %v", err)
 	}
-	_, err = NewTinkSigner(context.TODO(), keysetPath, a1)
+	_, err = NewTinkSigner(context.TODO(), keysetPath, a1, crypto.SHA512)
 	if err == nil || !strings.Contains(err.Error(), "decryption failed") {
 		t.Fatalf("expected error decrypting keyset, got %v", err)
 	}
@@ -116,7 +117,7 @@ func TestKeyHandleToSignerECDSA(t *testing.T) {
 			t.Fatalf("error creating ECDSA key handle: %v", err)
 		}
 		// convert to crypto.Signer interface
-		signer, err := KeyHandleToSigner(kh)
+		signer, err := KeyHandleToSigner(kh, crypto.SHA512)
 		if err != nil {
 			t.Fatalf("error converting ECDSA key handle to signer: %v", err)
 		}
@@ -162,7 +163,7 @@ func TestKeyHandleToSignerED25519(t *testing.T) {
 		t.Fatalf("error creating ED25519 key handle: %v", err)
 	}
 	// convert to crypto.Signer interface
-	signer, err := KeyHandleToSigner(kh)
+	signer, err := KeyHandleToSigner(kh, crypto.SHA512)
 	if err != nil {
 		t.Fatalf("error converting ED25519 key handle to signer: %v", err)
 	}
