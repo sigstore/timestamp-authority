@@ -36,15 +36,36 @@ const TinkScheme = "tink"
 const MemoryScheme = "memory"
 const FileScheme = "file"
 
-func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+func getHashFuncEllipticCurve(hashFuncStr string) (crypto.Hash, elliptic.Curve, error) {
+	switch hashFuncStr {
+	case "sha256":
+		return crypto.SHA256, elliptic.P256(), nil
+	case "sha384":
+		return crypto.SHA384, elliptic.P384(), nil
+	case "sha512":
+		return crypto.SHA512, elliptic.P521(), nil
+	default:
+		return 0, nil, fmt.Errorf("invalid hash algorithm - must be either sha256, sha384, or sha512")
+	}
+}
+
+func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd, signerHashFunc string) (crypto.Signer, error) {
 	switch signer {
 	case MemoryScheme:
-		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+		hashFunc, curve, err := getHashFuncEllipticCurve(signerHashFunc)
+		if err != nil {
+			return nil, err
+		}
+		sv, _, err := signature.NewECDSASignerVerifier(curve, rand.Reader, hashFunc)
 		return sv, err
 	case FileScheme:
 		return NewFileSigner(fileSignerPath, fileSignerPasswd)
 	case KMSScheme:
-		signer, err := kms.Get(ctx, kmsKey, crypto.SHA256)
+		hashFunc, _, err := getHashFuncEllipticCurve(signerHashFunc)
+		if err != nil {
+			return nil, err
+		}
+		signer, err := kms.Get(ctx, kmsKey, hashFunc)
 		if err != nil {
 			return nil, err
 		}

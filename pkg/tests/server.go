@@ -28,6 +28,7 @@ import (
 
 func createServer(t *testing.T) string {
 	viper.Set("timestamp-signer", "memory")
+	viper.Set("signer-hash-function", "sha256")
 	// unused port
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())

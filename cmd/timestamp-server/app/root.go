@@ -66,6 +66,8 @@ func init() {
 	rootCmd.PersistentFlags().String("tink-hcvault-token", "", "Authentication token for Hashicorp Vault API calls")
 	// KMS, Tink and File flags
 	rootCmd.PersistentFlags().String("certificate-chain-path", "", "Path to PEM-encoded certificate chain certifying the kms-key-resource, tink-key-resource, or file-signer-key-path to act as a timestamping authority")
+	// KMS and memory flags
+	rootCmd.PersistentFlags().String("signer-hash-function", "", "Hash function used by the signer. Valid options include: [sha256, sha384, sha512]")
 	// File flags
 	rootCmd.PersistentFlags().String("file-signer-key-path", "", "Path to file containing PEM-encoded private key. Supported formats include PKCS#1, PKCS#8, and RFC5915 for EC")
 	rootCmd.PersistentFlags().String("file-signer-passwd", "", "Password to decrypt private key")
