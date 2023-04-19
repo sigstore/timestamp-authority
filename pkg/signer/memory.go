@@ -30,12 +30,25 @@ import (
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
+func getCurveFromSigner(signer crypto.Signer) (elliptic.Curve, error) {
+	// the in-memory cert chain uses ECDSA keys, so we cast the public key to an ECDSA key
+	pub, ok := signer.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("signer is not an ECDSA key")
+	}
+	return pub.Curve, nil
+}
+
 // NewTimestampingCertWithChain generates an in-memory certificate chain.
 func NewTimestampingCertWithChain(signer crypto.Signer) ([]*x509.Certificate, error) {
 	now := time.Now()
+	curve, err := getCurveFromSigner(signer)
+	if err != nil {
+		return nil, fmt.Errorf("getting elliptic curve from signer public key: %w", err)
+	}
 
 	// generate root
-	rootPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	rootPriv, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("generating in-memory root key")
 	}
@@ -69,7 +82,7 @@ func NewTimestampingCertWithChain(signer crypto.Signer) ([]*x509.Certificate, er
 	if err != nil {
 		return nil, fmt.Errorf("generating subordinate serial number: %w", err)
 	}
-	subPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	subPriv, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("generating in-memory subordinate key")
 	}
