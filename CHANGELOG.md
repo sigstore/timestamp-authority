@@ -1,6 +1,6 @@
 # 1.1.0
 
-1.1.0 now allows clients to make timestamp requests in JSON format in addition to the DER encoded format.
+1.1.0 now supports making timestamp requests in JSON format in addition to DER encoded format.
 
 ## Changes
 
