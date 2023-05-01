@@ -1,3 +1,24 @@
+# 1.1.0
+
+1.1.0 now allows clients to make timestamp requests in JSON format in addition to the DER encoded format.
+
+## Changes
+
+### Enhancements
+
+* Support timestamp requests in JSON format (https://github.com/sigstore/timestamp-authority/pull/247)
+
+### Bug Fixes
+
+### Misc
+
+* Fix typo in README (https://github.com/sigstore/timestamp-authority/pull/294)
+
+## Contributors
+
+* Andrea Cosentino
+* Meredith Lancaster
+
 # 1.0.0
 
 1.0 release of the timestamp authority. No changes from the previous release candidate.
