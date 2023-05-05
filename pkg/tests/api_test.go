@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/json"
 	"io"
 	"math/big"
 	"strings"
@@ -392,5 +393,37 @@ func TestUnsupportedHashAlgorithm(t *testing.T) {
 		if !strings.Contains(err.Error(), api.WeakHashAlgorithmTimestampRequest) {
 			t.Fatalf("test '%s': error message should contain message about weak hash algorithm: %v", tc.name, err)
 		}
+	}
+}
+
+func TestInvalidJSONArtifactHashNotBase64Encoded(t *testing.T) {
+	jsonReq := api.JSONRequest{
+		HashAlgorithm: "sha256",
+		ArtifactHash:  "not*base64*encoded",
+	}
+
+	marshalled, err := json.Marshal(jsonReq)
+	if err != nil {
+		t.Fatalf("failed to marshal request")
+	}
+
+	url := createServer(t)
+
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.JSONMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(marshalled))
+
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.JSONMediaType}
+	}
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err == nil {
+		t.Fatalf("expected error to occur while parsing request")
 	}
 }
