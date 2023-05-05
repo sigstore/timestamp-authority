@@ -90,7 +90,7 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to decode base64 encoded artifact hash: %v", err)
 	}
 
-	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
+	// create a timestamp request from the request's JSON body
 	tsReq := timestamp.Request{
 		HashAlgorithm: hashAlgo,
 		HashedMessage: decoded,
