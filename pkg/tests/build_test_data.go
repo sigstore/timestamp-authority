@@ -49,7 +49,7 @@ func createBase64EncodedArtifactHash(artifact []byte, hash crypto.Hash) (string,
 	return base64.StdEncoding.EncodeToString(artifactHash), nil
 }
 
-func buildJSONReq(t *testing.T, artifact []byte, digestHash crypto.Hash, reqHash string, includeCerts bool, nonce *big.Int, oidStr string) []byte {
+func buildJSONReq(t *testing.T, artifact []byte, digestHash crypto.Hash, hashName string, includeCerts bool, nonce *big.Int, oidStr string) []byte {
 	encodedHash, err := createBase64EncodedArtifactHash(artifact, digestHash)
 	if err != nil {
 		t.Fatalf("failed to marshal request")
@@ -57,7 +57,7 @@ func buildJSONReq(t *testing.T, artifact []byte, digestHash crypto.Hash, reqHash
 
 	jsonReq := api.JSONRequest{
 		Certificates:  includeCerts,
-		HashAlgorithm: reqHash,
+		HashAlgorithm: hashName,
 		ArtifactHash:  encodedHash,
 		Nonce:         nonce,
 		TSAPolicyOID:  oidStr,
