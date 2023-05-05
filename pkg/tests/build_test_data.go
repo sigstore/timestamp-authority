@@ -16,7 +16,11 @@ package tests
 
 import (
 	"bytes"
+	"crypto"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
 	"math/big"
 	"testing"
 
@@ -24,11 +28,37 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/api"
 )
 
-func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlg string, nonce *big.Int, oidStr string) []byte {
+func createBase64EncodedArtifactHash(artifact []byte, hash crypto.Hash) (string, error) {
+	r := bytes.NewReader(artifact)
+	h := hash.New()
+
+	b := make([]byte, h.Size())
+	for {
+		n, err := r.Read(b)
+		if err == io.EOF {
+			break
+		}
+
+		_, err = h.Write(b[:n])
+		if err != nil {
+			return "", fmt.Errorf("failed to create hash")
+		}
+	}
+	artifactHash := h.Sum(nil)
+
+	return base64.StdEncoding.EncodeToString(artifactHash), nil
+}
+
+func buildJSONReq(t *testing.T, artifact []byte, digestHash crypto.Hash, reqHash string, includeCerts bool, nonce *big.Int, oidStr string) []byte {
+	encodedHash, err := createBase64EncodedArtifactHash(artifact, digestHash)
+	if err != nil {
+		t.Fatalf("failed to marshal request")
+	}
+
 	jsonReq := api.JSONRequest{
 		Certificates:  includeCerts,
-		HashAlgorithm: hashAlg,
-		Artifact:      string(artifact),
+		HashAlgorithm: reqHash,
+		ArtifactHash:  encodedHash,
 		Nonce:         nonce,
 		TSAPolicyOID:  oidStr,
 	}

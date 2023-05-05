@@ -88,13 +88,13 @@ func TestGetTimestampResponse(t *testing.T) {
 	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
 	includeCerts := true
-	testHashStr := "sha256"
-	testHash := crypto.SHA256
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
 		Certificates: includeCerts,
 		TSAPolicyOID: nil,
-		Hash:         testHash,
+		Hash:         hashFunc,
 	}
 
 	tests := []timestampTestCase{
@@ -104,15 +104,15 @@ func TestGetTimestampResponse(t *testing.T) {
 			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
-			hash:         testHash,
+			hash:         hashFunc,
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, ""),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, testNonce, ""),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
-			hash:         testHash,
+			hash:         hashFunc,
 		},
 	}
 
@@ -197,7 +197,8 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
 	oidStr := "1.2.3.4.5"
 	includeCerts := true
-	testHashStr := "sha256"
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
@@ -216,7 +217,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, oidStr),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, testNonce, oidStr),
 			nonce:        testNonce,
 			policyOID:    testPolicyOID,
 		},
@@ -283,7 +284,8 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	testArtifact := "blob"
 	includeCerts := false
-	testHashStr := "sha256"
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 	oidStr := "1.2.3.4"
 
 	opts := ts.RequestOptions{
@@ -300,7 +302,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, nil, oidStr),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, nil, oidStr),
 		},
 	}
 
@@ -346,7 +348,8 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 
 func TestUnsupportedHashAlgorithm(t *testing.T) {
 	testArtifact := "blob"
-	testHashStr := "sha1"
+	hashFunc := crypto.SHA1
+	hashName := "sha1"
 
 	opts := ts.RequestOptions{
 		Hash: crypto.SHA1,
@@ -361,7 +364,7 @@ func TestUnsupportedHashAlgorithm(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), false, testHashStr, nil, "1.2.3.4"),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, false, nil, "1.2.3.4"),
 		},
 	}
 

@@ -97,11 +97,12 @@ If you would like to make a request for a timestamp using a JSON based request, 
 
 `curl -sSH "Content-Type: application/json" -d @request.json http://localhost:3000/api/v1/timestamp -o response.tsr`
 
-The service expects the JSON body to be in the shape:
+The service expects the JSON body to include a base64 encoded string representing the artifact hash.
+The full shape of the JSON body is as follows:
 
 ```
 {
-  "artifact": "myblob",
+  "artifactHash": "123abc",
   "certificates": true,
   "hashAlgorithm": "sha256",
   "nonce": 1123343434,
