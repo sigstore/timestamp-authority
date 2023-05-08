@@ -1,3 +1,21 @@
+# 1.1.1
+
+1.1.1 fixes a bug in the JSON format request code.
+
+## Changes
+
+### Enhancements
+
+### Bug Fixes
+
+* Update how the JSON body is parsed (https://github.com/sigstore/timestamp-authority/pull/343)
+
+### Misc
+
+## Contributors
+
+* Meredith Lancaster
+
 # 1.1.0
 
 1.1.0 now supports making timestamp requests in JSON format in addition to DER encoded format.
