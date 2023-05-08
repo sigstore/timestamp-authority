@@ -19,8 +19,6 @@ import (
 	"crypto"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
 	"math/big"
 	"testing"
 
@@ -29,21 +27,8 @@ import (
 )
 
 func createBase64EncodedArtifactHash(artifact []byte, hash crypto.Hash) (string, error) {
-	r := bytes.NewReader(artifact)
 	h := hash.New()
-
-	b := make([]byte, h.Size())
-	for {
-		n, err := r.Read(b)
-		if err == io.EOF {
-			break
-		}
-
-		_, err = h.Write(b[:n])
-		if err != nil {
-			return "", fmt.Errorf("failed to create hash")
-		}
-	}
+	h.Write(artifact)
 	artifactHash := h.Sum(nil)
 
 	return base64.StdEncoding.EncodeToString(artifactHash), nil
