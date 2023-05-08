@@ -117,8 +117,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.18.11 h1:uBE+Zj478pfxV98L6SEpvxYiADN
 github.com/aws/aws-sdk-go-v2/service/sts v1.18.11/go.mod h1:BgQOMsg8av8jset59jelyPW7NoZcZXLVpDsXunGDrk8=
 github.com/aws/smithy-go v1.13.5 h1:hgz0X/DX0dGqTYpGALqXJoRKRj5oQ7150i5FdTePzO8=
 github.com/aws/smithy-go v1.13.5/go.mod h1:Tg+OJXh4MB2R/uN61Ko2f6hTZwB/ZYGOtib8J3gBHzA=
-github.com/beevik/ntp v0.3.3 h1:9CMHHSnEeLwJy0ePLCDQ3lPBDqIlZOcyTPy2bna2IoI=
-github.com/beevik/ntp v0.3.3/go.mod h1:JN7/74B0Z4GUGO/1aUeRI2adARlfJGUeaJb0y0Wvnf4=
+github.com/beevik/ntp v1.0.0 h1:d0Lgy1xbNNqVyGfvg2Z96ItKcfyn3lzgus/oRoj9vnk=
+github.com/beevik/ntp v1.0.0/go.mod h1:JN7/74B0Z4GUGO/1aUeRI2adARlfJGUeaJb0y0Wvnf4=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
