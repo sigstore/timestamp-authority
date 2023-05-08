@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/json"
 	"io"
 	"math/big"
 	"strings"
@@ -88,13 +89,13 @@ func TestGetTimestampResponse(t *testing.T) {
 	testArtifact := "blobblobblobblobblobblobblobblobblob"
 	testNonce := big.NewInt(1234)
 	includeCerts := true
-	testHashStr := "sha256"
-	testHash := crypto.SHA256
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
 		Certificates: includeCerts,
 		TSAPolicyOID: nil,
-		Hash:         testHash,
+		Hash:         hashFunc,
 	}
 
 	tests := []timestampTestCase{
@@ -104,15 +105,15 @@ func TestGetTimestampResponse(t *testing.T) {
 			reqBytes:     buildTimestampQueryReq(t, []byte(testArtifact), opts),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
-			hash:         testHash,
+			hash:         hashFunc,
 		},
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, ""),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, testNonce, ""),
 			nonce:        testNonce,
 			includeCerts: includeCerts,
-			hash:         testHash,
+			hash:         hashFunc,
 		},
 	}
 
@@ -197,7 +198,8 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	testPolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
 	oidStr := "1.2.3.4.5"
 	includeCerts := true
-	testHashStr := "sha256"
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 
 	opts := ts.RequestOptions{
 		Nonce:        testNonce,
@@ -216,7 +218,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, testNonce, oidStr),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, testNonce, oidStr),
 			nonce:        testNonce,
 			policyOID:    testPolicyOID,
 		},
@@ -283,7 +285,8 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	testArtifact := "blob"
 	includeCerts := false
-	testHashStr := "sha256"
+	hashFunc := crypto.SHA256
+	hashName := "sha256"
 	oidStr := "1.2.3.4"
 
 	opts := ts.RequestOptions{
@@ -300,7 +303,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), includeCerts, testHashStr, nil, oidStr),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, includeCerts, nil, oidStr),
 		},
 	}
 
@@ -346,7 +349,8 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 
 func TestUnsupportedHashAlgorithm(t *testing.T) {
 	testArtifact := "blob"
-	testHashStr := "sha1"
+	hashFunc := crypto.SHA1
+	hashName := "sha1"
 
 	opts := ts.RequestOptions{
 		Hash: crypto.SHA1,
@@ -361,7 +365,7 @@ func TestUnsupportedHashAlgorithm(t *testing.T) {
 		{
 			name:         "JSON Request",
 			reqMediaType: client.JSONMediaType,
-			reqBytes:     buildJSONReq(t, []byte(testArtifact), false, testHashStr, nil, "1.2.3.4"),
+			reqBytes:     buildJSONReq(t, []byte(testArtifact), hashFunc, hashName, false, nil, "1.2.3.4"),
 		},
 	}
 
@@ -389,5 +393,37 @@ func TestUnsupportedHashAlgorithm(t *testing.T) {
 		if !strings.Contains(err.Error(), api.WeakHashAlgorithmTimestampRequest) {
 			t.Fatalf("test '%s': error message should contain message about weak hash algorithm: %v", tc.name, err)
 		}
+	}
+}
+
+func TestInvalidJSONArtifactHashNotBase64Encoded(t *testing.T) {
+	jsonReq := api.JSONRequest{
+		HashAlgorithm: "sha256",
+		ArtifactHash:  "not*base64*encoded",
+	}
+
+	marshalled, err := json.Marshal(jsonReq)
+	if err != nil {
+		t.Fatalf("failed to marshal request")
+	}
+
+	url := createServer(t)
+
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.JSONMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(marshalled))
+
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.JSONMediaType}
+	}
+	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err == nil {
+		t.Fatalf("expected error to occur while parsing request")
 	}
 }

@@ -101,13 +101,15 @@ The service expects the JSON body to be in the shape:
 
 ```
 {
-  "artifact": "myblob",
+  "artifactHash": "<base64 encoded artifact hash>",
   "certificates": true,
   "hashAlgorithm": "sha256",
   "nonce": 1123343434,
   "tsaPolicyOID": "1.2.3.4"
 }
 ```
+
+The artifact hash must be represented as a base64 encoded string.
 
 ## Production deployment
 

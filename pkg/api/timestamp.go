@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +36,7 @@ import (
 )
 
 type JSONRequest struct {
-	Artifact      string   `json:"artifact"`
+	ArtifactHash  string   `json:"artifactHash"`
 	Certificates  bool     `json:"certificates"`
 	HashAlgorithm string   `json:"hashAlgorithm"`
 	Nonce         *big.Int `json:"nonce"`
@@ -83,26 +84,22 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		}
 	}
 
-	opts := timestamp.RequestOptions{
-		Certificates: req.Certificates,
-		Hash:         hashAlgo,
-		Nonce:        req.Nonce,
-		TSAPolicyOID: oidInts,
-	}
-
-	// create a DER encocded timestamp request from the reader and timestamp.RequestOptions
-	tsReqBytes, err := timestamp.CreateRequest(bytes.NewBuffer([]byte(req.Artifact)), &opts)
+	// decode the base64 encoded artifact hash
+	decoded, err := base64.StdEncoding.DecodeString(req.ArtifactHash)
 	if err != nil {
-		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to create Request from JSON: %v", err)
+		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to decode base64 encoded artifact hash: %v", err)
 	}
 
-	// parse the DER encoded timestamp request into a timestamp.Request struct
-	tsRequest, err := timestamp.ParseRequest(tsReqBytes)
-	if err != nil {
-		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse Request from Request bytes: %v", err)
+	// create a timestamp request from the request's JSON body
+	tsReq := timestamp.Request{
+		HashAlgorithm: hashAlgo,
+		HashedMessage: decoded,
+		Certificates:  req.Certificates,
+		Nonce:         req.Nonce,
+		TSAPolicyOID:  oidInts,
 	}
 
-	return tsRequest, "", nil
+	return &tsReq, "", nil
 }
 
 func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {

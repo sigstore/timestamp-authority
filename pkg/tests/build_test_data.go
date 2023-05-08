@@ -16,6 +16,8 @@ package tests
 
 import (
 	"bytes"
+	"crypto"
+	"encoding/base64"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -24,11 +26,24 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/api"
 )
 
-func buildJSONReq(t *testing.T, artifact []byte, includeCerts bool, hashAlg string, nonce *big.Int, oidStr string) []byte {
+func createBase64EncodedArtifactHash(artifact []byte, hash crypto.Hash) (string, error) {
+	h := hash.New()
+	h.Write(artifact)
+	artifactHash := h.Sum(nil)
+
+	return base64.StdEncoding.EncodeToString(artifactHash), nil
+}
+
+func buildJSONReq(t *testing.T, artifact []byte, digestHash crypto.Hash, hashName string, includeCerts bool, nonce *big.Int, oidStr string) []byte {
+	encodedHash, err := createBase64EncodedArtifactHash(artifact, digestHash)
+	if err != nil {
+		t.Fatalf("failed to marshal request")
+	}
+
 	jsonReq := api.JSONRequest{
 		Certificates:  includeCerts,
-		HashAlgorithm: hashAlg,
-		Artifact:      string(artifact),
+		HashAlgorithm: hashName,
+		ArtifactHash:  encodedHash,
 		Nonce:         nonce,
 		TSAPolicyOID:  oidStr,
 	}
