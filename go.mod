@@ -33,7 +33,7 @@ require (
 	golang.org/x/net v0.10.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/yaml.v3 v3.0.1
-	sigs.k8s.io/release-utils v0.7.3
+	sigs.k8s.io/release-utils v0.7.4
 )
 
 require (

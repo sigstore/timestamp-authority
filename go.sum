@@ -940,5 +940,5 @@ honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sigs.k8s.io/release-utils v0.7.3 h1:6pS8x6c5RmdUgR9qcg1LO6hjUzuE4Yo9TGZ3DemrZdM=
-sigs.k8s.io/release-utils v0.7.3/go.mod h1:n0mVez/1PZYZaZUTJmxewxH3RJ/Lf7JUDh7TG1CASOE=
+sigs.k8s.io/release-utils v0.7.4 h1:17LmJrydpUloTCtaoWj95uKlcrUp4h2A9Sa+ZL+lV9w=
+sigs.k8s.io/release-utils v0.7.4/go.mod h1:JEt2QPHItd5Pg2UKLAU8PEaSlF4bUjCZimpxFDgymVU=
