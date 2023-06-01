@@ -32,7 +32,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.31.1
+	go.step.sm/crypto v0.31.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.10.0
 	google.golang.org/protobuf v1.30.0
