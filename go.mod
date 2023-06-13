@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	cloud.google.com/go/security v1.15.0
-	github.com/beevik/ntp v1.0.0
+	github.com/beevik/ntp v1.1.1
 	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
 	github.com/go-chi/chi v4.1.2+incompatible
@@ -138,7 +138,7 @@ require (
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.2.0 // indirect
