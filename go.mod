@@ -3,7 +3,7 @@ module github.com/sigstore/timestamp-authority
 go 1.20
 
 require (
-	cloud.google.com/go/security v1.15.0
+	cloud.google.com/go/security v1.15.1
 	github.com/beevik/ntp v1.1.1
 	github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3
 	github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31
@@ -46,7 +46,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.0 // indirect
 	cloud.google.com/go/kms v1.12.0 // indirect
-	cloud.google.com/go/longrunning v0.4.2 // indirect
+	cloud.google.com/go/longrunning v0.5.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0 // indirect
