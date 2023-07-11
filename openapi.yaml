@@ -57,8 +57,8 @@ paths:
 
   /api/v1/timestamp/certchain:
     get:
-      summary: Retrieve the certficate chain for timestamping that can be used to validate trusted timestamps
-      description: Returns the certficate chain for timestamping that can be used to validate trusted timestamps
+      summary: Retrieve the certificate chain for timestamping that can be used to validate trusted timestamps
+      description: Returns the certificate chain for timestamping that can be used to validate trusted timestamps
       operationId: getTimestampCertChain
       tags:
         - timestamp
