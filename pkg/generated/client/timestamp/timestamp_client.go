@@ -53,9 +53,9 @@ type ClientService interface {
 }
 
 /*
-GetTimestampCertChain retrieves the certficate chain for timestamping that can be used to validate trusted timestamps
+GetTimestampCertChain retrieves the certificate chain for timestamping that can be used to validate trusted timestamps
 
-Returns the certficate chain for timestamping that can be used to validate trusted timestamps
+Returns the certificate chain for timestamping that can be used to validate trusted timestamps
 */
 func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error) {
 	// TODO: Validate the params before sending

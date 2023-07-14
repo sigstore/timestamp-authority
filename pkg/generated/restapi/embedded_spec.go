@@ -91,7 +91,7 @@ func init() {
     },
     "/api/v1/timestamp/certchain": {
       "get": {
-        "description": "Returns the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "description": "Returns the certificate chain for timestamping that can be used to validate trusted timestamps",
         "consumes": [
           "application/json"
         ],
@@ -101,7 +101,7 @@ func init() {
         "tags": [
           "timestamp"
         ],
-        "summary": "Retrieve the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "summary": "Retrieve the certificate chain for timestamping that can be used to validate trusted timestamps",
         "operationId": "getTimestampCertChain",
         "responses": {
           "200": {
@@ -219,7 +219,7 @@ func init() {
     },
     "/api/v1/timestamp/certchain": {
       "get": {
-        "description": "Returns the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "description": "Returns the certificate chain for timestamping that can be used to validate trusted timestamps",
         "consumes": [
           "application/json"
         ],
@@ -229,7 +229,7 @@ func init() {
         "tags": [
           "timestamp"
         ],
-        "summary": "Retrieve the certficate chain for timestamping that can be used to validate trusted timestamps",
+        "summary": "Retrieve the certificate chain for timestamping that can be used to validate trusted timestamps",
         "operationId": "getTimestampCertChain",
         "responses": {
           "200": {

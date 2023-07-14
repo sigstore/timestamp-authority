@@ -47,9 +47,9 @@ func NewGetTimestampCertChain(ctx *middleware.Context, handler GetTimestampCertC
 /*
 	GetTimestampCertChain swagger:route GET /api/v1/timestamp/certchain timestamp getTimestampCertChain
 
-# Retrieve the certficate chain for timestamping that can be used to validate trusted timestamps
+# Retrieve the certificate chain for timestamping that can be used to validate trusted timestamps
 
-Returns the certficate chain for timestamping that can be used to validate trusted timestamps
+Returns the certificate chain for timestamping that can be used to validate trusted timestamps
 */
 type GetTimestampCertChain struct {
 	Context *middleware.Context
