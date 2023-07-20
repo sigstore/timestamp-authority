@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -101,6 +102,24 @@ func (l *logAdapter) Print(v ...interface{}) {
 	log.Logger.Info(v...)
 }
 
+// httpPingOnly custom middleware prohibits all entrypoing except
+// "/ping" on the http (non-HTTPS) server.
+func httpPingOnly(endpoint string) func(http.Handler) http.Handler {
+	f := func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, endpoint) {
+				w.Header().Set("Content-Type", "text/plain")
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("http server supports only the /ping entrypoint"))
+				return
+			}
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(fn)
+	}
+	return f
+}
+
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics.
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
@@ -109,6 +128,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+	returnHandler = httpPingOnly("/ping")(returnHandler)
 
 	handleCORS := cors.Default().Handler
 	returnHandler = handleCORS(returnHandler)
