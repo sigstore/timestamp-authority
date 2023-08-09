@@ -26,7 +26,7 @@ require (
 	github.com/sigstore/sigstore v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.2
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.2
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -135,7 +135,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/oauth2 v0.10.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
