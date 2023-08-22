@@ -13,7 +13,7 @@
 ### Misc
 
 * Fix typo in OpenAPI spec (https://github.com/sigstore/timestamp-authority/pull/419)
-* Update goreleaser flag (https://github.com/sigstore/timestamp-authority/pull/356)
+* Update GoReleaser flag (https://github.com/sigstore/timestamp-authority/pull/356)
 
 ## Contributors
 
