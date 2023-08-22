@@ -131,11 +131,11 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/digitorus/pkcs7 v0.0.0-20221019075359-21b8b40e6bb4/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
-github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3 h1:rjCXeRWazGsbcBlExMcAW8H1LGdgJ9r619y7+aeKgds=
-github.com/digitorus/pkcs7 v0.0.0-20221212123742-001c36b64ec3/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
-github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31 h1:3go0tpsBpbs9L/oysk3jDwRprlLRRkpSU7YxKlTfU+o=
-github.com/digitorus/timestamp v0.0.0-20221019182153-ef3b63b79b31/go.mod h1:6V2ND8Yf8TOJ4h+9pmUlx8kXvNLBB2QplToVVZQ3rF0=
+github.com/digitorus/pkcs7 v0.0.0-20230713084857-e76b763bdc49/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
+github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 h1:ge14PCmCvPjpMQMIAH7uKg0lrtNSOdpYsRXlwk3QbaE=
+github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
+github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c h1:kgG83Hfj3YXkUbrihwBxDc0COzP1ZejiDSr4/fItT0E=
+github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
 github.com/dnaeon/go-vcr v1.2.0 h1:zHCHvJYTMh1N7xnV7zf1m1GPBF9Ad0Jk/whtQ1663qI=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
