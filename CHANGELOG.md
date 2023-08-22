@@ -1,3 +1,26 @@
+# 1.1.2
+
+1.1.2 fixes a signing related hash function bug and a typo.
+
+## Changes
+
+### Enhancements
+
+### Bug Fixes
+
+* Fix hash function hardcoding bug by updating dependency (https://github.com/sigstore/timestamp-authority/pull/452)
+
+### Misc
+
+* Fix typo in OpenAPI spec (https://github.com/sigstore/timestamp-authority/pull/419)
+* Update GoReleaser flag (https://github.com/sigstore/timestamp-authority/pull/356)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior
+* Dmitry Savintsev
+* Meredith Lancaster
+
 # 1.1.1
 
 1.1.1 fixes a bug in the JSON format request code.
