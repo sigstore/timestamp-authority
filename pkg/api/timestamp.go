@@ -173,7 +173,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		ExtraExtensions:   req.Extensions,
 	}
 
-	resp, err := tsStruct.CreateResponse(api.certChain[0], api.tsaSigner)
+	resp, err := tsStruct.CreateResponseWithOpts(api.certChain[0], api.tsaSigner, crypto.SHA256)
 	if err != nil {
 		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
