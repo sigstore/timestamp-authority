@@ -510,7 +510,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		ExtraExtensions:   req.Extensions,
 	}
 
-	resp, err := tsTemplate.CreateResponse(certChain[0], sv)
+	resp, err := tsTemplate.CreateResponseWithOpts(certChain[0], sv, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("unexpectedly failed to create timestamp response: %v", err)
 	}
