@@ -152,6 +152,6 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 	return &ts.GetTimestampResponseCreated{Payload: bytes.NewBuffer(resp)}, nil
 }
 
-func (c *TSAClient) SetTransport(transport runtime.ClientTransport) {
+func (c *TSAClient) SetTransport(_ runtime.ClientTransport) {
 	// nothing to do
 }
