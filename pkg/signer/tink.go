@@ -51,7 +51,7 @@ var (
 )
 
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
+func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err

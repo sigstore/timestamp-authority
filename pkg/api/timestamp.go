@@ -181,6 +181,6 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 	return ts.NewGetTimestampResponseCreated().WithPayload(io.NopCloser(bytes.NewReader(resp)))
 }
 
-func GetTimestampCertChainHandler(params ts.GetTimestampCertChainParams) middleware.Responder {
+func GetTimestampCertChainHandler(_ ts.GetTimestampCertChainParams) middleware.Responder {
 	return ts.NewGetTimestampCertChainOK().WithPayload(api.certChainPem)
 }
