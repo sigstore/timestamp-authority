@@ -29,7 +29,7 @@ import (
 func createServer(t *testing.T) string {
 	viper.Set("timestamp-signer", "memory")
 	// unused port
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, 10*time.Second, 10*time.Second)
+	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())
 	t.Cleanup(server.Close)
 
