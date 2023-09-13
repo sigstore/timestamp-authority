@@ -138,6 +138,15 @@ go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
   --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
   --output="chain.crt.pem"
 ```
+If you are not using GCP, there are many possible options but the steps for setting up the certificates could be similar to the following:
+* create a KMS private key (for example, in the AWS KMS)
+* use this private key to create a CSR
+* assuming you have an external (for example, corporate etc.) Certificate Authority entity
+that can sign the CSR, make it sign the generated CSR and produce a certificate.  Make
+sure that the leaf certificate - the one that will be used to sign timestamping requests -
+has the Timestamping EKU (Extended Key Usage) set and it is marked as Critical.
+* if necessary, combine the CA, intermediate and leaf certificates into the certificate chain file.  Verify the certificate chain format with [VerifyCertChain](https://github.com/sigstore/timestamp-authority/blob/main/pkg/x509/x509.go#L35) to ensure it is compatible with
+what the `timestamp_server` expects.
 
 Set `--timestamp-signer=kms`, provide the path to the chain with `--certificate-chain-path`,
 and the KMS key with `--kms-key-resource`. The key should be prefixed with either `gcpkms://`, `azurekms://`, `awskms://`, or `hashivault://`.
