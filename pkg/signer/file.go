@@ -28,6 +28,7 @@ import (
 // File returns a file-based signer and verifier, used for local testing
 type File struct {
 	crypto.Signer
+	hashFunc crypto.Hash
 }
 
 func NewFileSigner(keyPath, keyPass string) (*File, error) {
@@ -35,27 +36,33 @@ func NewFileSigner(keyPath, keyPass string) (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
+
+	signingHashFunc := crypto.SHA256
 	// Cannot use signature.LoadSignerVerifier because the SignerVerifier interface does not extend crypto.Signer
 	switch pk := opaqueKey.(type) {
 	case *rsa.PrivateKey:
-		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
+		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, signingHashFunc)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, signingHashFunc}, nil
 	case *ecdsa.PrivateKey:
-		signer, err := signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
+		signer, err := signature.LoadECDSASignerVerifier(pk, signingHashFunc)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, signingHashFunc}, nil
 	case ed25519.PrivateKey:
 		signer, err := signature.LoadED25519SignerVerifier(pk)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, signingHashFunc}, nil
 	default:
 		return nil, fmt.Errorf("unsupported private key type, must be RSA, ECDSA, or ED25519")
 	}
+}
+
+func (f File) HashFunc() crypto.Hash {
+	return f.hashFunc
 }

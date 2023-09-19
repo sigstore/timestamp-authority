@@ -50,8 +50,17 @@ var (
 	ed25519SignerTypeURL    = "type.googleapis.com/google.crypto.tink.Ed25519PrivateKey"
 )
 
+type Tink struct {
+	crypto.Signer
+	hashFunc crypto.Hash
+}
+
+func (t Tink) HashFunc() crypto.Hash {
+	return t.hashFunc
+}
+
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
+func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (*Tink, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err
@@ -66,7 +75,12 @@ func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.A
 	if err != nil {
 		return nil, err
 	}
-	return signer, nil
+
+	t := Tink{
+		signer,
+		crypto.SHA256,
+	}
+	return &t, nil
 }
 
 // GetPrimaryKey returns a Tink AEAD encryption key from KMS

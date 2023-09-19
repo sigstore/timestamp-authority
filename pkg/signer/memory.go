@@ -30,6 +30,15 @@ import (
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
+type Memory struct {
+	crypto.Signer
+	hashFunc crypto.Hash
+}
+
+func (m Memory) HashFunc() crypto.Hash {
+	return m.hashFunc
+}
+
 // NewTimestampingCertWithChain generates an in-memory certificate chain.
 func NewTimestampingCertWithChain(signer crypto.Signer) ([]*x509.Certificate, error) {
 	now := time.Now()

@@ -18,7 +18,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -28,21 +27,22 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
 type API struct {
-	tsaSigner    crypto.Signer       // the signer to use for timestamping
-	certChain    []*x509.Certificate // timestamping cert chain
-	certChainPem string              // PEM encoded timestamping cert chain
+	tsaSigner    kms.CryptoSignerWrapper // the signer to use for timestamping
+	certChain    []*x509.Certificate     // timestamping cert chain
+	certChainPem string                  // PEM encoded timestamping cert chain
 }
 
 func NewAPI() (*API, error) {
 	ctx := context.Background()
 
-	tsaSigner, err := signer.NewCryptoSigner(ctx, viper.GetString("timestamp-signer"),
+	tsaSigner, err := signer.NewCryptoSigner(ctx, signer.SignerScheme(viper.GetString("timestamp-signer")),
 		viper.GetString("kms-key-resource"),
 		viper.GetString("tink-key-resource"), viper.GetString("tink-keyset-path"),
 		viper.GetString("tink-hcvault-token"),
@@ -54,7 +54,7 @@ func NewAPI() (*API, error) {
 	var certChain []*x509.Certificate
 
 	// KMS, Tink and File signers require a provided certificate chain
-	if viper.GetString("timestamp-signer") != signer.MemoryScheme {
+	if signer.SignerScheme(viper.GetString("timestamp-signer")) != signer.MemoryScheme {
 		certChainPath := viper.GetString("certificate-chain-path")
 		data, err := os.ReadFile(filepath.Clean(certChainPath))
 		if err != nil {

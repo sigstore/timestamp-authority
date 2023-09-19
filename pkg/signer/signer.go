@@ -31,16 +31,25 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
-const KMSScheme = "kms"
-const TinkScheme = "tink"
-const MemoryScheme = "memory"
-const FileScheme = "file"
+type SignerScheme string
 
-func NewCryptoSigner(ctx context.Context, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+const (
+	KMSScheme    SignerScheme = "kms"
+	TinkScheme                = "tink"
+	MemoryScheme              = "memory"
+	FileScheme                = "file"
+)
+
+type WrappedSigner interface {
+	crypto.Signer
+	HashFunc() crypto.Hash
+}
+
+func NewCryptoSigner(ctx context.Context, signer SignerScheme, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (WrappedSigner, error) {
 	switch signer {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
-		return sv, err
+		return Memory{sv, crypto.SHA256}, err
 	case FileScheme:
 		return NewFileSigner(fileSignerPath, fileSignerPasswd)
 	case KMSScheme:
