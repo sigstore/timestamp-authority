@@ -110,7 +110,7 @@ func httpPingOnly(endpoint string) func(http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, endpoint) {
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusForbidden)
+				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte("http server supports only the /ping entrypoint")) //nolint:errcheck
 				return
 			}
