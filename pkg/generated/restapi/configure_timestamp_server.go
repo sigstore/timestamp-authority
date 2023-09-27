@@ -103,15 +103,17 @@ func (l *logAdapter) Print(v ...interface{}) {
 	log.Logger.Info(v...)
 }
 
+const pingPath = "/ping"
+
 // httpPingOnly custom middleware prohibits all entrypoints except
 // "/ping" on the http (non-HTTPS) server.
-func httpPingOnly(endpoint string) func(http.Handler) http.Handler {
+func httpPingOnly() func(http.Handler) http.Handler {
 	f := func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, endpoint) {
+			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, pingPath) {
 				w.Header().Set("Content-Type", "text/plain")
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("http server supports only the /ping entrypoint")) //nolint:errcheck
+				w.Write([]byte("http server supports only the " + pingPath + " entrypoint")) //nolint:errcheck
 				return
 			}
 			h.ServeHTTP(w, r)
@@ -128,9 +130,9 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		&middleware.DefaultLogFormatter{Logger: &logAdapter{}})
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
-	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+	returnHandler = middleware.Heartbeat(pingPath)(returnHandler)
 	if cmdparams.IsHTTPPingOnly {
-		returnHandler = httpPingOnly("/ping")(returnHandler)
+		returnHandler = httpPingOnly()(returnHandler)
 	}
 
 	handleCORS := cors.Default().Handler
