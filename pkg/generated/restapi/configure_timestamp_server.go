@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -33,6 +34,7 @@ import (
 	pkgapi "github.com/sigstore/timestamp-authority/pkg/api"
 	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations"
 	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
+	"github.com/sigstore/timestamp-authority/pkg/internal/cmdparams"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 )
 
@@ -101,6 +103,26 @@ func (l *logAdapter) Print(v ...interface{}) {
 	log.Logger.Info(v...)
 }
 
+const pingPath = "/ping"
+
+// httpPingOnly custom middleware prohibits all entrypoints except
+// "/ping" on the http (non-HTTPS) server.
+func httpPingOnly() func(http.Handler) http.Handler {
+	f := func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, pingPath) {
+				w.Header().Set("Content-Type", "text/plain")
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("http server supports only the " + pingPath + " entrypoint")) //nolint:errcheck
+				return
+			}
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(fn)
+	}
+	return f
+}
+
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics.
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
@@ -108,7 +130,10 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		&middleware.DefaultLogFormatter{Logger: &logAdapter{}})
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
-	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+	returnHandler = middleware.Heartbeat(pingPath)(returnHandler)
+	if cmdparams.IsHTTPPingOnly {
+		returnHandler = httpPingOnly()(returnHandler)
+	}
 
 	handleCORS := cors.Default().Handler
 	returnHandler = handleCORS(returnHandler)

@@ -26,9 +26,10 @@ import (
 )
 
 var (
-	cfgFile     string
-	logType     string
-	enablePprof bool
+	cfgFile      string
+	logType      string
+	enablePprof  bool
+	httpPingOnly bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -56,7 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.timestamp-server.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logType, "log-type", "dev", "logger type to use (dev/prod)")
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable-pprof", false, "enable pprof for profiling on port 6060")
-
+	rootCmd.PersistentFlags().BoolVar(&httpPingOnly, "http-ping-only", false, "serve only /ping in the http server")
 	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
 	// KMS flags
 	rootCmd.PersistentFlags().String("kms-key-resource", "", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]")

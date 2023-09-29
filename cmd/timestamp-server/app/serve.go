@@ -100,8 +100,7 @@ var serveCmd = &cobra.Command{
 		host := viper.GetString("host")
 		port := int(viper.GetUint("port"))
 		scheme := viper.GetStringSlice("scheme")
-
-		server := server.NewRestAPIServer(host, port, scheme, readTimeout, writeTimeout)
+		server := server.NewRestAPIServer(host, port, scheme, httpPingOnly, readTimeout, writeTimeout)
 		defer func() {
 			if err := server.Shutdown(); err != nil {
 				log.Logger.Error(err)
