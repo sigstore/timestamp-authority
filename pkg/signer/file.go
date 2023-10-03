@@ -30,7 +30,7 @@ type File struct {
 	crypto.Signer
 }
 
-func NewFileSigner(keyPath, keyPass string) (*File, error) {
+func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
 	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
@@ -38,13 +38,13 @@ func NewFileSigner(keyPath, keyPass string) (*File, error) {
 	// Cannot use signature.LoadSignerVerifier because the SignerVerifier interface does not extend crypto.Signer
 	switch pk := opaqueKey.(type) {
 	case *rsa.PrivateKey:
-		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
+		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, hash)
 		if err != nil {
 			return nil, err
 		}
 		return &File{signer}, nil
 	case *ecdsa.PrivateKey:
-		signer, err := signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
+		signer, err := signature.LoadECDSASignerVerifier(pk, hash)
 		if err != nil {
 			return nil, err
 		}

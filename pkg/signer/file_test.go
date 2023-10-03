@@ -15,6 +15,7 @@
 package signer
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -88,7 +89,7 @@ func TestNewFileSigner(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc
-			_, err := NewFileSigner(tc.keyPath, tc.keyPass)
+			_, err := NewFileSigner(tc.keyPath, tc.keyPass, crypto.SHA256)
 			if tc.wantErr != (err != nil) {
 				t.Errorf("NewFileSigner() expected %t, got err %s", tc.wantErr, err)
 			}
