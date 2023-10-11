@@ -1,3 +1,30 @@
+# v1.2.0
+
+v1.2.0 is based on Go 1.21.3.
+
+## Changes
+
+### Enhancements
+
+* Support other hash algs for pre-signed timestamp besides SHA256 (#488)
+* new http-ping-only flag for 'timestamp-server serve' (#474)
+
+### Bug Fixes
+
+* Fix bug where TSA signing fails if cert hash != content hash. (#465)
+
+### Misc
+
+* expand README on Cloud KMS deployment (#476)
+* upgrade to Go1.21 (#471)
+
+## Contributors
+
+* Billy Lynch
+* Carlos Tadeu Panato Junior
+* Dmitry Savintsev
+* Hayden B
+
 # 1.1.2
 
 1.1.2 fixes a signing related hash function bug and a typo.
