@@ -16,7 +16,7 @@ require (
 	github.com/go-openapi/swag v0.22.4
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/golang/protobuf v1.5.3
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/tink/go v1.7.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
