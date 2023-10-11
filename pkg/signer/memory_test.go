@@ -30,7 +30,7 @@ import (
 func TestNewTimestampingCertWithChain(t *testing.T) {
 	ctx := context.Background()
 
-	signer, err := NewCryptoSigner(ctx, "memory", "", "", "", "", "", "")
+	signer, err := NewCryptoSigner(ctx, crypto.Hash(0), "memory", "", "", "", "", "", "")
 	if err != nil {
 		t.Fatalf("new signer: %v", err)
 	}
