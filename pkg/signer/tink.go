@@ -60,7 +60,7 @@ func (t Tink) HashFunc() crypto.Hash {
 }
 
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(ctx context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (*Tink, error) {
+func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (*Tink, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err
