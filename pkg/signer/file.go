@@ -31,7 +31,7 @@ type File struct {
 	hashFunc crypto.Hash
 }
 
-func NewFileSigner(keyPath, keyPass string) (*File, error) {
+func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
 	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)

@@ -20,6 +20,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
@@ -51,9 +52,9 @@ func NewCryptoSigner(ctx context.Context, signer SignerScheme, kmsKey, tinkKmsKe
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 		return Memory{sv, crypto.SHA256}, err
 	case FileScheme:
-		return NewFileSigner(fileSignerPath, fileSignerPasswd)
+		return NewFileSigner(fileSignerPath, fileSignerPasswd, hash)
 	case KMSScheme:
-		signer, err := kms.Get(ctx, kmsKey, crypto.SHA256)
+		signer, err := kms.Get(ctx, kmsKey, hash) // hash is ignored for all KMS providers except Hashivault
 		if err != nil {
 			return nil, err
 		}
@@ -68,4 +69,20 @@ func NewCryptoSigner(ctx context.Context, signer SignerScheme, kmsKey, tinkKmsKe
 	default:
 		return nil, fmt.Errorf("unsupported signer type: %s", signer)
 	}
+}
+
+func HashToAlg(signerHashAlg string) (crypto.Hash, error) {
+	lowercaseAlg := strings.ToLower(signerHashAlg)
+	var hash crypto.Hash
+	switch lowercaseAlg {
+	case "sha256":
+		hash = crypto.SHA256
+	case "sha384":
+		hash = crypto.SHA384
+	case "sha512":
+		hash = crypto.SHA512
+	default:
+		return crypto.Hash(0), fmt.Errorf("unsupported hash algorithm: %s", lowercaseAlg)
+	}
+	return hash, nil
 }
