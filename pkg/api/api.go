@@ -48,12 +48,17 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting hash")
 	}
-	tsaSigner, err := signer.NewCryptoSigner(ctx, tsaSignerHash,
-		signer.SignerScheme(viper.GetString("timestamp-signer")),
-		viper.GetString("kms-key-resource"),
-		viper.GetString("tink-key-resource"), viper.GetString("tink-keyset-path"),
-		viper.GetString("tink-hcvault-token"),
-		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
+
+	config := signer.SignerConfig{
+		Scheme:           signer.SignerScheme(viper.GetString("timestamp-signer")),
+		CloudKMSKey:      viper.GetString("kms-key-resource"),
+		TinkKMSKey:       viper.GetString("tink-key-resource"),
+		TinkKeysetPath:   viper.GetString("tink-keyset-path"),
+		HCVaultToken:     viper.GetString("tink-hcvault-token"),
+		FileSignerPath:   viper.GetString("file-signer-key-path"),
+		FileSignerPasswd: viper.GetString("file-signer-passwd"),
+	}
+	tsaSigner, err := signer.NewCryptoSigner(ctx, tsaSignerHash, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
 	}

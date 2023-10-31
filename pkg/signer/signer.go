@@ -46,28 +46,38 @@ type WrappedSigner interface {
 	HashFunc() crypto.Hash
 }
 
-func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer SignerScheme, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (WrappedSigner, error) {
-	switch signer {
+type SignerConfig struct {
+	Scheme           SignerScheme
+	CloudKMSKey      string
+	TinkKMSKey       string
+	TinkKeysetPath   string
+	HCVaultToken     string
+	FileSignerPath   string
+	FileSignerPasswd string
+}
+
+func NewCryptoSigner(ctx context.Context, hash crypto.Hash, config SignerConfig) (WrappedSigner, error) {
+	switch config.Scheme {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 		return Memory{sv, crypto.SHA256}, err
 	case FileScheme:
-		return NewFileSigner(fileSignerPath, fileSignerPasswd, hash)
+		return NewFileSigner(config.FileSignerPath, config.FileSignerPasswd, hash)
 	case KMSScheme:
-		signer, err := kms.Get(ctx, kmsKey, hash) // hash is ignored for all KMS providers except Hashivault
+		signer, err := kms.Get(ctx, config.CloudKMSKey, hash) // hash is ignored for all KMS providers except Hashivault
 		if err != nil {
 			return nil, err
 		}
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
 	case TinkScheme:
-		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey, hcVaultToken)
+		primaryKey, err := GetPrimaryKey(ctx, config.TinkKMSKey, config.HCVaultToken)
 		if err != nil {
 			return nil, err
 		}
-		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey)
+		return NewTinkSigner(ctx, config.TinkKeysetPath, primaryKey)
 	default:
-		return nil, fmt.Errorf("unsupported signer type: %s", signer)
+		return nil, fmt.Errorf("unsupported signer type: %s", config.Scheme)
 	}
 }
 
