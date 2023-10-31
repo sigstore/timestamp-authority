@@ -36,9 +36,9 @@ type SignerScheme string
 
 const (
 	KMSScheme    SignerScheme = "kms"
-	TinkScheme                = "tink"
-	MemoryScheme              = "memory"
-	FileScheme                = "file"
+	TinkScheme   SignerScheme = "tink"
+	MemoryScheme SignerScheme = "memory"
+	FileScheme   SignerScheme = "file"
 )
 
 type WrappedSigner interface {
@@ -46,7 +46,7 @@ type WrappedSigner interface {
 	HashFunc() crypto.Hash
 }
 
-func NewCryptoSigner(ctx context.Context, signer SignerScheme, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (WrappedSigner, error) {
+func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer SignerScheme, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (WrappedSigner, error) {
 	switch signer {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)

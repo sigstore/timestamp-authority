@@ -36,9 +36,9 @@ import (
 
 type API struct {
 	tsaSigner     kms.CryptoSignerWrapper // the signer to use for timestamping
+	tsaSignerHash crypto.Hash             // hash algorithm used to hash pre-signed timestamps
 	certChain     []*x509.Certificate     // timestamping cert chain
 	certChainPem  string                  // PEM encoded timestamping cert chain
-	tsaSignerHash crypto.Hash             // hash algorithm used to hash pre-signed timestamps
 }
 
 func NewAPI() (*API, error) {
@@ -49,7 +49,7 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "error getting hash")
 	}
 	tsaSigner, err := signer.NewCryptoSigner(ctx, tsaSignerHash,
-		viper.GetString("timestamp-signer"),
+		signer.SignerScheme(viper.GetString("timestamp-signer")),
 		viper.GetString("kms-key-resource"),
 		viper.GetString("tink-key-resource"), viper.GetString("tink-keyset-path"),
 		viper.GetString("tink-hcvault-token"),

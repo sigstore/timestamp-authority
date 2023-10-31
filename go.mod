@@ -40,22 +40,22 @@ require (
 	sigs.k8s.io/release-utils v0.7.6
 )
 
-replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20230919024336-d4939b3b993e
+replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20231031155517-ba36e0d7114c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20230919024336-d4939b3b993e
+replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20231031155517-ba36e0d7114c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20230919024336-d4939b3b993e
+replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20231031155517-ba36e0d7114c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20230919024336-d4939b3b993e
+replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20231031155517-ba36e0d7114c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20230919024336-d4939b3b993e
+replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20231031155517-ba36e0d7114c
 
 require (
 	cloud.google.com/go v0.110.8 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.2 // indirect
-	cloud.google.com/go/kms v1.15.3 // indirect
+	cloud.google.com/go/kms v1.15.4 // indirect
 	cloud.google.com/go/longrunning v0.5.1 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.8.0 // indirect
@@ -65,7 +65,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.46.3 // indirect
+	github.com/aws/aws-sdk-go v1.46.7 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.2 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43 // indirect
@@ -134,11 +134,11 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/secure-systems-lab/go-securesystemslib v0.7.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/theupdateframework/go-tuf v0.5.2 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
