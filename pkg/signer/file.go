@@ -31,38 +31,37 @@ type File struct {
 	hashFunc crypto.Hash
 }
 
+func (f File) HashFunc() crypto.Hash {
+	return f.hashFunc
+}
+
 func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
 	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
 
-	signingHashFunc := crypto.SHA256
 	// Cannot use signature.LoadSignerVerifier because the SignerVerifier interface does not extend crypto.Signer
 	switch pk := opaqueKey.(type) {
 	case *rsa.PrivateKey:
-		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, signingHashFunc)
+		signer, err := signature.LoadRSAPKCS1v15SignerVerifier(pk, hash)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer, signingHashFunc}, nil
+		return &File{signer, hash}, nil
 	case *ecdsa.PrivateKey:
-		signer, err := signature.LoadECDSASignerVerifier(pk, signingHashFunc)
+		signer, err := signature.LoadECDSASignerVerifier(pk, hash)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer, signingHashFunc}, nil
+		return &File{signer, hash}, nil
 	case ed25519.PrivateKey:
 		signer, err := signature.LoadED25519SignerVerifier(pk)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer, signingHashFunc}, nil
+		return &File{signer, hash}, nil
 	default:
 		return nil, fmt.Errorf("unsupported private key type, must be RSA, ECDSA, or ED25519")
 	}
-}
-
-func (f File) HashFunc() crypto.Hash {
-	return f.hashFunc
 }
