@@ -18,7 +18,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -35,10 +34,9 @@ import (
 )
 
 type API struct {
-	tsaSigner     kms.CryptoSignerWrapper // the signer to use for timestamping
-	tsaSignerHash crypto.Hash             // hash algorithm used to hash pre-signed timestamps
-	certChain     []*x509.Certificate     // timestamping cert chain
-	certChainPem  string                  // PEM encoded timestamping cert chain
+	tsaSigner    kms.CryptoSignerWrapper // the signer to use for timestamping
+	certChain    []*x509.Certificate     // timestamping cert chain
+	certChainPem string                  // PEM encoded timestamping cert chain
 }
 
 func NewAPI() (*API, error) {
@@ -93,10 +91,9 @@ func NewAPI() (*API, error) {
 	}
 
 	return &API{
-		tsaSigner:     tsaSigner,
-		tsaSignerHash: tsaSignerHash,
-		certChain:     certChain,
-		certChainPem:  string(certChainPEM),
+		tsaSigner:    tsaSigner,
+		certChain:    certChain,
+		certChainPem: string(certChainPEM),
 	}, nil
 }
 
