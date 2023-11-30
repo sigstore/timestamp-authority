@@ -47,8 +47,8 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "error getting hash")
 	}
 
-	config := signer.SignerConfig{
-		Scheme:           signer.SignerScheme(viper.GetString("timestamp-signer")),
+	config := signer.Config{
+		Scheme:           signer.Scheme(viper.GetString("timestamp-signer")),
 		CloudKMSKey:      viper.GetString("kms-key-resource"),
 		TinkKMSKey:       viper.GetString("tink-key-resource"),
 		TinkKeysetPath:   viper.GetString("tink-keyset-path"),
@@ -64,7 +64,7 @@ func NewAPI() (*API, error) {
 	var certChain []*x509.Certificate
 
 	// KMS, Tink and File signers require a provided certificate chain
-	if signer.SignerScheme(viper.GetString("timestamp-signer")) != signer.MemoryScheme {
+	if signer.Scheme(viper.GetString("timestamp-signer")) != signer.MemoryScheme {
 		certChainPath := viper.GetString("certificate-chain-path")
 		data, err := os.ReadFile(filepath.Clean(certChainPath))
 		if err != nil {

@@ -32,13 +32,13 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
-type SignerScheme string
+type Scheme string
 
 const (
-	KMSScheme    SignerScheme = "kms"
-	TinkScheme   SignerScheme = "tink"
-	MemoryScheme SignerScheme = "memory"
-	FileScheme   SignerScheme = "file"
+	KMSScheme    Scheme = "kms"
+	TinkScheme   Scheme = "tink"
+	MemoryScheme Scheme = "memory"
+	FileScheme   Scheme = "file"
 )
 
 type WrappedSigner interface {
@@ -46,8 +46,8 @@ type WrappedSigner interface {
 	HashFunc() crypto.Hash
 }
 
-type SignerConfig struct {
-	Scheme           SignerScheme
+type Config struct {
+	Scheme           Scheme
 	CloudKMSKey      string
 	TinkKMSKey       string
 	TinkKeysetPath   string
@@ -56,7 +56,7 @@ type SignerConfig struct {
 	FileSignerPasswd string
 }
 
-func NewCryptoSigner(ctx context.Context, hash crypto.Hash, config SignerConfig) (WrappedSigner, error) {
+func NewCryptoSigner(ctx context.Context, hash crypto.Hash, config Config) (WrappedSigner, error) {
 	switch config.Scheme {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
