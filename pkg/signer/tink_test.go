@@ -36,20 +36,13 @@ import (
 	"github.com/google/tink/go/signature"
 )
 
-type TestStruct struct {
-	keyTemplate *tink_go_proto.KeyTemplate
-	h           hash.Hash
-}
-
-
-
 func TestNewTinkSigner(t *testing.T) {
-	type newTinkSignerTest struct {
+	type testcase struct {
 		keyTemplate *tink_go_proto.KeyTemplate
 		expectedHashFunc crypto.Hash
 	}
 
-	supportedKeyTypes := []newTinkSignerTest{
+	supportedKeyTypes := []testcase{
 		{
 			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
 			expectedHashFunc:   crypto.SHA256,
@@ -125,7 +118,12 @@ func TestNewTinkSigner(t *testing.T) {
 }
 
 func TestKeyHandleToSignerECDSA(t *testing.T) {
-	supportedKeyTypes := []TestStruct{
+	type testcase struct {
+		keyTemplate *tink_go_proto.KeyTemplate
+		h           hash.Hash
+	}
+
+	supportedKeyTypes := []testcase{
 		{
 			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
 			h:           sha256.New(),
@@ -229,28 +227,23 @@ func TestKeyHandleToSignerED25519(t *testing.T) {
 	}
 }
 
-type keyHandleTest struct {
-	keyTemplate *tink_go_proto.KeyTemplate
-	h           hash.Hash
-	expectedHashName string
-	expectHashFunc crypto.Hash
-}
-
 func TestKeyHandleToSigner(t *testing.T) {
-	supportedKeyTypes := []keyHandleTest{
+	type testcase struct {
+		keyTemplate *tink_go_proto.KeyTemplate
+		expectedHashName string
+	}
+
+	supportedKeyTypes := []testcase{
 		{
 			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
-			h:           sha256.New(),
 			expectedHashName: "SHA256",
 		},
 		{
 			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
-			h:           sha512.New384(),
 			expectedHashName: "SHA512",
 		},
 		{
 			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
-			h:           sha512.New(),
 			expectedHashName: "SHA512",
 		},
 	}
@@ -260,9 +253,13 @@ func TestKeyHandleToSigner(t *testing.T) {
 			t.Fatalf("error creating ECDSA key handle: %v", err)
 		}
 
-		_, hashName, err := KeyHandleToSigner(kh)
+		signer, hashName, err := KeyHandleToSigner(kh)
 		if err != nil {
 			t.Fatalf("error creating signer from ECDSA key template: %v", err)
+		}
+
+		if signer == nil {
+			t.Fatalf("expected signer to be non-nil")
 		}
 
 		if hashName != kt.expectedHashName {
