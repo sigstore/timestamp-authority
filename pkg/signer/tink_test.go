@@ -41,58 +41,86 @@ type TestStruct struct {
 	h           hash.Hash
 }
 
+
+
 func TestNewTinkSigner(t *testing.T) {
-	aeskh, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
-	if err != nil {
-		t.Fatalf("error creating AEAD key handle: %v", err)
-	}
-	a, err := aead.New(aeskh)
-	if err != nil {
-		t.Fatalf("error creating AEAD key: %v", err)
-	}
-	kh, err := keyset.NewHandle(signature.ECDSAP256KeyTemplate())
-	if err != nil {
-		t.Fatalf("error creating ECDSA key handle: %v", err)
-	}
-	khsigner, _, err := KeyHandleToSigner(kh)
-	if err != nil {
-		t.Fatalf("error converting ECDSA key handle to signer: %v", err)
+	type newTinkSignerTest struct {
+		keyTemplate *tink_go_proto.KeyTemplate
+		expectedHashFunc crypto.Hash
 	}
 
-	dir := t.TempDir()
-	keysetPath := filepath.Join(dir, "keyset.json.enc")
-	f, err := os.Create(keysetPath)
-	if err != nil {
-		t.Fatalf("error creating file: %v", err)
-	}
-	defer f.Close()
-	jsonWriter := keyset.NewJSONWriter(f)
-	if err := kh.Write(jsonWriter, a); err != nil {
-		t.Fatalf("error writing enc keyset: %v", err)
-	}
-
-	signer, err := NewTinkSigner(context.TODO(), keysetPath, a)
-	if err != nil {
-		t.Fatalf("unexpected error creating Tink signer: %v", err)
+	supportedKeyTypes := []newTinkSignerTest{
+		{
+			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
+			expectedHashFunc:   crypto.SHA256,
+		},
+		{
+			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
+			expectedHashFunc:   crypto.SHA512,
+		},
+		{
+			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
+			expectedHashFunc:   crypto.SHA512,
+		},
 	}
 
-	// Expect signer and key handle's public keys match
-	if err := cryptoutils.EqualKeys(signer.Public(), khsigner.Public()); err != nil {
-		t.Fatalf("keys of signer and key handle do not match: %v", err)
-	}
+	for _, kt := range supportedKeyTypes {
+		aeskh, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
+		if err != nil {
+			t.Fatalf("error creating AEAD key handle: %v", err)
+		}
+		a, err := aead.New(aeskh)
+		if err != nil {
+			t.Fatalf("error creating AEAD key: %v", err)
+		}
+		kh, err := keyset.NewHandle(kt.keyTemplate)
+		if err != nil {
+			t.Fatalf("error creating ECDSA key handle: %v", err)
+		}
+		khsigner, _, err := KeyHandleToSigner(kh)
+		if err != nil {
+			t.Fatalf("error converting ECDSA key handle to signer: %v", err)
+		}
 
-	// Failure: Unable to decrypt keyset
-	aeskh1, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
-	if err != nil {
-		t.Fatalf("error creating AEAD key handle: %v", err)
-	}
-	a1, err := aead.New(aeskh1)
-	if err != nil {
-		t.Fatalf("error creating AEAD key: %v", err)
-	}
-	_, err = NewTinkSigner(context.TODO(), keysetPath, a1)
-	if err == nil || !strings.Contains(err.Error(), "decryption failed") {
-		t.Fatalf("expected error decrypting keyset, got %v", err)
+		dir := t.TempDir()
+		keysetPath := filepath.Join(dir, "keyset.json.enc")
+		f, err := os.Create(keysetPath)
+		if err != nil {
+			t.Fatalf("error creating file: %v", err)
+		}
+		defer f.Close()
+		jsonWriter := keyset.NewJSONWriter(f)
+		if err := kh.Write(jsonWriter, a); err != nil {
+			t.Fatalf("error writing enc keyset: %v", err)
+		}
+
+		signer, err := NewTinkSigner(context.TODO(), keysetPath, a)
+		if err != nil {
+			t.Fatalf("unexpected error creating Tink signer: %v", err)
+		}
+
+		if signer.HashFunc() != kt.expectedHashFunc {
+			t.Fatalf("unexpected hash function: %v", signer.HashFunc())
+		}
+
+		// Expect signer and key handle's public keys match
+		if err := cryptoutils.EqualKeys(signer.Public(), khsigner.Public()); err != nil {
+			t.Fatalf("keys of signer and key handle do not match: %v", err)
+		}
+
+		// Failure: Unable to decrypt keyset
+		aeskh1, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
+		if err != nil {
+			t.Fatalf("error creating AEAD key handle: %v", err)
+		}
+		a1, err := aead.New(aeskh1)
+		if err != nil {
+			t.Fatalf("error creating AEAD key: %v", err)
+		}
+		_, err = NewTinkSigner(context.TODO(), keysetPath, a1)
+		if err == nil || !strings.Contains(err.Error(), "decryption failed") {
+			t.Fatalf("expected error decrypting keyset, got %v", err)
+		}
 	}
 }
 
@@ -214,19 +242,16 @@ func TestKeyHandleToSigner(t *testing.T) {
 			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
 			h:           sha256.New(),
 			expectedHashName: "SHA256",
-			expectHashFunc: crypto.SHA256,
 		},
 		{
 			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
 			h:           sha512.New384(),
 			expectedHashName: "SHA512",
-			expectHashFunc: crypto.SHA384,
 		},
 		{
 			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
 			h:           sha512.New(),
 			expectedHashName: "SHA512",
-			expectHashFunc: crypto.SHA512,
 		},
 	}
 	for _, kt := range supportedKeyTypes {
@@ -243,9 +268,5 @@ func TestKeyHandleToSigner(t *testing.T) {
 		if hashName != kt.expectedHashName {
 			t.Fatalf("expected hash name %s, got %s", kt.expectedHashName, hashName)
 		}
-
-		// if signer.HashFunc() != kt.expectHashFunc {
-		// 	t.Fatalf("expected hash func %v, got %v", kt.expectHashFunc, signer.HashFunc())
-		// }
 	}
 }

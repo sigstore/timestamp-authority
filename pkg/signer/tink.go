@@ -86,12 +86,12 @@ func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEA
 func getHashFromName(name string) crypto.Hash {
 	lowercaseAlg := strings.ToLower(name)
 	switch lowercaseAlg {
-	case "SHA256":
+	case "sha256":
 		return crypto.SHA256
-	case "SHA512":
-		return crypto.SHA512
-	case "SHA384":
+	case "sha384":
 		return crypto.SHA384
+	case "sha512":
+		return crypto.SHA512
 	}
 	return crypto.Hash(0)
 }
