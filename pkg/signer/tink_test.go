@@ -38,22 +38,22 @@ import (
 
 func TestNewTinkSigner(t *testing.T) {
 	type testcase struct {
-		keyTemplate *tink_go_proto.KeyTemplate
+		keyTemplate      *tink_go_proto.KeyTemplate
 		expectedHashFunc crypto.Hash
 	}
 
 	supportedKeyTypes := []testcase{
 		{
-			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
-			expectedHashFunc:   crypto.SHA256,
+			keyTemplate:      signature.ECDSAP256KeyWithoutPrefixTemplate(),
+			expectedHashFunc: crypto.SHA256,
 		},
 		{
-			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
-			expectedHashFunc:   crypto.SHA512,
+			keyTemplate:      signature.ECDSAP384KeyWithoutPrefixTemplate(),
+			expectedHashFunc: crypto.SHA512,
 		},
 		{
-			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
-			expectedHashFunc:   crypto.SHA512,
+			keyTemplate:      signature.ECDSAP521KeyWithoutPrefixTemplate(),
+			expectedHashFunc: crypto.SHA512,
 		},
 	}
 
@@ -229,21 +229,21 @@ func TestKeyHandleToSignerED25519(t *testing.T) {
 
 func TestKeyHandleToSigner(t *testing.T) {
 	type testcase struct {
-		keyTemplate *tink_go_proto.KeyTemplate
+		keyTemplate      *tink_go_proto.KeyTemplate
 		expectedHashName string
 	}
 
 	supportedKeyTypes := []testcase{
 		{
-			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
+			keyTemplate:      signature.ECDSAP256KeyWithoutPrefixTemplate(),
 			expectedHashName: "SHA256",
 		},
 		{
-			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
+			keyTemplate:      signature.ECDSAP384KeyWithoutPrefixTemplate(),
 			expectedHashName: "SHA512",
 		},
 		{
-			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
+			keyTemplate:      signature.ECDSAP521KeyWithoutPrefixTemplate(),
 			expectedHashName: "SHA512",
 		},
 	}
