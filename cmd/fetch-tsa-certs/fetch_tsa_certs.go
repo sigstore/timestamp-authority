@@ -195,7 +195,7 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 		if err != nil {
 			return nil, err
 		}
-		leafKMSSigner, err = signer.KeyHandleToSigner(kh)
+		leafKMSSigner, _, err = signer.KeyHandleToSigner(kh)
 		if err != nil {
 			return nil, err
 		}

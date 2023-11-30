@@ -16,6 +16,7 @@ package signer
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -53,7 +54,7 @@ func TestNewTinkSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating ECDSA key handle: %v", err)
 	}
-	khsigner, err := KeyHandleToSigner(kh)
+	khsigner, _, err := KeyHandleToSigner(kh)
 	if err != nil {
 		t.Fatalf("error converting ECDSA key handle to signer: %v", err)
 	}
@@ -116,10 +117,11 @@ func TestKeyHandleToSignerECDSA(t *testing.T) {
 			t.Fatalf("error creating ECDSA key handle: %v", err)
 		}
 		// convert to crypto.Signer interface
-		signer, err := KeyHandleToSigner(kh)
+		signer, _, err := KeyHandleToSigner(kh)
 		if err != nil {
 			t.Fatalf("error converting ECDSA key handle to signer: %v", err)
 		}
+
 		msg := []byte("hello there")
 
 		// sign with key handle, verify with signer public key
@@ -162,7 +164,7 @@ func TestKeyHandleToSignerED25519(t *testing.T) {
 		t.Fatalf("error creating ED25519 key handle: %v", err)
 	}
 	// convert to crypto.Signer interface
-	signer, err := KeyHandleToSigner(kh)
+	signer, _, err := KeyHandleToSigner(kh)
 	if err != nil {
 		t.Fatalf("error converting ED25519 key handle to signer: %v", err)
 	}
@@ -196,5 +198,54 @@ func TestKeyHandleToSignerED25519(t *testing.T) {
 	}
 	if err := v.Verify(sig, msg); err != nil {
 		t.Fatalf("error verifying with tink verifier: %v", err)
+	}
+}
+
+type keyHandleTest struct {
+	keyTemplate *tink_go_proto.KeyTemplate
+	h           hash.Hash
+	expectedHashName string
+	expectHashFunc crypto.Hash
+}
+
+func TestKeyHandleToSigner(t *testing.T) {
+	supportedKeyTypes := []keyHandleTest{
+		{
+			keyTemplate: signature.ECDSAP256KeyWithoutPrefixTemplate(),
+			h:           sha256.New(),
+			expectedHashName: "SHA256",
+			expectHashFunc: crypto.SHA256,
+		},
+		{
+			keyTemplate: signature.ECDSAP384KeyWithoutPrefixTemplate(),
+			h:           sha512.New384(),
+			expectedHashName: "SHA512",
+			expectHashFunc: crypto.SHA384,
+		},
+		{
+			keyTemplate: signature.ECDSAP521KeyWithoutPrefixTemplate(),
+			h:           sha512.New(),
+			expectedHashName: "SHA512",
+			expectHashFunc: crypto.SHA512,
+		},
+	}
+	for _, kt := range supportedKeyTypes {
+		kh, err := keyset.NewHandle(kt.keyTemplate)
+		if err != nil {
+			t.Fatalf("error creating ECDSA key handle: %v", err)
+		}
+
+		_, hashName, err := KeyHandleToSigner(kh)
+		if err != nil {
+			t.Fatalf("error creating signer from ECDSA key template: %v", err)
+		}
+
+		if hashName != kt.expectedHashName {
+			t.Fatalf("expected hash name %s, got %s", kt.expectedHashName, hashName)
+		}
+
+		// if signer.HashFunc() != kt.expectHashFunc {
+		// 	t.Fatalf("expected hash func %v, got %v", kt.expectHashFunc, signer.HashFunc())
+		// }
 	}
 }
