@@ -18,7 +18,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -28,16 +27,16 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
 type API struct {
-	tsaSigner     crypto.Signer       // the signer to use for timestamping
-	tsaSignerHash crypto.Hash         // hash algorithm used to hash pre-signed timestamps
-	certChain     []*x509.Certificate // timestamping cert chain
-	certChainPem  string              // PEM encoded timestamping cert chain
+	tsaSigner    kms.CryptoSignerWrapper // the signer to use for timestamping
+	certChain    []*x509.Certificate     // timestamping cert chain
+	certChainPem string                  // PEM encoded timestamping cert chain
 }
 
 func NewAPI() (*API, error) {
@@ -47,12 +46,17 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting hash")
 	}
-	tsaSigner, err := signer.NewCryptoSigner(ctx, tsaSignerHash,
-		viper.GetString("timestamp-signer"),
-		viper.GetString("kms-key-resource"),
-		viper.GetString("tink-key-resource"), viper.GetString("tink-keyset-path"),
-		viper.GetString("tink-hcvault-token"),
-		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
+
+	config := signer.Config{
+		Scheme:           signer.Scheme(viper.GetString("timestamp-signer")),
+		CloudKMSKey:      viper.GetString("kms-key-resource"),
+		TinkKMSKey:       viper.GetString("tink-key-resource"),
+		TinkKeysetPath:   viper.GetString("tink-keyset-path"),
+		HCVaultToken:     viper.GetString("tink-hcvault-token"),
+		FileSignerPath:   viper.GetString("file-signer-key-path"),
+		FileSignerPasswd: viper.GetString("file-signer-passwd"),
+	}
+	tsaSigner, err := signer.NewCryptoSigner(ctx, tsaSignerHash, config)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
 	}
@@ -60,7 +64,7 @@ func NewAPI() (*API, error) {
 	var certChain []*x509.Certificate
 
 	// KMS, Tink and File signers require a provided certificate chain
-	if viper.GetString("timestamp-signer") != signer.MemoryScheme {
+	if signer.Scheme(viper.GetString("timestamp-signer")) != signer.MemoryScheme {
 		certChainPath := viper.GetString("certificate-chain-path")
 		data, err := os.ReadFile(filepath.Clean(certChainPath))
 		if err != nil {
@@ -87,10 +91,9 @@ func NewAPI() (*API, error) {
 	}
 
 	return &API{
-		tsaSigner:     tsaSigner,
-		tsaSignerHash: tsaSignerHash,
-		certChain:     certChain,
-		certChainPem:  string(certChainPEM),
+		tsaSigner:    tsaSigner,
+		certChain:    certChain,
+		certChainPem: string(certChainPEM),
 	}, nil
 }
 

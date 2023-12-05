@@ -28,6 +28,11 @@ import (
 // File returns a file-based signer and verifier, used for local testing
 type File struct {
 	crypto.Signer
+	hashFunc crypto.Hash
+}
+
+func (f File) HashFunc() crypto.Hash {
+	return f.hashFunc
 }
 
 func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
@@ -35,6 +40,7 @@ func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
+
 	// Cannot use signature.LoadSignerVerifier because the SignerVerifier interface does not extend crypto.Signer
 	switch pk := opaqueKey.(type) {
 	case *rsa.PrivateKey:
@@ -42,19 +48,19 @@ func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, hash}, nil
 	case *ecdsa.PrivateKey:
 		signer, err := signature.LoadECDSASignerVerifier(pk, hash)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, hash}, nil
 	case ed25519.PrivateKey:
 		signer, err := signature.LoadED25519SignerVerifier(pk)
 		if err != nil {
 			return nil, err
 		}
-		return &File{signer}, nil
+		return &File{signer, hash}, nil
 	default:
 		return nil, fmt.Errorf("unsupported private key type, must be RSA, ECDSA, or ED25519")
 	}

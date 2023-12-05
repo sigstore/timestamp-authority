@@ -50,8 +50,17 @@ var (
 	ed25519SignerTypeURL    = "type.googleapis.com/google.crypto.tink.Ed25519PrivateKey"
 )
 
+type Tink struct {
+	crypto.Signer
+	hashFunc crypto.Hash
+}
+
+func (t Tink) HashFunc() crypto.Hash {
+	return t.hashFunc
+}
+
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
+func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (*Tink, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err
@@ -62,11 +71,29 @@ func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEA
 	if err != nil {
 		return nil, err
 	}
-	signer, err := KeyHandleToSigner(kh)
+	signer, hashName, err := KeyHandleToSigner(kh)
 	if err != nil {
 		return nil, err
 	}
-	return signer, nil
+
+	t := Tink{
+		signer,
+		getHashFromName(hashName),
+	}
+	return &t, nil
+}
+
+func getHashFromName(name string) crypto.Hash {
+	lowercaseAlg := strings.ToLower(name)
+	switch lowercaseAlg {
+	case "sha256":
+		return crypto.SHA256
+	case "sha384":
+		return crypto.SHA384
+	case "sha512":
+		return crypto.SHA512
+	}
+	return crypto.Hash(0)
 }
 
 // GetPrimaryKey returns a Tink AEAD encryption key from KMS
@@ -101,13 +128,13 @@ func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD,
 
 // KeyHandleToSigner converts a key handle to the crypto.Signer interface.
 // Heavily pulls from Tink's signature and subtle packages.
-func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
+func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, string, error) {
 	// extract the key material from the key handle
 	ks := insecurecleartextkeyset.KeysetMaterial(kh)
 
 	k := getPrimaryKey(ks)
 	if k == nil {
-		return nil, errors.New("no enabled key found in keyset")
+		return nil, "", errors.New("no enabled key found in keyset")
 	}
 
 	switch k.GetTypeUrl() {
@@ -115,33 +142,33 @@ func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ecdsa_signer_key_manager.go#L48
 		privKey := new(ecdsapb.EcdsaPrivateKey)
 		if err := proto.Unmarshal(k.GetValue(), privKey); err != nil {
-			return nil, fmt.Errorf("error unmarshalling ecdsa private key: %w", err)
+			return nil, "", fmt.Errorf("error unmarshalling ecdsa private key: %w", err)
 		}
 		if err := validateEcdsaPrivKey(privKey); err != nil {
-			return nil, fmt.Errorf("error validating ecdsa private key: %w", err)
+			return nil, "", fmt.Errorf("error validating ecdsa private key: %w", err)
 		}
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/subtle/ecdsa_signer.go#L39
-		_, curve, _ := getECDSAParamNames(privKey.PublicKey.Params)
+		hashName, curve, _ := getECDSAParamNames(privKey.PublicKey.Params)
 		p := new(ecdsa.PrivateKey)
 		c := subtle.GetCurve(curve)
 		p.PublicKey.Curve = c
 		p.D = new(big.Int).SetBytes(privKey.GetKeyValue())
 		p.PublicKey.X, p.PublicKey.Y = c.ScalarBaseMult(privKey.GetKeyValue())
-		return p, nil
+		return p, hashName, nil
 	case ed25519SignerTypeURL:
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L47
 		privKey := new(ed25519pb.Ed25519PrivateKey)
 		if err := proto.Unmarshal(k.GetValue(), privKey); err != nil {
-			return nil, fmt.Errorf("error unmarshalling ed25519 private key: %w", err)
+			return nil, "", fmt.Errorf("error unmarshalling ed25519 private key: %w", err)
 		}
 		if err := validateEd25519PrivKey(privKey); err != nil {
-			return nil, fmt.Errorf("error validating ed25519 private key: %w", err)
+			return nil, "", fmt.Errorf("error validating ed25519 private key: %w", err)
 		}
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/subtle/ed25519_signer.go#L29
 		p := ed25519.NewKeyFromSeed(privKey.GetKeyValue())
-		return p, nil
+		return p, "", nil
 	default:
-		return nil, fmt.Errorf("unsupported key type: %s", k.GetTypeUrl())
+		return nil, "", fmt.Errorf("unsupported key type: %s", k.GetTypeUrl())
 	}
 }
 

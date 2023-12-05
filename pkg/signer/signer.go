@@ -32,33 +32,52 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
-const KMSScheme = "kms"
-const TinkScheme = "tink"
-const MemoryScheme = "memory"
-const FileScheme = "file"
+type Scheme string
 
-func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
-	switch signer {
+const (
+	KMSScheme    Scheme = "kms"
+	TinkScheme   Scheme = "tink"
+	MemoryScheme Scheme = "memory"
+	FileScheme   Scheme = "file"
+)
+
+type WrappedSigner interface {
+	crypto.Signer
+	HashFunc() crypto.Hash
+}
+
+type Config struct {
+	Scheme           Scheme
+	CloudKMSKey      string
+	TinkKMSKey       string
+	TinkKeysetPath   string
+	HCVaultToken     string
+	FileSignerPath   string
+	FileSignerPasswd string
+}
+
+func NewCryptoSigner(ctx context.Context, hash crypto.Hash, config Config) (WrappedSigner, error) {
+	switch config.Scheme {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
-		return sv, err
+		return Memory{sv, crypto.SHA256}, err
 	case FileScheme:
-		return NewFileSigner(fileSignerPath, fileSignerPasswd, hash)
+		return NewFileSigner(config.FileSignerPath, config.FileSignerPasswd, hash)
 	case KMSScheme:
-		signer, err := kms.Get(ctx, kmsKey, hash) // hash is ignored for all KMS providers except Hashivault
+		signer, err := kms.Get(ctx, config.CloudKMSKey, hash) // hash is ignored for all KMS providers except Hashivault
 		if err != nil {
 			return nil, err
 		}
 		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
 		return s, err
 	case TinkScheme:
-		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey, hcVaultToken)
+		primaryKey, err := GetPrimaryKey(ctx, config.TinkKMSKey, config.HCVaultToken)
 		if err != nil {
 			return nil, err
 		}
-		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey)
+		return NewTinkSigner(ctx, config.TinkKeysetPath, primaryKey)
 	default:
-		return nil, fmt.Errorf("unsupported signer type: %s", signer)
+		return nil, fmt.Errorf("unsupported signer type: %s", config.Scheme)
 	}
 }
 
