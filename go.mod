@@ -40,15 +40,15 @@ require (
 	sigs.k8s.io/release-utils v0.7.7
 )
 
-replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20231031155517-ba36e0d7114c
+replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20231204203429-078bde7980e0
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20231031155517-ba36e0d7114c
+replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20231204203429-078bde7980e0
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20231031155517-ba36e0d7114c
+replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20231204203429-078bde7980e0
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20231031155517-ba36e0d7114c
+replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20231204203429-078bde7980e0
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20231031155517-ba36e0d7114c
+replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20231204203429-078bde7980e0
 
 require (
 	cloud.google.com/go v0.110.10 // indirect
@@ -65,20 +65,21 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.1.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.48.7 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.21.2 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.19.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.43 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.43 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.37 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.45 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.37 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.24.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.15.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.17.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.23.2 // indirect
-	github.com/aws/smithy-go v1.15.0 // indirect
+	github.com/aws/aws-sdk-go v1.48.11 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.23.5 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.25.11 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.16.9 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.27.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.18.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.26.2 // indirect
+	github.com/aws/smithy-go v1.18.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -148,7 +149,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/oauth2 v0.14.0 // indirect
+	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
