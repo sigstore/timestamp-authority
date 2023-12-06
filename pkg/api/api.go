@@ -27,14 +27,13 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
 )
 
 type API struct {
-	tsaSigner    kms.CryptoSignerWrapper // the signer to use for timestamping
+	tsaSigner    signer.WrappedSigner // the signer to use for timestamping
 	certChain    []*x509.Certificate     // timestamping cert chain
 	certChainPem string                  // PEM encoded timestamping cert chain
 }

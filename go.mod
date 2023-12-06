@@ -40,15 +40,15 @@ require (
 	sigs.k8s.io/release-utils v0.7.7
 )
 
-replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20231204203429-078bde7980e0
+replace github.com/sigstore/sigstore => github.com/malancas/sigstore v0.0.0-20231206031758-2ec4921c801c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20231204203429-078bde7980e0
+replace github.com/sigstore/sigstore/pkg/signature/kms/aws => github.com/malancas/sigstore/pkg/signature/kms/aws v0.0.0-20231206031758-2ec4921c801c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20231204203429-078bde7980e0
+replace github.com/sigstore/sigstore/pkg/signature/kms/azure => github.com/malancas/sigstore/pkg/signature/kms/azure v0.0.0-20231206031758-2ec4921c801c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20231204203429-078bde7980e0
+replace github.com/sigstore/sigstore/pkg/signature/kms/gcp => github.com/malancas/sigstore/pkg/signature/kms/gcp v0.0.0-20231206031758-2ec4921c801c
 
-replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20231204203429-078bde7980e0
+replace github.com/sigstore/sigstore/pkg/signature/kms/hashivault => github.com/malancas/sigstore/pkg/signature/kms/hashivault v0.0.0-20231206031758-2ec4921c801c
 
 require (
 	cloud.google.com/go v0.110.10 // indirect

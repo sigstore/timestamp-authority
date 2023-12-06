@@ -46,6 +46,15 @@ type WrappedSigner interface {
 	HashFunc() crypto.Hash
 }
 
+type KMS struct {
+	crypto.Signer
+	hashFunc crypto.Hash
+}
+
+func (k KMS) HashFunc() crypto.Hash {
+	return k.hashFunc
+}
+
 type Config struct {
 	Scheme           Scheme
 	CloudKMSKey      string
@@ -68,8 +77,11 @@ func NewCryptoSigner(ctx context.Context, hash crypto.Hash, config Config) (Wrap
 		if err != nil {
 			return nil, err
 		}
-		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
-		return s, err
+		s, signerOpts, err := signer.CryptoSigner(ctx, func(err error) {})
+		return KMS{
+			s,
+			signerOpts.HashFunc(),
+		}, err
 	case TinkScheme:
 		primaryKey, err := GetPrimaryKey(ctx, config.TinkKMSKey, config.HCVaultToken)
 		if err != nil {
