@@ -8,11 +8,11 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
 	github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647
 	github.com/go-chi/chi v4.1.2+incompatible
-	github.com/go-openapi/errors v0.20.4
+	github.com/go-openapi/errors v0.21.0
 	github.com/go-openapi/loads v0.21.2
 	github.com/go-openapi/runtime v0.26.2
 	github.com/go-openapi/spec v0.20.11
-	github.com/go-openapi/strfmt v0.21.9
+	github.com/go-openapi/strfmt v0.21.10
 	github.com/go-openapi/swag v0.22.4
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/golang/protobuf v1.5.3
