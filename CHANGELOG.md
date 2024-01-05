@@ -1,3 +1,14 @@
+# v1.2.1
+
+v1.2.1 includes a minor bug fix to set the SignedData version value
+in a timestamp response as per the RFC.
+
+## Changes
+
+### Bug Fixes
+
+* Bump digitorus/timestamp version to pick up RFC correctness fix (#584)
+
 # v1.2.0
 
 v1.2.0 is based on Go 1.21.3.
