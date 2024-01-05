@@ -85,8 +85,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8Yc
 github.com/digitorus/pkcs7 v0.0.0-20230713084857-e76b763bdc49/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
 github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 h1:ge14PCmCvPjpMQMIAH7uKg0lrtNSOdpYsRXlwk3QbaE=
 github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
-github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647 h1:WOk5Aclr/+sZ2/SX2YyxulNFwZOUhSrDJLw5KbHKmdE=
-github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
+github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 h1:lxmTCgmHE1GUYL7P0MlNa00M67axePTq+9nBSGddR8I=
+github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
 github.com/dnaeon/go-vcr v1.2.0 h1:zHCHvJYTMh1N7xnV7zf1m1GPBF9Ad0Jk/whtQ1663qI=
 github.com/dnaeon/go-vcr v1.2.0/go.mod h1:R4UdLID7HZT3taECzJs4YgbbH6PIGXB6W/sc5OLb6RQ=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
