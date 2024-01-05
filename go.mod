@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/security v1.15.4
 	github.com/beevik/ntp v1.3.1
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
-	github.com/digitorus/timestamp v0.0.0-20230902153158-687734543647
+	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.21.0
 	github.com/go-openapi/loads v0.21.5
