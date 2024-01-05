@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
@@ -55,6 +56,10 @@ jobs:
           set -euo pipefail
           checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
           echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
+      
+      - name: Set tag output
+        id: tag
+        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
   provenance:
     needs: [release]
@@ -65,23 +70,5 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
     with:
       base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: false # do not upload to a new release since goreleaser creates it
-
-  release-provenance:
-    needs: [provenance]
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read # To read the workflow path.
-      contents: write # To add assets to a release.
-    steps:
-      - name: Download the provenance
-        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # v4.1.0
-        with:
-          name: ${{needs.provenance.outputs.provenance-name}}
-
-      - name: Release Provenance
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
-        id: release-provenance
-        with:
-          draft: true
-          files: ${{needs.provenance.outputs.provenance-name}}
+      upload-assets: true
+      upload-tag-name: "${{ needs.release.outputs.tag_name }}" # Upload to tag rather than generate a new release
