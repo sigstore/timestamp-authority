@@ -72,3 +72,4 @@ jobs:
       base64-subjects: "${{ needs.release.outputs.hashes }}"
       upload-assets: true
       upload-tag-name: "${{ needs.release.outputs.tag_name }}" # Upload to tag rather than generate a new release
+      draft-release: true
