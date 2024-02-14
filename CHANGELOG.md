@@ -1,3 +1,15 @@
+# v1.2.2
+
+## Changes
+
+### Bug fixes
+
+* Go checksum database error on installation due to deleting a tag
+
+### Misc
+
+* Dependabot updates
+
 # v1.2.1
 
 v1.2.1 includes a minor bug fix to set the SignedData version value
