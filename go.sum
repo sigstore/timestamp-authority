@@ -299,8 +299,8 @@ github.com/sagikazarmark/slog-shim v0.1.0 h1:diDBnUNK9N/354PgrxMywXnAwEr1QZcOr6g
 github.com/sagikazarmark/slog-shim v0.1.0/go.mod h1:SrcSrq8aKtyuqEI1uvTDTK1arOWRIczQRv+GVI1AkeQ=
 github.com/secure-systems-lab/go-securesystemslib v0.8.0 h1:mr5An6X45Kb2nddcFlbmfHkLguCE9laoZCUzEEpIZXA=
 github.com/secure-systems-lab/go-securesystemslib v0.8.0/go.mod h1:UH2VZVuJfCYR8WgMlCU1uFsOUU+KeyrTWcSS73NBOzU=
-github.com/sigstore/sigstore v1.8.1 h1:mAVposMb14oplk2h/bayPmIVdzbq2IhCgy4g6R0ZSjo=
-github.com/sigstore/sigstore v1.8.1/go.mod h1:02SL1158BSj15bZyOFz7m+/nJzLZfFd9A8ab3Kz7w/E=
+github.com/sigstore/sigstore v1.8.2 h1:0Ttjcn3V0fVQXlYq7+oHaaHkGFIt3ywm7SF4JTU/l8c=
+github.com/sigstore/sigstore v1.8.2/go.mod h1:CHVcSyknCcjI4K2ZhS1SI28r0tcQyBlwtALG536x1DY=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.2 h1:e0EtUcE7cqWBxxME7h6upA3EA0IR3EOE3F1t+WHOdTc=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.2/go.mod h1:07qBxPjI9bsgdQRiBz27Ai+gl6hgr//vwXMZzTX87Us=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.2 h1:Fgt4dC9OozkLEtMO6JYfFgqNdSDG1y1uAdiJgrtZYN4=

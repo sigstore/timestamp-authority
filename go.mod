@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/rs/cors v1.10.1
-	github.com/sigstore/sigstore v1.8.1
+	github.com/sigstore/sigstore v1.8.2
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.2
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.2
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.2
