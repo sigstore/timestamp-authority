@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/strfmt v0.22.2
 	github.com/go-openapi/swag v0.22.10
 	github.com/go-playground/validator/v10 v10.19.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0
 	github.com/google/tink/go v1.7.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -35,7 +35,7 @@ require (
 	go.step.sm/crypto v0.43.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.22.0
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/release-utils v0.7.7
 )
