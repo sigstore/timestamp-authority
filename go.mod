@@ -8,12 +8,12 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-chi/chi v4.1.2+incompatible
-	github.com/go-openapi/errors v0.21.1
-	github.com/go-openapi/loads v0.21.6
-	github.com/go-openapi/runtime v0.27.2
-	github.com/go-openapi/spec v0.20.15
-	github.com/go-openapi/strfmt v0.22.2
-	github.com/go-openapi/swag v0.22.10
+	github.com/go-openapi/errors v0.22.0
+	github.com/go-openapi/loads v0.22.0
+	github.com/go-openapi/runtime v0.28.0
+	github.com/go-openapi/spec v0.21.0
+	github.com/go-openapi/strfmt v0.23.0
+	github.com/go-openapi/swag v0.23.0
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0
@@ -82,10 +82,10 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/analysis v0.22.3 // indirect
-	github.com/go-openapi/jsonpointer v0.20.3 // indirect
-	github.com/go-openapi/jsonreference v0.20.5 // indirect
-	github.com/go-openapi/validate v0.23.0 // indirect
+	github.com/go-openapi/analysis v0.23.0 // indirect
+	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonreference v0.21.0 // indirect
+	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
@@ -135,9 +135,9 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.48.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.48.0 // indirect
-	go.opentelemetry.io/otel v1.23.0 // indirect
-	go.opentelemetry.io/otel/metric v1.23.0 // indirect
-	go.opentelemetry.io/otel/trace v1.23.0 // indirect
+	go.opentelemetry.io/otel v1.24.0 // indirect
+	go.opentelemetry.io/otel/metric v1.24.0 // indirect
+	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
