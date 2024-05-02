@@ -85,7 +85,7 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 	if err != nil {
 		return nil, err
 	}
-	intermediateSigner, _, err := intermediateKMSSigner.CryptoSigner(ctx, func(err error) {})
+	intermediateSigner, _, err := intermediateKMSSigner.CryptoSigner(ctx, func(_ error) {})
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 		if err != nil {
 			return nil, err
 		}
-		leafKMSSigner, _, err = kmsSigner.CryptoSigner(ctx, func(err error) {})
+		leafKMSSigner, _, err = kmsSigner.CryptoSigner(ctx, func(_ error) {})
 		if err != nil {
 			return nil, err
 		}

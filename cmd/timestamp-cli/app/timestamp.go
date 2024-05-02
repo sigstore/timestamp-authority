@@ -60,13 +60,13 @@ var timestampCmd = &cobra.Command{
 	Use:   "timestamp",
 	Short: "Signed timestamp command",
 	Long:  "Fetches a signed RFC 3161 timestamp. The timestamp response can be verified locally using a timestamp certificate chain.",
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		return runTimestamp()
 	}),
 }

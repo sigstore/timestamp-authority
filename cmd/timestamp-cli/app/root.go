@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Use:   "timestamp-cli",
 	Short: "Timestamp CLI",
 	Long:  `Timestamp command line interface tool`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		return initConfig(cmd)
 	},
 }

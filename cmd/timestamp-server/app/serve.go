@@ -33,7 +33,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal(err)
 		}

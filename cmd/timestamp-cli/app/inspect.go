@@ -44,13 +44,13 @@ var inspectCmd = &cobra.Command{
 	Use:   "inspect",
 	Short: "Inspect timestamp",
 	Long:  "Inspect the signed timestamp response.",
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		tsr := viper.GetString("timestamp")
 		tsrBytes, err := os.ReadFile(filepath.Clean(tsr))
 		if err != nil {
