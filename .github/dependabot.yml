@@ -19,15 +19,37 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      gomod:
+        update-types:
+          - "patch"
+
   - package-ecosystem: "gomod"
     directory: "./hack/tools"
     schedule:
       interval: "daily"
+    groups:
+      gomod-hack:
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      actions:
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      docker:
+        update-types:
+          - "minor"
+          - "patch"
