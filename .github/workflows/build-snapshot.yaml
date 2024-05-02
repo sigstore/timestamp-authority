@@ -1,28 +1,23 @@
-name: cut-release
+name: build-snapshot
 
 on:
-  push:
-    tags:
-      - "v*"
+  pull_request:
 
-concurrency: cut-release
-
-permissions: read-all
+permissions: {}
 
 jobs:
-  release:
+  snapshot:
     permissions:
-      contents: write # needed to write releases
-      id-token: write # needed for keyless signing
-      packages: write # needed for pushing the images to ghcr.io
+      contents: read
+
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
       tag_name: ${{ steps.tag.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: './go.mod'
           check-latest: true
@@ -43,7 +38,7 @@ jobs:
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           version: latest
-          args: release --clean
+          args: release --clean --skip=sign --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
@@ -62,14 +57,13 @@ jobs:
         run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
   provenance:
-    needs: [release]
+    needs:
+      - snapshot
     permissions:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
     with:
       base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: true
-      upload-tag-name: "${{ needs.release.outputs.tag_name }}" # Upload to tag rather than generate a new release
-      draft-release: true
+      upload-assets: false
