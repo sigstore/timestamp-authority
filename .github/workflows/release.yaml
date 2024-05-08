@@ -61,6 +61,9 @@ jobs:
         id: tag
         run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
+      - name: build and sign images
+        run: make sign-container-release
+
   provenance:
     needs: [release]
     permissions:
