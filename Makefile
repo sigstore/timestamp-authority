@@ -39,7 +39,7 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-KO_PREFIX ?= ghcr.io/sigstore
+KO_PREFIX ?= ghcr.io/cpanato
 export KO_DOCKER_REPO=$(KO_PREFIX)
 
 # Binaries
