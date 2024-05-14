@@ -49,7 +49,7 @@ func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer, kmsKey, tink
 		if err != nil {
 			return nil, err
 		}
-		s, _, err := signer.CryptoSigner(ctx, func(err error) {})
+		s, _, err := signer.CryptoSigner(ctx, func(_ error) {})
 		return s, err
 	case TinkScheme:
 		primaryKey, err := GetPrimaryKey(ctx, tinkKmsKey, hcVaultToken)

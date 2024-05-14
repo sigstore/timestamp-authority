@@ -1,6 +1,6 @@
 module github.com/sigstore/timestamp-authority
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/security v1.16.1

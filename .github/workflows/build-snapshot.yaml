@@ -1,0 +1,44 @@
+name: build-snapshot
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  snapshot:
+    permissions:
+      contents: read
+
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: './go.mod'
+          check-latest: true
+
+      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+      - uses: anchore/sbom-action/download-syft@7ccf588e3cf3cc2611714c2eeae48550fbc17552 # v0.15.11
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+
+      - name: Set LDFLAGS
+        id: ldflags
+        run: |
+           source ./release/ldflags.sh
+           goflags=$(ldflags)
+           echo "GO_FLAGS="${goflags}"" >> "$GITHUB_ENV"
+
+      - name: Run GoReleaser
+        id: run-goreleaser
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
+        with:
+          version: latest
+          args: release --clean --skip=sign --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LDFLAGS: ${{ env.GO_FLAGS }}

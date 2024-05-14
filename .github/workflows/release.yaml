@@ -56,10 +56,13 @@ jobs:
           set -euo pipefail
           checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
           echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
-      
+
       - name: Set tag output
         id: tag
         run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
+
+      - name: build and sign images
+        run: make sign-container-release
 
   provenance:
     needs: [release]
