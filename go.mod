@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/rs/cors v1.11.0
 	github.com/sigstore/sigstore v1.8.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.3
@@ -35,7 +35,7 @@ require (
 	go.step.sm/crypto v0.44.8
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.24.0
-	google.golang.org/protobuf v1.34.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/release-utils v0.8.2
 )
