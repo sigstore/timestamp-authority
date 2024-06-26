@@ -169,8 +169,8 @@ func init() {
     "/api/v1/timestamp": {
       "post": {
         "consumes": [
-          "application/json",
-          "application/timestamp-query"
+          "application/timestamp-query",
+          "application/json"
         ],
         "produces": [
           "application/timestamp-reply"
