@@ -21,6 +21,7 @@ package timestamp
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -117,11 +118,11 @@ func (o *GetTimestampResponseCreated) Code() int {
 }
 
 func (o *GetTimestampResponseCreated) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated", 201)
 }
 
 func (o *GetTimestampResponseCreated) String() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated", 201)
 }
 
 func (o *GetTimestampResponseCreated) GetPayload() io.Writer {
@@ -183,11 +184,13 @@ func (o *GetTimestampResponseBadRequest) Code() int {
 }
 
 func (o *GetTimestampResponseBadRequest) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest %s", 400, payload)
 }
 
 func (o *GetTimestampResponseBadRequest) String() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest %s", 400, payload)
 }
 
 func (o *GetTimestampResponseBadRequest) GetPayload() *models.Error {
@@ -250,11 +253,11 @@ func (o *GetTimestampResponseNotImplemented) Code() int {
 }
 
 func (o *GetTimestampResponseNotImplemented) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented", 501)
 }
 
 func (o *GetTimestampResponseNotImplemented) String() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented", 501)
 }
 
 func (o *GetTimestampResponseNotImplemented) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
@@ -311,11 +314,13 @@ func (o *GetTimestampResponseDefault) Code() int {
 }
 
 func (o *GetTimestampResponseDefault) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default %s", o._statusCode, payload)
 }
 
 func (o *GetTimestampResponseDefault) String() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
+	payload, _ := json.Marshal(o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default %s", o._statusCode, payload)
 }
 
 func (o *GetTimestampResponseDefault) GetPayload() *models.Error {
