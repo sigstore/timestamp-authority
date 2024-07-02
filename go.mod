@@ -34,7 +34,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.47.1
+	go.step.sm/crypto v0.48.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.26.0
 	google.golang.org/protobuf v1.34.2
