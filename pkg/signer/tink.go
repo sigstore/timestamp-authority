@@ -158,7 +158,7 @@ func getPrimaryKey(ks *tinkpb.Keyset) *tinkpb.KeyData {
 // validateEcdsaPrivKey validates the given ECDSAPrivateKey.
 // https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ecdsa_signer_key_manager.go#L139
 func validateEcdsaPrivKey(key *ecdsapb.EcdsaPrivateKey) error {
-	if err := keyset.ValidateKeyVersion(key.Version, uint32(ecdsaSignerKeyVersion)); err != nil {
+	if err := keyset.ValidateKeyVersion(key.Version, uint32(ecdsaSignerKeyVersion)); err != nil { //nolint:gosec
 		return fmt.Errorf("ecdsa_signer_key_manager: invalid key: %w", err)
 	}
 	hash, curve, encoding := getECDSAParamNames(key.PublicKey.Params)
@@ -178,7 +178,7 @@ func getECDSAParamNames(params *ecdsapb.EcdsaParams) (string, string, string) {
 // validateEd25519PrivKey validates the given ED25519PrivateKey.
 // https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L132
 func validateEd25519PrivKey(key *ed25519pb.Ed25519PrivateKey) error {
-	if err := keyset.ValidateKeyVersion(key.Version, uint32(ed25519SignerKeyVersion)); err != nil {
+	if err := keyset.ValidateKeyVersion(key.Version, uint32(ed25519SignerKeyVersion)); err != nil { //nolint:gosec
 		return fmt.Errorf("ed25519_signer_key_manager: invalid key: %w", err)
 	}
 	if len(key.KeyValue) != ed25519.SeedSize {
