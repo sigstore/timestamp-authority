@@ -166,6 +166,9 @@ func TestGetTimestampResponse(t *testing.T) {
 		if tsr.Time.After(time.Now()) {
 			t.Fatalf("test '%s': expected time to be set to a previous time", tc.name)
 		}
+		if tsr.Time.Location() != time.UTC {
+			t.Fatalf("test '%s': expected time to be in UTC, got %v", tc.name, tsr.Time.Location())
+		}
 		duration, _ := time.ParseDuration("1s")
 		if tsr.Accuracy != duration {
 			t.Fatalf("test '%s': expected 1s accuracy, got %v", tc.name, tsr.Accuracy)
