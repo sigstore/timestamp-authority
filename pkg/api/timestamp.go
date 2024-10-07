@@ -166,11 +166,11 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		// states that the GeneralizedTime values MUST be expressed in Greenwich Mean Time.
 		// However, go asn1/marshal will happily accept other formats. So we force it directly here.
 		// https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.5.2
-		Time:          time.Now().UTC(),
-		Nonce:         req.Nonce,
-		Policy:        policyID,
-		Ordering:      false,
-		Accuracy:      duration,
+		Time:     time.Now().UTC(),
+		Nonce:    req.Nonce,
+		Policy:   policyID,
+		Ordering: false,
+		Accuracy: duration,
 		// Not qualified for the european directive
 		Qualified:         false,
 		AddTSACertificate: req.Certificates,
