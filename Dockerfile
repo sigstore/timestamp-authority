@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.23.2@sha256:a7f2fc9834049c1f5df787690026a53738e55fc097cd8a4a93faa3e06c67ee32 AS builder
+FROM golang:1.23.2@sha256:540d3442f4758da82e787d03930bf6468cf6f8613474135e8946259b9e531ea0 AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -29,7 +29,7 @@ RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/timestamp-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o timestamp-server_debug ./cmd/timestamp-server
 
 # Multi-Stage production build
-FROM golang:1.23.2@sha256:a7f2fc9834049c1f5df787690026a53738e55fc097cd8a4a93faa3e06c67ee32 as deploy
+FROM golang:1.23.2@sha256:540d3442f4758da82e787d03930bf6468cf6f8613474135e8946259b9e531ea0 as deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
