@@ -1,0 +1,27 @@
+{
+  "subject": {
+    "country": [
+      "US"
+    ],
+    "organization": [
+      "Sigstore"
+    ],
+    "organizationalUnit": [
+      "Timestamp Authority Root CA"
+    ],
+    "commonName": "https://tsa.com"
+  },
+  "issuer": {
+    "commonName": "https://tsa.com"
+  },
+  "notBefore": "2024-01-01T00:00:00Z",
+  "notAfter": "2034-01-01T00:00:00Z",
+  "basicConstraints": {
+    "isCA": true,
+    "maxPathLen": 1
+  },
+  "keyUsage": [
+    "certSign",
+    "crlSign"
+  ]
+}
