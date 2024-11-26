@@ -51,13 +51,13 @@ func newMockKMS() *mockKMS {
 	if err != nil {
 		panic(fmt.Errorf("failed to generate root key: %v", err))
 	}
-	intermediateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		panic(fmt.Errorf("failed to generate intermediate key: %v", err))
+		panic(fmt.Errorf("failed to generate leaf key: %v", err))
 	}
 
 	m.keys["root-key"] = rootKey
-	m.keys["intermediate-key"] = intermediateKey
+	m.keys["leaf-key"] = leafKey
 
 	return m
 }
@@ -124,115 +124,64 @@ func TestParseTemplate(t *testing.T) {
 
 // TestCreateCertificates tests certificate chain creation
 func TestCreateCertificates(t *testing.T) {
-	t.Run("Fulcio", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "cert-test-fulcio-*")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(tmpDir) })
-
-		// Root template (same for both)
-		rootContent := `{
-			"subject": {
-				"commonName": "https://blah.com"
-			},
-			"issuer": {
-				"commonName": "https://blah.com"
-			},
-			"keyUsage": [
-				"certSign",
-				"crlSign"
-			],
-			"extKeyUsage": [
-				"CodeSigning"
-			],
-			"basicConstraints": {
-				"isCA": true,
-				"maxPathLen": 0
-			},
-			"notBefore": "2024-01-01T00:00:00Z",
-			"notAfter": "2025-01-01T00:00:00Z"
-		}`
-
-		// Fulcio intermediate template
-		intermediateContent := `{
-			"subject": {
-				"commonName": "https://blah.com"
-			},
-			"issuer": {
-				"commonName": "https://blah.com"
-			},
-			"keyUsage": [
-				"certSign",
-				"crlSign"
-			],
-			"extKeyUsage": [
-				"CodeSigning"
-			],
-			"basicConstraints": {
-				"isCA": true,
-				"maxPathLen": 0
-			},
-			"notBefore": "2024-01-01T00:00:00Z",
-			"notAfter": "2025-01-01T00:00:00Z"
-		}`
-
-		testCertificateCreation(t, tmpDir, rootContent, intermediateContent)
-	})
-
 	t.Run("TSA", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "cert-test-tsa-*")
 		require.NoError(t, err)
 		t.Cleanup(func() { os.RemoveAll(tmpDir) })
 
-		// Root template (same for both)
+		// root template (same for both)
 		rootContent := `{
 			"subject": {
-				"commonName": "https://blah.com"
+				"country": ["US"],
+				"organization": ["Sigstore"],
+				"organizationalUnit": ["Timestamp Authority Root CA"],
+				"commonName": "https://tsa.com"
 			},
 			"issuer": {
-				"commonName": "https://blah.com"
-			},
-			"keyUsage": [
-				"certSign",
-				"crlSign"
-			],
-			"extKeyUsage": [
-				"CodeSigning"
-			],
-			"basicConstraints": {
-				"isCA": true,
-				"maxPathLen": 0
+				"commonName": "https://tsa.com"
 			},
 			"notBefore": "2024-01-01T00:00:00Z",
-			"notAfter": "2025-01-01T00:00:00Z"
-		}`
-
-		// TSA intermediate template
-		intermediateContent := `{
-			"subject": {
-				"commonName": "https://blah.com"
-			},
-			"issuer": {
-				"commonName": "https://blah.com"
+			"notAfter": "2034-01-01T00:00:00Z",
+			"basicConstraints": {
+				"isCA": true,
+				"maxPathLen": 1
 			},
 			"keyUsage": [
 				"certSign",
 				"crlSign"
-			],
-			"basicConstraints": {
-				"isCA": false
+			]
+		}`
+
+		// leaf template
+		leafContent := `{
+			"subject": {
+				"country": ["US"],
+				"organization": ["Sigstore"],
+				"organizationalUnit": ["Timestamp Authority"],
+				"commonName": "https://tsa.com"
 			},
+			"issuer": {
+				"commonName": "https://tsa.com"
+			},
+			"notBefore": "2024-01-01T00:00:00Z",
+			"notAfter": "2034-01-01T00:00:00Z",
+			"basicConstraints": {
+				"isCA": false,
+				"maxPathLen": 0
+			},
+			"keyUsage": [
+				"digitalSignature"
+			],
 			"extensions": [
 				{
 					"id": "2.5.29.37",
 					"critical": true,
-					"value": "asn1Seq (asn1Enc oid:1.3.6.1.5.5.7.3.8) | toJson"
+					"value": {{ asn1Seq (asn1Enc "oid:1.3.6.1.5.5.7.3.8") | toJson }}
 				}
-			],
-			"notBefore": "2024-01-01T00:00:00Z",
-			"notAfter": "2025-01-01T00:00:00Z"
+			]
 		}`
 
-		testCertificateCreation(t, tmpDir, rootContent, intermediateContent)
+		testCertificateCreation(t, tmpDir, rootContent, leafContent)
 	})
 }
 
@@ -274,27 +223,27 @@ func TestWriteCertificateToFile(t *testing.T) {
 }
 
 // testCertificateCreation creates and verifies certificate chains
-func testCertificateCreation(t *testing.T, tmpDir, rootContent, intermediateContent string) {
+func testCertificateCreation(t *testing.T, tmpDir, rootContent, leafContent string) {
 	rootTmplPath := filepath.Join(tmpDir, "root-template.json")
-	intermediateTmplPath := filepath.Join(tmpDir, "intermediate-template.json")
+	leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
 	rootCertPath := filepath.Join(tmpDir, "root.pem")
-	intermediateCertPath := filepath.Join(tmpDir, "intermediate.pem")
+	leafCertPath := filepath.Join(tmpDir, "leaf.pem")
 
 	err := os.WriteFile(rootTmplPath, []byte(rootContent), 0600)
 	require.NoError(t, err)
 
-	err = os.WriteFile(intermediateTmplPath, []byte(intermediateContent), 0600)
+	err = os.WriteFile(leafTmplPath, []byte(leafContent), 0600)
 	require.NoError(t, err)
 
 	km := newMockKMS()
 	config := KMSConfig{
-		Type:              "mockkms",
-		RootKeyID:         "root-key",
-		IntermediateKeyID: "intermediate-key",
-		Options:           make(map[string]string),
+		Type:      "mockkms",
+		RootKeyID: "root-key",
+		LeafKeyID: "leaf-key",
+		Options:   make(map[string]string),
 	}
 
-	err = CreateCertificates(km, config, rootTmplPath, intermediateTmplPath, rootCertPath, intermediateCertPath)
+	err = CreateCertificates(km, config, rootTmplPath, leafTmplPath, rootCertPath, leafCertPath)
 	require.NoError(t, err)
 }
 
@@ -307,9 +256,9 @@ func TestValidateKMSConfig(t *testing.T) {
 		{
 			name: "valid azure config",
 			config: KMSConfig{
-				Type:              "azurekms",
-				RootKeyID:         "root-key",
-				IntermediateKeyID: "intermediate-key",
+				Type:      "azurekms",
+				RootKeyID: "root-key",
+				LeafKeyID: "leaf-key",
 				Options: map[string]string{
 					"vault-name": "test-vault",
 					"tenant-id":  "test-tenant",
