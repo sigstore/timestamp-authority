@@ -21,8 +21,7 @@ import (
 	"go.step.sm/crypto/x509util"
 )
 
-// CertificateTemplate defines the JSON structure for X.509 certificate templates
-// including subject, issuer, validity period, and certificate constraints.
+// CertificateTemplate defines the structure for the JSON certificate templates
 type CertificateTemplate struct {
 	Subject struct {
 		Country            []string `json:"country,omitempty"`
@@ -88,8 +87,6 @@ func ParseTemplate(filename string, parent *x509.Certificate) (*x509.Certificate
 }
 
 // ValidateTemplate performs validation checks on the certificate template.
-// CA certs: verifies proper key usage is set.
-// non-CA certs: verifies digitalSignature usage is set.
 func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error {
 	if tmpl.Subject.CommonName == "" {
 		return fmt.Errorf("template subject.commonName cannot be empty")
@@ -147,9 +144,7 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 	return nil
 }
 
-// CreateCertificateFromTemplate generates an x509.Certificate from the provided template
-// applying all specified attributes including subject, issuer, validity period,
-// constraints and extensions.
+// CreateCertificateFromTemplate creates an x509.Certificate from the provided template
 func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) (*x509.Certificate, error) {
 	notBefore, err := time.Parse(time.RFC3339, tmpl.NotBefore)
 	if err != nil {
@@ -189,7 +184,7 @@ func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certi
 
 	SetKeyUsages(cert, tmpl.KeyUsage)
 
-	// Sets extensions
+	// Sets extensions (e.g. Timestamping)
 	for _, ext := range tmpl.Extensions {
 		var oid []int
 		for _, n := range strings.Split(ext.ID, ".") {
