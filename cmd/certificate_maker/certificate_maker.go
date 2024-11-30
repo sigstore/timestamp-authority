@@ -38,7 +38,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use:     "tsa-certificate-maker",
 		Short:   "Create certificate chains for Timestamp Authority",
-		Long:    `A tool for creating root and leaf certificates for Timestamp Authority with timestamping capabilities`,
+		Long:    `A tool for creating root, intermediate, and leaf certificates for Timestamp Authority with timestamping capabilities`,
 		Version: version,
 	}
 
@@ -48,18 +48,20 @@ var (
 		RunE:  runCreate,
 	}
 
-	kmsType          string
-	kmsRegion        string
-	kmsKeyID         string
-	kmsVaultName     string
-	kmsTenantID      string
-	kmsCredsFile     string
-	rootTemplatePath string
-	leafTemplatePath string
-	rootKeyID        string
-	leafKeyID        string
-	rootCertPath     string
-	leafCertPath     string
+	kmsType              string
+	kmsRegion            string
+	kmsKeyID             string
+	kmsTenantID          string
+	kmsCredsFile         string
+	rootTemplatePath     string
+	leafTemplatePath     string
+	rootKeyID            string
+	leafKeyID            string
+	rootCertPath         string
+	leafCertPath         string
+	intermediateKeyID    string
+	intermediateTemplate string
+	intermediateCert     string
 
 	rawJSON = []byte(`{
 		"level": "debug",
@@ -85,7 +87,6 @@ func init() {
 	createCmd.Flags().StringVar(&kmsType, "kms-type", "", "KMS provider type (awskms, cloudkms, azurekms)")
 	createCmd.Flags().StringVar(&kmsRegion, "kms-region", "", "KMS region")
 	createCmd.Flags().StringVar(&kmsKeyID, "kms-key-id", "", "KMS key identifier")
-	createCmd.Flags().StringVar(&kmsVaultName, "kms-vault-name", "", "Azure KMS vault name")
 	createCmd.Flags().StringVar(&kmsTenantID, "kms-tenant-id", "", "Azure KMS tenant ID")
 	createCmd.Flags().StringVar(&kmsCredsFile, "kms-credentials-file", "", "Path to credentials file (for Google Cloud KMS)")
 	createCmd.Flags().StringVar(&rootTemplatePath, "root-template",
@@ -96,19 +97,23 @@ func init() {
 	createCmd.Flags().StringVar(&leafKeyID, "leaf-key-id", "", "KMS key identifier for leaf certificate")
 	createCmd.Flags().StringVar(&rootCertPath, "root-cert", "root.pem", "Output path for root certificate")
 	createCmd.Flags().StringVar(&leafCertPath, "leaf-cert", "leaf.pem", "Output path for leaf certificate")
+	createCmd.Flags().StringVar(&intermediateKeyID, "intermediate-key-id", "", "KMS key identifier for intermediate certificate")
+	createCmd.Flags().StringVar(&intermediateTemplate, "intermediate-template", "pkg/certmaker/templates/intermediate-template.json", "Path to intermediate certificate template")
+	createCmd.Flags().StringVar(&intermediateCert, "intermediate-cert", "intermediate.pem", "Output path for intermediate certificate")
 }
 
-func runCreate(cmd *cobra.Command, args []string) error {
+func runCreate(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Build KMS config from flags and environment
 	config := certmaker.KMSConfig{
-		Type:      getConfigValue(kmsType, "KMS_TYPE"),
-		Region:    getConfigValue(kmsRegion, "KMS_REGION"),
-		RootKeyID: getConfigValue(rootKeyID, "KMS_ROOT_KEY_ID"),
-		LeafKeyID: getConfigValue(leafKeyID, "KMS_LEAF_KEY_ID"),
-		Options:   make(map[string]string),
+		Type:              getConfigValue(kmsType, "KMS_TYPE"),
+		Region:            getConfigValue(kmsRegion, "KMS_REGION"),
+		RootKeyID:         getConfigValue(rootKeyID, "KMS_ROOT_KEY_ID"),
+		IntermediateKeyID: getConfigValue(intermediateKeyID, "KMS_INTERMEDIATE_KEY_ID"),
+		LeafKeyID:         getConfigValue(leafKeyID, "KMS_LEAF_KEY_ID"),
+		Options:           make(map[string]string),
 	}
 
 	// Handle KMS provider options
@@ -118,9 +123,6 @@ func runCreate(cmd *cobra.Command, args []string) error {
 			config.Options["credentials-file"] = credsFile
 		}
 	case "azurekms":
-		if vaultName := getConfigValue(kmsVaultName, "KMS_VAULT_NAME"); vaultName != "" {
-			config.Options["vault-name"] = vaultName
-		}
 		if tenantID := getConfigValue(kmsTenantID, "KMS_TENANT_ID"); tenantID != "" {
 			config.Options["tenant-id"] = tenantID
 		}
@@ -139,7 +141,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("leaf template error: %w", err)
 	}
 
-	return certmaker.CreateCertificates(km, config, rootTemplatePath, leafTemplatePath, rootCertPath, leafCertPath)
+	return certmaker.CreateCertificates(km, config, rootTemplatePath, leafTemplatePath, rootCertPath, leafCertPath, intermediateKeyID, intermediateTemplate, intermediateCert)
 }
 
 func main() {
