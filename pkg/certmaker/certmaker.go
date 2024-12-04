@@ -14,7 +14,7 @@
 //
 
 // Package certmaker implements a certificate creation utility for Timestamp Authority.
-// It supports creating root and intermediate certificates using (AWS, GCP, Azure).
+// It supports creating root, intermediate, and leaf certs using (AWS, GCP, Azure).
 package certmaker
 
 import (
