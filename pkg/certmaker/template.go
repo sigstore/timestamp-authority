@@ -1,7 +1,20 @@
+// Copyright 2024 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 // Package certmaker provides template parsing and certificate generation functionality
-// for creating X.509 certificates from JSON templates per RFC3161 standards. It supports both root and
-// intermediate certificate creation with configurable properties including key usage,
-// extended key usage, and basic constraints.
+// for creating X.509 certificates from JSON templates per RFC3161 standards.
 package certmaker
 
 import (
@@ -88,10 +101,21 @@ func ParseTemplate(filename string, parent *x509.Certificate) (*x509.Certificate
 
 // ValidateTemplate performs validation checks on the certificate template.
 func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error {
+	if tmpl.NotBefore == "" {
+		return fmt.Errorf("notBefore time must be specified")
+	}
+	if tmpl.NotAfter == "" {
+		return fmt.Errorf("notAfter time must be specified")
+	}
+	if _, err := time.Parse(time.RFC3339, tmpl.NotBefore); err != nil {
+		return fmt.Errorf("invalid notBefore time format: %w", err)
+	}
+	if _, err := time.Parse(time.RFC3339, tmpl.NotAfter); err != nil {
+		return fmt.Errorf("invalid notAfter time format: %w", err)
+	}
 	if tmpl.Subject.CommonName == "" {
 		return fmt.Errorf("template subject.commonName cannot be empty")
 	}
-
 	if parent == nil && tmpl.Issuer.CommonName == "" {
 		return fmt.Errorf("template issuer.commonName cannot be empty for root certificate")
 	}
@@ -139,6 +163,12 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 				return fmt.Errorf("invalid OID component in extension: %s", ext.ID)
 			}
 		}
+	}
+
+	notBefore, _ := time.Parse(time.RFC3339, tmpl.NotBefore)
+	notAfter, _ := time.Parse(time.RFC3339, tmpl.NotAfter)
+	if notBefore.After(notAfter) {
+		return fmt.Errorf("NotBefore time must be before NotAfter time")
 	}
 
 	return nil
