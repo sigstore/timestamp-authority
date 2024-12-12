@@ -147,35 +147,35 @@ func TestValidateKMSConfig(t *testing.T) {
 		{
 			name: "GCP KMS invalid root key ID",
 			config: KMSConfig{
-				Type:      "cloudkms",
+				Type:      "gcpkms",
 				RootKeyID: "invalid-key-id",
 			},
-			wantError: "cloudkms RootKeyID must start with 'projects/'",
+			wantError: "gcpkms RootKeyID must start with 'projects/'",
 		},
 		{
 			name: "GCP KMS invalid intermediate key ID",
 			config: KMSConfig{
-				Type:              "cloudkms",
+				Type:              "gcpkms",
 				RootKeyID:         "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key",
 				IntermediateKeyID: "invalid-key-id",
 			},
-			wantError: "cloudkms IntermediateKeyID must start with 'projects/'",
+			wantError: "gcpkms IntermediateKeyID must start with 'projects/'",
 		},
 		{
 			name: "GCP KMS invalid leaf key ID",
 			config: KMSConfig{
-				Type:      "cloudkms",
+				Type:      "gcpkms",
 				LeafKeyID: "invalid-key-id",
 			},
-			wantError: "cloudkms LeafKeyID must start with 'projects/'",
+			wantError: "gcpkms LeafKeyID must start with 'projects/'",
 		},
 		{
 			name: "GCP KMS missing required parts",
 			config: KMSConfig{
-				Type:      "cloudkms",
+				Type:      "gcpkms",
 				RootKeyID: "projects/my-project",
 			},
-			wantError: "invalid cloudkms key format",
+			wantError: "invalid gcpkms key format",
 		},
 		{
 			name: "Azure KMS missing tenant ID",
@@ -261,7 +261,7 @@ func TestValidateKMSConfig(t *testing.T) {
 			LeafKeyID: "alias/my-key",
 		},
 		{
-			Type:      "cloudkms",
+			Type:      "gcpkms",
 			RootKeyID: "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key",
 		},
 		{
@@ -636,7 +636,7 @@ func TestInitKMS(t *testing.T) {
 		{
 			name: "GCP KMS",
 			config: KMSConfig{
-				Type:      "cloudkms",
+				Type:      "gcpkms",
 				RootKeyID: "test-key",
 				Options: map[string]string{
 					"credentials-file": "/path/to/credentials.json",
