@@ -64,7 +64,8 @@ func InitKMS(ctx context.Context, config KMSConfig) (apiv1.KeyManager, error) {
 	case "awskms":
 		opts.URI = fmt.Sprintf("awskms:///%s?region=%s", keyID, config.Region)
 		return awskms.New(ctx, opts)
-	case "cloudkms":
+	case "gcpkms":
+		opts.Type = apiv1.Type("cloudkms")
 		opts.URI = fmt.Sprintf("cloudkms:%s", keyID)
 		if credFile, ok := config.Options["credentials-file"]; ok {
 			if _, err := os.Stat(credFile); err != nil {
@@ -77,7 +78,7 @@ func InitKMS(ctx context.Context, config KMSConfig) (apiv1.KeyManager, error) {
 		}
 		km, err := cloudkms.New(ctx, opts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize Cloud KMS: %w", err)
+			return nil, fmt.Errorf("failed to initialize GCP KMS: %w", err)
 		}
 		return km, nil
 	case "azurekms":
@@ -242,17 +243,17 @@ func ValidateKMSConfig(config KMSConfig) error {
 			return err
 		}
 
-	case "cloudkms":
+	case "gcpkms":
 		// GCP KMS validation
 		validateGCPKeyID := func(keyID, keyType string) error {
 			if keyID == "" {
 				return nil
 			}
 			if !strings.HasPrefix(keyID, "projects/") {
-				return fmt.Errorf("cloudkms %s must start with 'projects/'", keyType)
+				return fmt.Errorf("gcpkms %s must start with 'projects/'", keyType)
 			}
 			if !strings.Contains(keyID, "/locations/") || !strings.Contains(keyID, "/keyRings/") {
-				return fmt.Errorf("invalid cloudkms key format for %s: %s", keyType, keyID)
+				return fmt.Errorf("invalid gcpkms key format for %s: %s", keyType, keyID)
 			}
 			return nil
 		}
