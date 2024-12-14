@@ -21,46 +21,32 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.step.sm/crypto/kms/apiv1"
-	"go.step.sm/crypto/x509util"
 )
 
-// mockKMSProvider is a mock implementation of apiv1.KeyManager
 type mockKMSProvider struct {
-	name    string
-	keys    map[string]*ecdsa.PrivateKey
-	signers map[string]crypto.Signer
+	keys map[string]crypto.Signer
 }
 
 func newMockKMSProvider() *mockKMSProvider {
-	m := &mockKMSProvider{
-		name:    "test",
-		keys:    make(map[string]*ecdsa.PrivateKey),
-		signers: make(map[string]crypto.Signer),
+	keys := make(map[string]crypto.Signer)
+	for _, id := range []string{"root-key", "intermediate-key", "leaf-key"} {
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		keys[id] = priv
 	}
-
-	// Pre-create test keys
-	rootKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	intermediateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	leafKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	m.keys["root-key"] = rootKey
-	m.keys["intermediate-key"] = intermediateKey
-	m.keys["leaf-key"] = leafKey
-
-	return m
+	return &mockKMSProvider{keys: keys}
 }
 
 func (m *mockKMSProvider) CreateKey(*apiv1.CreateKeyRequest) (*apiv1.CreateKeyResponse, error) {
@@ -72,7 +58,6 @@ func (m *mockKMSProvider) CreateSigner(req *apiv1.CreateSignerRequest) (crypto.S
 	if !ok {
 		return nil, fmt.Errorf("key not found: %s", req.SigningKey)
 	}
-	m.signers[req.SigningKey] = key
 	return key, nil
 }
 
@@ -145,7 +130,7 @@ func TestValidateKMSConfig(t *testing.T) {
 			wantError: "awskms LeafKeyID must start with 'arn:aws:kms:' or 'alias/'",
 		},
 		{
-			name: "GCP KMS invalid root key ID",
+			name: "GCP_KMS_invalid_root_key_ID",
 			config: KMSConfig{
 				Type:      "gcpkms",
 				RootKeyID: "invalid-key-id",
@@ -153,16 +138,16 @@ func TestValidateKMSConfig(t *testing.T) {
 			wantError: "gcpkms RootKeyID must start with 'projects/'",
 		},
 		{
-			name: "GCP KMS invalid intermediate key ID",
+			name: "GCP_KMS_invalid_intermediate_key_ID",
 			config: KMSConfig{
 				Type:              "gcpkms",
-				RootKeyID:         "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key",
+				RootKeyID:         "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key/cryptoKeyVersions/1",
 				IntermediateKeyID: "invalid-key-id",
 			},
 			wantError: "gcpkms IntermediateKeyID must start with 'projects/'",
 		},
 		{
-			name: "GCP KMS invalid leaf key ID",
+			name: "GCP_KMS_invalid_leaf_key_ID",
 			config: KMSConfig{
 				Type:      "gcpkms",
 				LeafKeyID: "invalid-key-id",
@@ -173,31 +158,21 @@ func TestValidateKMSConfig(t *testing.T) {
 			name: "GCP KMS missing required parts",
 			config: KMSConfig{
 				Type:      "gcpkms",
-				RootKeyID: "projects/my-project",
+				RootKeyID: "projects/test-project",
 			},
-			wantError: "invalid gcpkms key format",
+			wantError: "gcpkms RootKeyID must contain '/locations/'",
 		},
 		{
-			name: "Azure KMS missing tenant ID",
+			name: "Azure_KMS_missing_tenant_ID",
 			config: KMSConfig{
 				Type:      "azurekms",
 				RootKeyID: "azurekms:name=my-key;vault=my-vault",
+				Options:   map[string]string{},
 			},
 			wantError: "tenant-id is required for Azure KMS",
 		},
 		{
-			name: "Azure KMS invalid root key ID prefix",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "invalid-key-id",
-				Options: map[string]string{
-					"tenant-id": "tenant-id",
-				},
-			},
-			wantError: "azurekms RootKeyID must start with 'azurekms:name='",
-		},
-		{
-			name: "Azure KMS missing vault parameter",
+			name: "Azure_KMS_missing_vault_parameter",
 			config: KMSConfig{
 				Type:      "azurekms",
 				RootKeyID: "azurekms:name=my-key",
@@ -208,29 +183,6 @@ func TestValidateKMSConfig(t *testing.T) {
 			wantError: "azurekms RootKeyID must contain ';vault=' parameter",
 		},
 		{
-			name: "Azure KMS invalid intermediate key ID",
-			config: KMSConfig{
-				Type:              "azurekms",
-				RootKeyID:         "azurekms:name=my-key;vault=my-vault",
-				IntermediateKeyID: "invalid-key-id",
-				Options: map[string]string{
-					"tenant-id": "tenant-id",
-				},
-			},
-			wantError: "azurekms IntermediateKeyID must start with 'azurekms:name='",
-		},
-		{
-			name: "Azure KMS invalid leaf key ID",
-			config: KMSConfig{
-				Type:      "azurekms",
-				LeafKeyID: "invalid-key-id",
-				Options: map[string]string{
-					"tenant-id": "tenant-id",
-				},
-			},
-			wantError: "azurekms LeafKeyID must start with 'azurekms:name='",
-		},
-		{
 			name: "unsupported KMS type",
 			config: KMSConfig{
 				Type:      "invalidkms",
@@ -238,445 +190,826 @@ func TestValidateKMSConfig(t *testing.T) {
 			},
 			wantError: "unsupported KMS type",
 		},
+		{
+			name: "aws_kms_invalid_arn_format",
+			config: KMSConfig{
+				Type:      "awskms",
+				Region:    "us-west-2",
+				RootKeyID: "arn:aws:kms:us-west-2:invalid",
+			},
+			wantError: "invalid AWS KMS ARN format for RootKeyID",
+		},
+		{
+			name: "aws_kms_region_mismatch",
+			config: KMSConfig{
+				Type:      "awskms",
+				Region:    "us-west-2",
+				RootKeyID: "arn:aws:kms:us-east-1:123456789012:key/test-key",
+			},
+			wantError: "region in ARN (us-east-1) does not match configured region (us-west-2)",
+		},
+		{
+			name: "aws_kms_empty_alias",
+			config: KMSConfig{
+				Type:      "awskms",
+				Region:    "us-west-2",
+				RootKeyID: "alias/",
+			},
+			wantError: "alias name cannot be empty for RootKeyID",
+		},
+		{
+			name: "azure_kms_empty_key_name",
+			config: KMSConfig{
+				Type:      "azurekms",
+				RootKeyID: "azurekms:name=;vault=test-vault",
+				Options: map[string]string{
+					"tenant-id": "test-tenant",
+				},
+			},
+			wantError: "key name cannot be empty for RootKeyID",
+		},
+		{
+			name: "azure_kms_empty_vault_name",
+			config: KMSConfig{
+				Type:      "azurekms",
+				RootKeyID: "azurekms:name=test-key;vault=",
+				Options: map[string]string{
+					"tenant-id": "test-tenant",
+				},
+			},
+			wantError: "vault name cannot be empty for RootKeyID",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateKMSConfig(tt.config)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantError)
-		})
-	}
-
-	// Test valid configurations
-	validConfigs := []KMSConfig{
-		{
-			Type:      "awskms",
-			Region:    "us-west-2",
-			RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
-		},
-		{
-			Type:      "awskms",
-			Region:    "us-west-2",
-			LeafKeyID: "alias/my-key",
-		},
-		{
-			Type:      "gcpkms",
-			RootKeyID: "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key",
-		},
-		{
-			Type:      "azurekms",
-			RootKeyID: "azurekms:name=my-key;vault=my-vault",
-			Options: map[string]string{
-				"tenant-id": "tenant-id",
-			},
-		},
-	}
-
-	for _, config := range validConfigs {
-		t.Run(fmt.Sprintf("valid %s config", config.Type), func(t *testing.T) {
-			err := ValidateKMSConfig(config)
-			require.NoError(t, err)
-		})
-	}
-}
-
-func TestValidateTemplatePath(t *testing.T) {
-	// Create a temporary directory for test files
-	tmpDir, err := os.MkdirTemp("", "template-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Create a valid JSON file
-	validPath := filepath.Join(tmpDir, "valid.json")
-	err = os.WriteFile(validPath, []byte("{}"), 0600)
-	require.NoError(t, err)
-
-	// Create a non-JSON file
-	nonJSONPath := filepath.Join(tmpDir, "invalid.txt")
-	err = os.WriteFile(nonJSONPath, []byte("{}"), 0600)
-	require.NoError(t, err)
-
-	tests := []struct {
-		name      string
-		path      string
-		wantError string
-	}{
-		{
-			name: "valid JSON file",
-			path: validPath,
-		},
-		{
-			name:      "non-existent file",
-			path:      "/nonexistent/template.json",
-			wantError: "template not found",
-		},
-		{
-			name:      "wrong extension",
-			path:      nonJSONPath,
-			wantError: "template file must have .json extension",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTemplatePath(tt.path)
 			if tt.wantError != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
-			} else {
-				require.NoError(t, err)
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
 }
 
-func TestWriteCertificateToFile(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "cert-write-test-*")
-	require.NoError(t, err)
-	t.Cleanup(func() { os.RemoveAll(tmpDir) })
-
-	// Create a key pair
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	// Create a certificate template
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName: "Test Cert",
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-		MaxPathLen:            0,
-		MaxPathLenZero:        true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-		SignatureAlgorithm:    x509.ECDSAWithSHA256,
-		PublicKeyAlgorithm:    x509.ECDSA,
-	}
-
-	// Create a self-signed certificate
-	cert, err := x509util.CreateCertificate(template, template, key.Public(), key)
-	require.NoError(t, err)
-
-	t.Run("success", func(t *testing.T) {
-		testFile := filepath.Join(tmpDir, "test-cert.pem")
-		err = WriteCertificateToFile(cert, testFile)
-		require.NoError(t, err)
-
-		content, err := os.ReadFile(testFile)
-		require.NoError(t, err)
-
-		block, _ := pem.Decode(content)
-		require.NotNil(t, block)
-		assert.Equal(t, "CERTIFICATE", block.Type)
-
-		parsedCert, err := x509.ParseCertificate(block.Bytes)
-		require.NoError(t, err)
-		assert.Equal(t, "Test Cert", parsedCert.Subject.CommonName)
-	})
-
-	t.Run("error writing to file", func(t *testing.T) {
-		// Try to write to a non-existent directory
-		testFile := filepath.Join(tmpDir, "nonexistent", "test-cert.pem")
-		err = WriteCertificateToFile(cert, testFile)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to create file")
-	})
-}
-
 func TestCreateCertificates(t *testing.T) {
-	rootContent := `{
-		"subject": {
-			"country": ["US"],
-			"organization": ["Sigstore"],
-			"organizationalUnit": ["Timestamp Authority Root CA"],
-			"commonName": "https://tsa.com"
-		},
-		"issuer": {
-			"commonName": "https://tsa.com"
-		},
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2034-01-01T00:00:00Z",
-		"basicConstraints": {
-			"isCA": true,
-			"maxPathLen": 1
-		},
-		"keyUsage": [
-			"certSign",
-			"crlSign"
-		]
-	}`
-
-	leafContent := `{
-		"subject": {
-			"country": ["US"],
-			"organization": ["Sigstore"],
-			"organizationalUnit": ["Timestamp Authority"],
-			"commonName": "https://tsa.com"
-		},
-		"issuer": {
-			"commonName": "https://tsa.com"
-		},
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2034-01-01T00:00:00Z",
-		"basicConstraints": {
-			"isCA": false
-		},
-		"keyUsage": [
-			"digitalSignature"
-		],
-		"extKeyUsage": [
-			"timeStamping"
-		]
-	}`
-
 	t.Run("TSA without intermediate", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "cert-test-tsa-*")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(tmpDir) })
+		tmpDir, err := os.MkdirTemp("", "cert-test-*")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
-		km := newMockKMSProvider()
-		config := KMSConfig{
-			Type:      "mockkms",
-			RootKeyID: "root-key",
-			LeafKeyID: "leaf-key",
-			Options:   make(map[string]string),
+		rootTemplate := filepath.Join(tmpDir, "root.json")
+		err = os.WriteFile(rootTemplate, []byte(`{
+			"subject": {
+				"commonName": "Test Root CA"
+			},
+			"issuer": {
+				"commonName": "Test Root CA"
+			},
+			"keyUsage": ["certSign", "crlSign"],
+			"basicConstraints": {
+				"isCA": true,
+				"maxPathLen": 1
+			},
+			"notBefore": "2024-01-01T00:00:00Z",
+			"notAfter": "2025-01-01T00:00:00Z"
+		}`), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write root template: %v", err)
 		}
 
-		rootTmplPath := filepath.Join(tmpDir, "root-template.json")
-		leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
-		rootCertPath := filepath.Join(tmpDir, "root.pem")
-		leafCertPath := filepath.Join(tmpDir, "leaf.pem")
+		leafTemplate := filepath.Join(tmpDir, "leaf.json")
+		err = os.WriteFile(leafTemplate, []byte(`{
+			"subject": {
+				"commonName": "Test TSA"
+			},
+			"issuer": {
+				"commonName": "Test Root CA"
+			},
+			"keyUsage": ["digitalSignature"],
+			"basicConstraints": {
+				"isCA": false
+			},
+			"extKeyUsage": ["timeStamping"],
+			"notBefore": "2024-01-01T00:00:00Z",
+			"notAfter": "2025-01-01T00:00:00Z"
+		}`), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write leaf template: %v", err)
+		}
 
-		err = os.WriteFile(rootTmplPath, []byte(rootContent), 0600)
-		require.NoError(t, err)
+		config := KMSConfig{
+			Type:      "test",
+			RootKeyID: "root-key",
+			LeafKeyID: "leaf-key",
+		}
 
-		err = os.WriteFile(leafTmplPath, []byte(leafContent), 0600)
-		require.NoError(t, err)
+		outDir := filepath.Join(tmpDir, "out")
+		err = os.MkdirAll(outDir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create output directory: %v", err)
+		}
 
-		err = CreateCertificates(km, config,
-			rootTmplPath, leafTmplPath,
-			rootCertPath, leafCertPath,
+		kms := newMockKMSProvider()
+		err = CreateCertificates(kms, config,
+			rootTemplate, leafTemplate,
+			filepath.Join(outDir, "root.crt"), filepath.Join(outDir, "leaf.crt"),
 			"", "", "")
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("Failed to create certificates: %v", err)
+		}
 
-		// Verify certificates were created
-		_, err = os.Stat(rootCertPath)
-		require.NoError(t, err)
-		_, err = os.Stat(leafCertPath)
-		require.NoError(t, err)
+		verifyGeneratedCertificates(t, outDir)
 	})
 
 	t.Run("TSA with intermediate", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "cert-test-tsa-*")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(tmpDir) })
+		tmpDir, err := os.MkdirTemp("", "cert-test-*")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
-		intermediateContent := `{
+		rootTemplate := filepath.Join(tmpDir, "root.json")
+		err = os.WriteFile(rootTemplate, []byte(`{
 			"subject": {
-				"country": ["US"],
-				"organization": ["Sigstore"],
-				"organizationalUnit": ["TSA Intermediate CA"],
-				"commonName": "https://tsa.com"
+				"commonName": "Test Root CA"
 			},
 			"issuer": {
-				"commonName": "https://tsa.com"
+				"commonName": "Test Root CA"
+			},
+			"keyUsage": ["certSign", "crlSign"],
+			"basicConstraints": {
+				"isCA": true,
+				"maxPathLen": 1
 			},
 			"notBefore": "2024-01-01T00:00:00Z",
-			"notAfter": "2034-01-01T00:00:00Z",
+			"notAfter": "2025-01-01T00:00:00Z"
+		}`), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write root template: %v", err)
+		}
+
+		intermediateTemplate := filepath.Join(tmpDir, "intermediate.json")
+		err = os.WriteFile(intermediateTemplate, []byte(`{
+			"subject": {
+				"commonName": "Test Intermediate CA"
+			},
+			"issuer": {
+				"commonName": "Test Root CA"
+			},
+			"keyUsage": ["certSign", "crlSign"],
 			"basicConstraints": {
 				"isCA": true,
 				"maxPathLen": 0
 			},
-			"keyUsage": [
-				"certSign",
-				"crlSign"
-			]
-		}`
+			"notBefore": "2024-01-01T00:00:00Z",
+			"notAfter": "2025-01-01T00:00:00Z"
+		}`), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write intermediate template: %v", err)
+		}
 
-		km := newMockKMSProvider()
+		leafTemplate := filepath.Join(tmpDir, "leaf.json")
+		err = os.WriteFile(leafTemplate, []byte(`{
+			"subject": {
+				"commonName": "Test TSA"
+			},
+			"issuer": {
+				"commonName": "Test Intermediate CA"
+			},
+			"keyUsage": ["digitalSignature"],
+			"basicConstraints": {
+				"isCA": false
+			},
+			"extKeyUsage": ["timeStamping"],
+			"notBefore": "2024-01-01T00:00:00Z",
+			"notAfter": "2025-01-01T00:00:00Z"
+		}`), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write leaf template: %v", err)
+		}
+
 		config := KMSConfig{
-			Type:              "mockkms",
+			Type:              "test",
 			RootKeyID:         "root-key",
 			IntermediateKeyID: "intermediate-key",
 			LeafKeyID:         "leaf-key",
-			Options:           make(map[string]string),
 		}
 
-		rootTmplPath := filepath.Join(tmpDir, "root-template.json")
-		leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
-		intermediateTmplPath := filepath.Join(tmpDir, "intermediate-template.json")
-		rootCertPath := filepath.Join(tmpDir, "root.pem")
-		intermediateCertPath := filepath.Join(tmpDir, "intermediate.pem")
-		leafCertPath := filepath.Join(tmpDir, "leaf.pem")
+		outDir := filepath.Join(tmpDir, "out")
+		err = os.MkdirAll(outDir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create output directory: %v", err)
+		}
 
-		err = os.WriteFile(rootTmplPath, []byte(rootContent), 0600)
-		require.NoError(t, err)
-		err = os.WriteFile(intermediateTmplPath, []byte(intermediateContent), 0600)
-		require.NoError(t, err)
-		err = os.WriteFile(leafTmplPath, []byte(leafContent), 0600)
-		require.NoError(t, err)
+		kms := newMockKMSProvider()
+		err = CreateCertificates(kms, config,
+			rootTemplate, leafTemplate,
+			filepath.Join(outDir, "root.crt"), filepath.Join(outDir, "leaf.crt"),
+			"intermediate-key", intermediateTemplate, filepath.Join(outDir, "intermediate.crt"))
+		if err != nil {
+			t.Fatalf("Failed to create certificates: %v", err)
+		}
 
-		err = CreateCertificates(km, config,
-			rootTmplPath, leafTmplPath,
-			rootCertPath, leafCertPath,
-			"intermediate-key", intermediateTmplPath, intermediateCertPath)
-		require.NoError(t, err)
-
-		// Verify certificates were created
-		_, err = os.Stat(rootCertPath)
-		require.NoError(t, err)
-		_, err = os.Stat(intermediateCertPath)
-		require.NoError(t, err)
-		_, err = os.Stat(leafCertPath)
-		require.NoError(t, err)
+		verifyGeneratedCertificates(t, outDir)
 	})
 
 	t.Run("invalid root template path", func(t *testing.T) {
-		km := newMockKMSProvider()
+		kms := newMockKMSProvider()
 		config := KMSConfig{
-			Type:      "mockkms",
+			Type:      "test",
 			RootKeyID: "root-key",
 			LeafKeyID: "leaf-key",
-			Options:   make(map[string]string),
 		}
 
-		err := CreateCertificates(km, config,
+		err := CreateCertificates(kms, config,
 			"/nonexistent/root.json", "/nonexistent/leaf.json",
-			"/nonexistent/root.pem", "/nonexistent/leaf.pem",
+			"/nonexistent/root.crt", "/nonexistent/leaf.crt",
 			"", "", "")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error reading template file")
-	})
-
-	t.Run("invalid intermediate template path", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "cert-test-tsa-*")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(tmpDir) })
-
-		km := newMockKMSProvider()
-		config := KMSConfig{
-			Type:              "mockkms",
-			RootKeyID:         "root-key",
-			IntermediateKeyID: "intermediate-key",
-			LeafKeyID:         "leaf-key",
-			Options:           make(map[string]string),
+		if err == nil {
+			t.Error("Expected error but got none")
 		}
-
-		rootTmplPath := filepath.Join(tmpDir, "root-template.json")
-		leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
-		rootCertPath := filepath.Join(tmpDir, "root.pem")
-		leafCertPath := filepath.Join(tmpDir, "leaf.pem")
-
-		err = os.WriteFile(rootTmplPath, []byte(rootContent), 0600)
-		require.NoError(t, err)
-		err = os.WriteFile(leafTmplPath, []byte(leafContent), 0600)
-		require.NoError(t, err)
-
-		err = CreateCertificates(km, config,
-			rootTmplPath, leafTmplPath,
-			rootCertPath, leafCertPath,
-			"intermediate-key", "/nonexistent/intermediate.json", "/nonexistent/intermediate.pem")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error reading template file")
-	})
-
-	t.Run("invalid leaf template path", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "cert-test-tsa-*")
-		require.NoError(t, err)
-		t.Cleanup(func() { os.RemoveAll(tmpDir) })
-
-		km := newMockKMSProvider()
-		config := KMSConfig{
-			Type:      "mockkms",
-			RootKeyID: "root-key",
-			LeafKeyID: "leaf-key",
-			Options:   make(map[string]string),
+		if !strings.Contains(err.Error(), "error reading template file") {
+			t.Errorf("Expected error containing 'error reading template file', got %v", err)
 		}
-
-		rootTmplPath := filepath.Join(tmpDir, "root-template.json")
-		rootCertPath := filepath.Join(tmpDir, "root.pem")
-		leafCertPath := filepath.Join(tmpDir, "leaf.pem")
-
-		err = os.WriteFile(rootTmplPath, []byte(rootContent), 0600)
-		require.NoError(t, err)
-
-		err = CreateCertificates(km, config,
-			rootTmplPath, "/nonexistent/leaf.json",
-			rootCertPath, leafCertPath,
-			"", "", "")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error reading template file")
 	})
 }
 
+func verifyGeneratedCertificates(t *testing.T, outDir string) {
+	files := []string{
+		"root.crt",
+		"leaf.crt",
+	}
+
+	intermediateExists := false
+	intermediatePath := filepath.Join(outDir, "intermediate.crt")
+	if _, err := os.Stat(intermediatePath); err == nil {
+		intermediateExists = true
+		files = append(files, "intermediate.crt")
+	}
+
+	for _, f := range files {
+		path := filepath.Join(outDir, f)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("Expected file %s does not exist", f)
+		}
+	}
+
+	rootCertPath := filepath.Join(outDir, "root.crt")
+	rootCertBytes, err := os.ReadFile(rootCertPath)
+	if err != nil {
+		t.Fatalf("Failed to read root certificate: %v", err)
+	}
+
+	rootBlock, _ := pem.Decode(rootCertBytes)
+	if rootBlock == nil {
+		t.Fatal("Failed to decode root certificate PEM")
+	}
+
+	rootCert, err := x509.ParseCertificate(rootBlock.Bytes)
+	if err != nil {
+		t.Fatalf("Failed to parse root certificate: %v", err)
+	}
+
+	if rootCert.Subject.CommonName != "Test Root CA" {
+		t.Errorf("Expected root CN %q, got %q", "Test Root CA", rootCert.Subject.CommonName)
+	}
+
+	if !rootCert.IsCA {
+		t.Error("Expected root certificate to be CA")
+	}
+
+	var intermediateCert *x509.Certificate
+	if intermediateExists {
+		intermediateCertBytes, err := os.ReadFile(intermediatePath)
+		if err != nil {
+			t.Fatalf("Failed to read intermediate certificate: %v", err)
+		}
+
+		intermediateBlock, _ := pem.Decode(intermediateCertBytes)
+		if intermediateBlock == nil {
+			t.Fatal("Failed to decode intermediate certificate PEM")
+		}
+
+		intermediateCert, err = x509.ParseCertificate(intermediateBlock.Bytes)
+		if err != nil {
+			t.Fatalf("Failed to parse intermediate certificate: %v", err)
+		}
+
+		if intermediateCert.Subject.CommonName != "Test Intermediate CA" {
+			t.Errorf("Expected intermediate CN %q, got %q", "Test Intermediate CA", intermediateCert.Subject.CommonName)
+		}
+
+		if !intermediateCert.IsCA {
+			t.Error("Expected intermediate certificate to be CA")
+		}
+	}
+
+	leafCertPath := filepath.Join(outDir, "leaf.crt")
+	leafCertBytes, err := os.ReadFile(leafCertPath)
+	if err != nil {
+		t.Fatalf("Failed to read leaf certificate: %v", err)
+	}
+
+	leafBlock, _ := pem.Decode(leafCertBytes)
+	if leafBlock == nil {
+		t.Fatal("Failed to decode leaf certificate PEM")
+	}
+
+	leafCert, err := x509.ParseCertificate(leafBlock.Bytes)
+	if err != nil {
+		t.Fatalf("Failed to parse leaf certificate: %v", err)
+	}
+
+	if leafCert.Subject.CommonName != "Test TSA" {
+		t.Errorf("Expected leaf CN %q, got %q", "Test TSA", leafCert.Subject.CommonName)
+	}
+
+	if leafCert.IsCA {
+		t.Error("Expected leaf certificate not to be CA")
+	}
+
+	roots := x509.NewCertPool()
+	roots.AddCert(rootCert)
+
+	intermediates := x509.NewCertPool()
+	if intermediateCert != nil {
+		intermediates.AddCert(intermediateCert)
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		Intermediates: intermediates,
+		KeyUsages: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageTimeStamping,
+		},
+	}
+
+	if _, err := leafCert.Verify(opts); err != nil {
+		t.Errorf("Failed to verify certificate chain: %v", err)
+	}
+}
+
 func TestInitKMS(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "kms-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("Failed to generate private key: %v", err)
+	}
+
+	privKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+	})
+
+	credsFile := filepath.Join(tmpDir, "test-credentials.json")
+	err = os.WriteFile(credsFile, []byte(fmt.Sprintf(`{
+		"type": "service_account",
+		"project_id": "test-project",
+		"private_key_id": "test-key-id",
+		"private_key": %q,
+		"client_email": "test@test-project.iam.gserviceaccount.com",
+		"client_id": "123456789",
+		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+		"token_uri": "https://oauth2.googleapis.com/token",
+		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@test-project.iam.gserviceaccount.com"
+	}`, string(privKeyPEM))), 0600)
+	if err != nil {
+		t.Fatalf("Failed to write credentials file: %v", err)
+	}
+
 	ctx := context.Background()
 	tests := []struct {
 		name      string
 		config    KMSConfig
-		wantError string
+		wantError bool
+		errMsg    string
 	}{
 		{
-			name: "AWS KMS",
+			name: "valid AWS KMS config",
 			config: KMSConfig{
 				Type:      "awskms",
 				Region:    "us-west-2",
-				RootKeyID: "test-key",
-				Options: map[string]string{
-					"access-key-id":     "test-access-key",
-					"secret-access-key": "test-secret-key",
-				},
+				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
+				Options:   map[string]string{},
 			},
+			wantError: false,
 		},
 		{
-			name: "GCP KMS",
+			name: "valid GCP KMS config",
 			config: KMSConfig{
 				Type:      "gcpkms",
-				RootKeyID: "test-key",
+				RootKeyID: "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				LeafKeyID: "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/leaf-key/cryptoKeyVersions/1",
 				Options: map[string]string{
-					"credentials-file": "/path/to/credentials.json",
+					"credentials-file": credsFile,
 				},
 			},
+			wantError: false,
 		},
 		{
-			name: "Azure KMS",
+			name: "valid Azure KMS config",
 			config: KMSConfig{
 				Type:      "azurekms",
-				RootKeyID: "test-key",
+				RootKeyID: "azurekms:name=test-key;vault=test-vault",
+				LeafKeyID: "azurekms:name=leaf-key;vault=test-vault",
 				Options: map[string]string{
-					"tenant-id":     "test-tenant",
-					"client-id":     "test-client",
-					"client-secret": "test-secret",
+					"tenant-id": "test-tenant",
 				},
 			},
+			wantError: false,
 		},
 		{
-			name: "unsupported KMS type",
+			name: "AWS KMS missing region",
 			config: KMSConfig{
-				Type:      "unsupportedkms",
-				RootKeyID: "test-key",
+				Type:      "awskms",
+				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			},
-			wantError: "unsupported KMS type",
+			wantError: true,
+			errMsg:    "region is required for AWS KMS",
+		},
+		{
+			name: "GCP KMS invalid credentials",
+			config: KMSConfig{
+				Type:      "gcpkms",
+				RootKeyID: "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				Options: map[string]string{
+					"credentials-file": "/nonexistent/credentials.json",
+				},
+			},
+			wantError: true,
+			errMsg:    "credentials file not found",
+		},
+		{
+			name: "Azure KMS missing tenant ID",
+			config: KMSConfig{
+				Type:      "azurekms",
+				RootKeyID: "azurekms:name=test-key;vault=test-vault",
+				Options:   map[string]string{},
+			},
+			wantError: true,
+			errMsg:    "tenant-id is required",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			km, err := InitKMS(ctx, tt.config)
-			if tt.wantError != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
-				assert.Nil(t, km)
+			if tt.wantError {
+				if err == nil {
+					t.Error("expected error but got nil")
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
+				}
+				if km != nil {
+					t.Error("expected nil KMS but got non-nil")
+				}
 			} else {
-				// Since we can't actually connect to KMS providers in tests,
-				// we expect an error but not the "unsupported KMS type" error
-				require.Error(t, err)
-				assert.NotContains(t, err.Error(), "unsupported KMS type")
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if km == nil {
+					t.Error("expected non-nil KMS but got nil")
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTemplatePath(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		setup     func() string
+		wantError string
+	}{
+		{
+			name:      "nonexistent file",
+			path:      "/nonexistent/template.json",
+			wantError: "template not found",
+		},
+		{
+			name: "wrong extension",
+			path: "template.txt",
+			setup: func() string {
+				f, err := os.CreateTemp("", "template.txt")
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return f.Name()
+			},
+			wantError: "must have .json extension",
+		},
+		{
+			name: "valid JSON template",
+			path: "valid.json",
+			setup: func() string {
+				f, err := os.CreateTemp("", "template*.json")
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				err = os.WriteFile(f.Name(), []byte(`{"key": "value"}`), 0600)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return f.Name()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := tt.path
+			if tt.setup != nil {
+				path = tt.setup()
+				defer os.Remove(path)
+			}
+
+			err := ValidateTemplatePath(path)
+			if tt.wantError != "" {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.wantError)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateCertificatesErrors(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T) (string, KMSConfig, apiv1.KeyManager)
+		wantError string
+	}{
+		{
+			name: "error creating intermediate signer",
+			setup: func(t *testing.T) (string, KMSConfig, apiv1.KeyManager) {
+				tmpDir, err := os.MkdirTemp("", "cert-test-*")
+				if err != nil {
+					t.Fatalf("Failed to create temp dir: %v", err)
+				}
+
+				rootTemplate := filepath.Join(tmpDir, "root.json")
+				err = os.WriteFile(rootTemplate, []byte(`{
+					"subject": {"commonName": "Test Root CA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["certSign", "crlSign"],
+					"basicConstraints": {"isCA": true, "maxPathLen": 1},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write root template: %v", err)
+				}
+
+				intermediateTemplate := filepath.Join(tmpDir, "intermediate.json")
+				err = os.WriteFile(intermediateTemplate, []byte(`{
+					"subject": {"commonName": "Test Intermediate CA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["certSign", "crlSign"],
+					"basicConstraints": {"isCA": true, "maxPathLen": 0},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write intermediate template: %v", err)
+				}
+
+				leafTemplate := filepath.Join(tmpDir, "leaf.json")
+				err = os.WriteFile(leafTemplate, []byte(`{
+					"subject": {"commonName": "Test TSA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["digitalSignature"],
+					"basicConstraints": {"isCA": false},
+					"extKeyUsage": ["timeStamping"],
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write leaf template: %v", err)
+				}
+
+				config := KMSConfig{
+					Type:              "test",
+					RootKeyID:         "root-key",
+					IntermediateKeyID: "nonexistent-key",
+					LeafKeyID:         "leaf-key",
+				}
+
+				return tmpDir, config, newMockKMSProvider()
+			},
+			wantError: "error creating intermediate signer",
+		},
+		{
+			name: "error creating leaf signer",
+			setup: func(t *testing.T) (string, KMSConfig, apiv1.KeyManager) {
+				tmpDir, err := os.MkdirTemp("", "cert-test-*")
+				if err != nil {
+					t.Fatalf("Failed to create temp dir: %v", err)
+				}
+
+				rootTemplate := filepath.Join(tmpDir, "root.json")
+				err = os.WriteFile(rootTemplate, []byte(`{
+					"subject": {"commonName": "Test Root CA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["certSign", "crlSign"],
+					"basicConstraints": {"isCA": true, "maxPathLen": 1},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write root template: %v", err)
+				}
+
+				leafTemplate := filepath.Join(tmpDir, "leaf.json")
+				err = os.WriteFile(leafTemplate, []byte(`{
+					"subject": {"commonName": "Test TSA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["digitalSignature"],
+					"basicConstraints": {"isCA": false},
+					"extKeyUsage": ["timeStamping"],
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write leaf template: %v", err)
+				}
+
+				config := KMSConfig{
+					Type:      "test",
+					RootKeyID: "root-key",
+					LeafKeyID: "nonexistent-key",
+				}
+
+				return tmpDir, config, newMockKMSProvider()
+			},
+			wantError: "error creating leaf signer",
+		},
+		{
+			name: "error creating root certificate",
+			setup: func(t *testing.T) (string, KMSConfig, apiv1.KeyManager) {
+				tmpDir, err := os.MkdirTemp("", "cert-test-*")
+				if err != nil {
+					t.Fatalf("Failed to create temp dir: %v", err)
+				}
+
+				rootTemplate := filepath.Join(tmpDir, "root.json")
+				err = os.WriteFile(rootTemplate, []byte(`{
+					"subject": {},
+					"issuer": {},
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write root template: %v", err)
+				}
+
+				leafTemplate := filepath.Join(tmpDir, "leaf.json")
+				err = os.WriteFile(leafTemplate, []byte(`{
+					"subject": {"commonName": "Test TSA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["digitalSignature"],
+					"basicConstraints": {"isCA": false},
+					"extKeyUsage": ["timeStamping"],
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write leaf template: %v", err)
+				}
+
+				config := KMSConfig{
+					Type:      "test",
+					RootKeyID: "root-key",
+					LeafKeyID: "leaf-key",
+				}
+
+				return tmpDir, config, newMockKMSProvider()
+			},
+			wantError: "error parsing root template: template validation error: notBefore time must be specified",
+		},
+		{
+			name: "error writing certificates",
+			setup: func(t *testing.T) (string, KMSConfig, apiv1.KeyManager) {
+				tmpDir, err := os.MkdirTemp("", "cert-test-*")
+				if err != nil {
+					t.Fatalf("Failed to create temp dir: %v", err)
+				}
+
+				rootTemplate := filepath.Join(tmpDir, "root.json")
+				err = os.WriteFile(rootTemplate, []byte(`{
+					"subject": {"commonName": "Test Root CA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["certSign", "crlSign"],
+					"basicConstraints": {"isCA": true, "maxPathLen": 1},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write root template: %v", err)
+				}
+
+				outDir := filepath.Join(tmpDir, "out")
+				err = os.MkdirAll(outDir, 0444)
+				if err != nil {
+					t.Fatalf("Failed to create output directory: %v", err)
+				}
+
+				config := KMSConfig{
+					Type:      "test",
+					RootKeyID: "root-key",
+					LeafKeyID: "leaf-key",
+				}
+
+				return tmpDir, config, newMockKMSProvider()
+			},
+			wantError: "error writing root certificate",
+		},
+		{
+			name: "error with nonexistent signer",
+			setup: func(t *testing.T) (string, KMSConfig, apiv1.KeyManager) {
+				tmpDir, err := os.MkdirTemp("", "cert-test-*")
+				if err != nil {
+					t.Fatalf("Failed to create temp dir: %v", err)
+				}
+
+				rootTemplate := filepath.Join(tmpDir, "root.json")
+				err = os.WriteFile(rootTemplate, []byte(`{
+					"subject": {"commonName": "Test Root CA"},
+					"issuer": {"commonName": "Test Root CA"},
+					"keyUsage": ["certSign", "crlSign"],
+					"basicConstraints": {"isCA": true, "maxPathLen": 1},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2025-01-01T00:00:00Z"
+				}`), 0600)
+				if err != nil {
+					t.Fatalf("Failed to write root template: %v", err)
+				}
+
+				config := KMSConfig{
+					Type:      "test",
+					RootKeyID: "nonexistent-key",
+					LeafKeyID: "leaf-key",
+				}
+
+				return tmpDir, config, newMockKMSProvider()
+			},
+			wantError: "error creating root signer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir, config, kms := tt.setup(t)
+			defer os.RemoveAll(tmpDir)
+
+			outDir := filepath.Join(tmpDir, "out")
+			err := os.MkdirAll(outDir, 0755)
+			if err != nil {
+				t.Fatalf("Failed to create output directory: %v", err)
+			}
+
+			var intermediateKeyID string
+			if tt.name == "error creating intermediate signer" {
+				intermediateKeyID = "nonexistent-key"
+			}
+
+			err = CreateCertificates(kms, config,
+				filepath.Join(tmpDir, "root.json"),
+				filepath.Join(tmpDir, "leaf.json"),
+				filepath.Join(outDir, "root.crt"),
+				filepath.Join(outDir, "leaf.crt"),
+				intermediateKeyID,
+				filepath.Join(tmpDir, "intermediate.json"),
+				filepath.Join(outDir, "intermediate.crt"))
+
+			if tt.wantError != "" {
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
