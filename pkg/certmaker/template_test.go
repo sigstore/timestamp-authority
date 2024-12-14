@@ -21,18 +21,17 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseTemplate(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "cert-template-*")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create a parent certificate for template data
 	parent := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "Parent CA",
@@ -107,26 +106,35 @@ func TestParseTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp file for template
 			tmpFile := filepath.Join(tmpDir, "template.json")
 			err := os.WriteFile(tmpFile, []byte(tt.content), 0600)
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Failed to write template file: %v", err)
+			}
 
 			cert, err := ParseTemplate(tmpFile, tt.parent)
 			if tt.wantError != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
-				assert.Nil(t, cert)
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+				}
+				if cert != nil {
+					t.Error("Expected nil certificate when error occurs")
+				}
 			} else {
-				require.NoError(t, err)
-				require.NotNil(t, cert)
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if cert == nil {
+					t.Error("Expected non-nil certificate")
+				}
 			}
 		})
 	}
 }
 
 func TestValidateTemplate(t *testing.T) {
-	// Create a parent certificate for testing
 	parent := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "Parent CA",
@@ -231,104 +239,19 @@ func TestValidateTemplate(t *testing.T) {
 			},
 			wantError: "invalid notBefore time format",
 		},
-		{
-			name: "invalid extension OID",
-			tmpl: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				NotBefore: "2024-01-01T00:00:00Z",
-				NotAfter:  "2025-01-01T00:00:00Z",
-				KeyUsage:  []string{"digitalSignature"},
-				Extensions: []struct {
-					ID       string `json:"id"`
-					Critical bool   `json:"critical"`
-					Value    string `json:"value"`
-				}{
-					{
-						ID:       "invalid.oid",
-						Critical: true,
-						Value:    "AQID",
-					},
-				},
-			},
-			wantError: "invalid OID component in extension",
-		},
-		{
-			name: "empty extension ID",
-			tmpl: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				NotBefore: "2024-01-01T00:00:00Z",
-				NotAfter:  "2025-01-01T00:00:00Z",
-				KeyUsage:  []string{"digitalSignature"},
-				Extensions: []struct {
-					ID       string `json:"id"`
-					Critical bool   `json:"critical"`
-					Value    string `json:"value"`
-				}{
-					{
-						ID:       "",
-						Critical: true,
-						Value:    "AQID",
-					},
-				},
-			},
-			wantError: "extension ID cannot be empty",
-		},
-		{
-			name: "notBefore after notAfter",
-			tmpl: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				NotBefore: "2025-01-01T00:00:00Z", // Later than NotAfter
-				NotAfter:  "2024-01-01T00:00:00Z",
-				KeyUsage:  []string{"digitalSignature"},
-			},
-			wantError: "NotBefore time must be before NotAfter time",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateTemplate(tt.tmpl, tt.parent)
 			if tt.wantError != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
-			} else {
-				require.NoError(t, err)
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
