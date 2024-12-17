@@ -35,7 +35,7 @@ require (
 	go.step.sm/crypto v0.55.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.32.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.0
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/release-utils v0.8.5
 )
