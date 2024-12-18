@@ -18,10 +18,11 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetConfigValue(t *testing.T) {
@@ -83,25 +84,38 @@ func TestGetConfigValue(t *testing.T) {
 				defer os.Unsetenv(tt.envVar)
 			}
 			got := getConfigValue(tt.flagValue, tt.envVar)
-			if got != tt.want {
-				t.Errorf("got %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestInitLogger(t *testing.T) {
 	logger := initLogger()
-	if logger == nil {
-		t.Errorf("logger is nil")
-	}
+	require.NotNil(t, logger)
+}
+
+func TestInitLoggerWithDebug(t *testing.T) {
+	os.Setenv("DEBUG", "true")
+	defer os.Unsetenv("DEBUG")
+	logger := initLogger()
+	require.NotNil(t, logger)
+}
+
+func TestInitLoggerWithInvalidLevel(t *testing.T) {
+	os.Setenv("DEBUG", "invalid")
+	defer os.Unsetenv("DEBUG")
+
+	logger := initLogger()
+	require.NotNil(t, logger)
+
+	os.Setenv("DEBUG", "")
+	logger = initLogger()
+	require.NotNil(t, logger)
 }
 
 func TestRunCreate(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "cert-test-*")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	rootTemplate := `{
@@ -136,13 +150,9 @@ func TestRunCreate(t *testing.T) {
 	rootTmplPath := filepath.Join(tmpDir, "root-template.json")
 	leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
 	err = os.WriteFile(rootTmplPath, []byte(rootTemplate), 0600)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	err = os.WriteFile(leafTmplPath, []byte(leafTemplate), 0600)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	tests := []struct {
 		name      string
@@ -181,26 +191,26 @@ func TestRunCreate(t *testing.T) {
 			args: []string{
 				"--kms-type", "awskms",
 				"--aws-region", "us-west-2",
-				"--root-key-id", "arn:aws:kms:us-west-2:123456789012:key/test-key",
-				"--leaf-key-id", "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				"--root-key-id", "alias/test-key",
+				"--leaf-key-id", "alias/test-key",
 				"--root-template", "nonexistent.json",
 				"--leaf-template", leafTmplPath,
 			},
 			wantError: true,
-			errMsg:    "template not found",
+			errMsg:    "root template error: template not found at nonexistent.json",
 		},
 		{
 			name: "missing leaf template",
 			args: []string{
 				"--kms-type", "awskms",
 				"--aws-region", "us-west-2",
-				"--root-key-id", "arn:aws:kms:us-west-2:123456789012:key/test-key",
-				"--leaf-key-id", "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				"--root-key-id", "alias/test-key",
+				"--leaf-key-id", "alias/test-key",
 				"--root-template", rootTmplPath,
 				"--leaf-template", "nonexistent.json",
 			},
 			wantError: true,
-			errMsg:    "template not found",
+			errMsg:    "leaf template error: template not found at nonexistent.json",
 		},
 		{
 			name: "GCP KMS with credentials file",
@@ -227,6 +237,45 @@ func TestRunCreate(t *testing.T) {
 			wantError: true,
 			errMsg:    "tenant-id is required",
 		},
+		{
+			name: "AWS KMS test",
+			args: []string{
+				"--kms-type", "awskms",
+				"--aws-region", "us-west-2",
+				"--root-key-id", "alias/test-key",
+				"--leaf-key-id", "alias/test-key",
+				"--root-template", rootTmplPath,
+				"--leaf-template", leafTmplPath,
+			},
+			wantError: true,
+			errMsg:    "error getting root public key: getting public key",
+		},
+		{
+			name: "HashiVault KMS without token",
+			args: []string{
+				"--kms-type", "hashivault",
+				"--root-key-id", "transit/keys/test-key",
+				"--leaf-key-id", "transit/keys/leaf-key",
+				"--vault-address", "http://vault:8200",
+				"--root-template", rootTmplPath,
+				"--leaf-template", leafTmplPath,
+			},
+			wantError: true,
+			errMsg:    "token is required for HashiVault KMS",
+		},
+		{
+			name: "HashiVault KMS without address",
+			args: []string{
+				"--kms-type", "hashivault",
+				"--root-key-id", "transit/keys/test-key",
+				"--leaf-key-id", "transit/keys/leaf-key",
+				"--vault-token", "test-token",
+				"--root-template", rootTmplPath,
+				"--leaf-template", leafTmplPath,
+			},
+			wantError: true,
+			errMsg:    "address is required for HashiVault KMS",
+		},
 	}
 
 	for _, tt := range tests {
@@ -241,11 +290,13 @@ func TestRunCreate(t *testing.T) {
 				RunE: runCreate,
 			}
 
-			cmd.Flags().StringVar(&kmsType, "kms-type", "", "KMS provider type (awskms, gcpkms, azurekms)")
+			cmd.Flags().StringVar(&kmsType, "kms-type", "", "KMS provider type (awskms, gcpkms, azurekms, hashivault)")
 			cmd.Flags().StringVar(&kmsRegion, "aws-region", "", "AWS KMS region")
 			cmd.Flags().StringVar(&kmsKeyID, "kms-key-id", "", "KMS key identifier")
 			cmd.Flags().StringVar(&kmsTenantID, "azure-tenant-id", "", "Azure KMS tenant ID")
 			cmd.Flags().StringVar(&kmsCredsFile, "gcp-credentials-file", "", "Path to credentials file for GCP KMS")
+			cmd.Flags().StringVar(&kmsVaultToken, "vault-token", "", "HashiVault token")
+			cmd.Flags().StringVar(&kmsVaultAddr, "vault-address", "", "HashiVault server address")
 			cmd.Flags().StringVar(&rootKeyID, "root-key-id", "", "KMS key identifier for root certificate")
 			cmd.Flags().StringVar(&leafKeyID, "leaf-key-id", "", "KMS key identifier for leaf certificate")
 			cmd.Flags().StringVar(&rootTemplatePath, "root-template", "", "Path to root certificate template")
@@ -260,15 +311,10 @@ func TestRunCreate(t *testing.T) {
 			err := cmd.Execute()
 
 			if tt.wantError {
-				if err == nil {
-					t.Errorf("expected error, but got nil")
-				} else if !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
-				}
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
+				require.NoError(t, err)
 			}
 		})
 	}
