@@ -118,6 +118,16 @@ To deploy to production, the timestamp authority currently supports signing with
 a certificate chain (leaf, any intermediates, and root), where the certificate chain's purpose (extended key usage) is
 for timestamping. We do not recommend the file signer for production since the signing key will only be password protected.
 
+### Certificate Maker
+
+TSA's Certificate Maker is a tool for creating RFC 3161 compliant certificate chains for Timestamp Authority. It supports:
+
+* Two-level chains (root -> leaf)
+* Three-level chains (root -> intermediate -> leaf)
+* Multiple KMS providers (AWS, Google Cloud, Azure, HashiCorp Vault)
+
+For detailed usage instructions and examples, see the [Certificate Maker documentation](docs/certificate-maker.md).
+
 ### Cloud KMS
 
 Create an asymmetric cloud KMS signing key in either GCP, AWS, Azure, or Vault, that will be used to sign timestamps.
