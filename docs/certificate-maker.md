@@ -12,17 +12,11 @@ This tool creates root, intermediate (optional), and leaf certificates for Times
 
 ## Local Development
 
-Clone and build the project locally:
+Build the binary:
 
 ```bash
-# Clone the repository
-git clone https://github.com/sigstore/timestamp-authority
-
-# Change to project directory
-cd timestamp-authority
-
-# Build the binary
-go build -o tsa-certificate-maker ./cmd/certificate_maker
+make cert-maker
+./bin/tsa-certificate-maker --help
 ```
 
 ## Usage
