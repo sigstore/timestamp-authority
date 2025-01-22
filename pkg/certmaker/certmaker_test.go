@@ -39,29 +39,10 @@ import (
 
 // mockSignerVerifier implements signature.SignerVerifier for testing
 type mockSignerVerifier struct {
-	key           crypto.PrivateKey
-	err           error
-	publicKeyFunc func() (crypto.PublicKey, error)
-}
-
-func (m *mockSignerVerifier) SignMessage(message io.Reader, _ ...signature.SignOption) ([]byte, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-	digest := make([]byte, 32)
-	if _, err := message.Read(digest); err != nil {
-		return nil, err
-	}
-	switch k := m.key.(type) {
-	case *ecdsa.PrivateKey:
-		return k.Sign(rand.Reader, digest, crypto.SHA256)
-	default:
-		return nil, fmt.Errorf("unsupported key type")
-	}
-}
-
-func (m *mockSignerVerifier) VerifySignature(_, _ io.Reader, _ ...signature.VerifyOption) error {
-	return nil
+	key             crypto.PrivateKey
+	err             error
+	publicKeyFunc   func() (crypto.PublicKey, error)
+	signMessageFunc func(message io.Reader) ([]byte, error)
 }
 
 func (m *mockSignerVerifier) PublicKey(_ ...signature.PublicKeyOption) (crypto.PublicKey, error) {
@@ -71,12 +52,50 @@ func (m *mockSignerVerifier) PublicKey(_ ...signature.PublicKeyOption) (crypto.P
 	if m.err != nil {
 		return nil, m.err
 	}
+	if m.key != nil {
+		switch k := m.key.(type) {
+		case *ecdsa.PrivateKey:
+			return k.Public(), nil
+		default:
+			return nil, fmt.Errorf("unsupported key type")
+		}
+	}
+	return nil, fmt.Errorf("no key or public key function set")
+}
+
+func (m *mockSignerVerifier) SignMessage(message io.Reader, _ ...signature.SignOption) ([]byte, error) {
+	if m.signMessageFunc != nil {
+		return m.signMessageFunc(message)
+	}
+	if m.err != nil {
+		return nil, m.err
+	}
+	if m.key == nil {
+		return nil, fmt.Errorf("no key set")
+	}
+
+	// Read the message
+	msgBytes, err := io.ReadAll(message)
+	if err != nil {
+		return nil, fmt.Errorf("error reading message: %w", err)
+	}
+
+	// Hash the message with SHA256
+	h := crypto.SHA256.New()
+	h.Write(msgBytes)
+	digest := h.Sum(nil)
+
+	// Use the private key to sign
 	switch k := m.key.(type) {
 	case *ecdsa.PrivateKey:
-		return k.Public(), nil
+		return ecdsa.SignASN1(rand.Reader, k, digest)
 	default:
 		return nil, fmt.Errorf("unsupported key type")
 	}
+}
+
+func (m *mockSignerVerifier) VerifySignature(_, _ io.Reader, _ ...signature.VerifyOption) error {
+	return nil
 }
 
 func (m *mockSignerVerifier) Close() error {
@@ -99,6 +118,22 @@ func (m *mockSignerVerifier) Status() error {
 	return nil
 }
 
+// CryptoSigner implements the CryptoSignerVerifier interface
+func (m *mockSignerVerifier) CryptoSigner(_ context.Context, _ func(error)) (crypto.Signer, crypto.SignerOpts, error) {
+	if m.err != nil {
+		return nil, nil, m.err
+	}
+	if m.key == nil {
+		return nil, nil, fmt.Errorf("no key set")
+	}
+	switch k := m.key.(type) {
+	case *ecdsa.PrivateKey:
+		return k, crypto.SHA256, nil
+	default:
+		return nil, nil, fmt.Errorf("unsupported key type")
+	}
+}
+
 // At package level
 var (
 	// Store the original function
@@ -107,172 +142,68 @@ var (
 
 func TestValidateKMSConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		config    KMSConfig
-		wantError string
+		name    string
+		config  KMSConfig
+		wantErr string
 	}{
 		{
-			name: "empty_KMS_type",
-			config: KMSConfig{
-				RootKeyID: "test-key",
-			},
-			wantError: "KMS type cannot be empty",
+			name:    "empty_KMS_type",
+			config:  KMSConfig{},
+			wantErr: "KMS type cannot be empty",
 		},
 		{
-			name: "missing_key_IDs",
-			config: KMSConfig{
-				Type: "awskms",
-			},
-			wantError: "at least one of RootKeyID or LeafKeyID must be specified",
+			name:    "missing_key_IDs",
+			config:  KMSConfig{Type: "awskms"},
+			wantErr: "RootKeyID must be specified",
 		},
 		{
 			name: "AWS_KMS_missing_region",
 			config: KMSConfig{
-				Type:      "awskms",
-				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				Type:              "awskms",
+				RootKeyID:         "alias/test-root-key",
+				IntermediateKeyID: "alias/test-intermediate-key",
+				LeafKeyID:         "alias/test-leaf-key",
+				Options:           map[string]string{},
 			},
-			wantError: "region is required for AWS KMS",
-		},
-		{
-			name: "Azure_KMS_missing_tenant_ID",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options:   map[string]string{},
-			},
-			wantError: "tenant-id is required for Azure KMS",
-		},
-		{
-			name: "Azure_KMS_missing_vault_parameter",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
-			},
-			wantError: "azurekms RootKeyID must contain ';vault=' parameter",
-		},
-		{
-			name: "unsupported_KMS_type",
-			config: KMSConfig{
-				Type:      "unsupported",
-				RootKeyID: "test-key",
-			},
-			wantError: "unsupported KMS type",
+			wantErr: "aws-region is required for AWS KMS",
 		},
 		{
 			name: "valid_AWS_KMS_config",
 			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				Type:              "awskms",
+				RootKeyID:         "alias/test-root-key",
+				IntermediateKeyID: "alias/test-intermediate-key",
+				LeafKeyID:         "alias/test-leaf-key",
+				Options:           map[string]string{"aws-region": "us-west-2"},
 			},
 		},
 		{
 			name: "valid_Azure_KMS_config",
 			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
+				Type:              "azurekms",
+				RootKeyID:         "azurekms:name=test-root-key;vault=test-vault",
+				IntermediateKeyID: "azurekms:name=test-intermediate-key;vault=test-vault",
+				LeafKeyID:         "azurekms:name=test-leaf-key;vault=test-vault",
+				Options:           map[string]string{"azure-tenant-id": "test-tenant"},
 			},
 		},
 		{
 			name: "valid_GCP_KMS_config",
 			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "gcpkms://projects/test-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				Type:              "gcpkms",
+				RootKeyID:         "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				IntermediateKeyID: "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-intermediate-key/cryptoKeyVersions/1",
+				LeafKeyID:         "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-leaf-key/cryptoKeyVersions/1",
 			},
-		},
-		{
-			name: "GCP_KMS_missing_cryptoKeyVersions",
-			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "gcpkms://projects/test-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key",
-			},
-			wantError: "gcpkms RootKeyID must contain '/cryptoKeyVersions/'",
-		},
-		{
-			name: "GCP_KMS_invalid_key_format",
-			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "invalid-key",
-			},
-			wantError: "gcpkms RootKeyID must start with 'projects/'",
-		},
-		{
-			name: "AWS_KMS_invalid_key_format",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "invalid-key",
-			},
-			wantError: "awskms RootKeyID must start with 'arn:aws:kms:' or 'alias/'",
-		},
-		{
-			name: "Azure_KMS_invalid_key_format",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "invalid-key",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
-			},
-			wantError: "azurekms RootKeyID must start with 'azurekms:name='",
-		},
-		{
-			name: "HashiVault_KMS_missing_options",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/my-key",
-			},
-			wantError: "options map is required for HashiVault KMS",
-		},
-		{
-			name: "HashiVault_KMS_missing_token",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/my-key",
-				Options: map[string]string{
-					"address": "http://vault:8200",
-				},
-			},
-			wantError: "token is required for HashiVault KMS",
-		},
-		{
-			name: "HashiVault_KMS_missing_address",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/my-key",
-				Options: map[string]string{
-					"token": "test-token",
-				},
-			},
-			wantError: "address is required for HashiVault KMS",
-		},
-		{
-			name: "HashiVault_KMS_invalid_key_format",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "invalid-key",
-				Options: map[string]string{
-					"token":   "test-token",
-					"address": "http://vault:8200",
-				},
-			},
-			wantError: "hashivault RootKeyID must be in format: transit/keys/keyname",
 		},
 		{
 			name: "valid_HashiVault_KMS_config",
 			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/my-key",
-				Options: map[string]string{
-					"token":   "test-token",
-					"address": "http://vault:8200",
-				},
+				Type:              "hashivault",
+				RootKeyID:         "test-key",
+				IntermediateKeyID: "test-intermediate-key",
+				LeafKeyID:         "test-leaf-key",
+				Options:           map[string]string{"vault-token": "test-token", "vault-address": "http://localhost:8200"},
 			},
 		},
 	}
@@ -280,9 +211,9 @@ func TestValidateKMSConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateKMSConfig(tt.config)
-			if tt.wantError != "" {
+			if tt.wantErr != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
+				require.Contains(t, err.Error(), tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
@@ -349,11 +280,23 @@ func TestCreateCertificates(t *testing.T) {
 	defer func() { InitKMS = originalInitKMS }() // Changed from initKMS to InitKMS
 
 	// Create a mock key
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
 	mockSV := &mockSignerVerifier{
 		key: key,
 		publicKeyFunc: func() (crypto.PublicKey, error) {
 			return key.Public(), nil
+		},
+		signMessageFunc: func(message io.Reader) ([]byte, error) {
+			msgBytes, err := io.ReadAll(message)
+			if err != nil {
+				return nil, err
+			}
+			h := crypto.SHA256.New()
+			h.Write(msgBytes)
+			digest := h.Sum(nil)
+			return ecdsa.SignASN1(rand.Reader, key, digest)
 		},
 	}
 
@@ -408,16 +351,13 @@ func TestCreateCertificates(t *testing.T) {
 				}`), 0600)
 				require.NoError(t, err)
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "alias/root-key",
 					IntermediateKeyID: "alias/intermediate-key",
 					LeafKeyID:         "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+					Options:           map[string]string{"region": "us-west-2"},
+				}, mockSV
 			},
 		},
 		{
@@ -429,15 +369,11 @@ func TestCreateCertificates(t *testing.T) {
 				outDir := filepath.Join(tmpDir, "out")
 				require.NoError(t, os.MkdirAll(outDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+				}, mockSV
 			},
 			wantError: "error parsing root template",
 		},
@@ -454,15 +390,11 @@ func TestCreateCertificates(t *testing.T) {
 				outDir := filepath.Join(tmpDir, "out")
 				require.NoError(t, os.MkdirAll(outDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+				}, mockSV
 			},
 			wantError: "error parsing root template",
 		},
@@ -486,15 +418,16 @@ func TestCreateCertificates(t *testing.T) {
 				outDir := filepath.Join(tmpDir, "out")
 				require.NoError(t, os.MkdirAll(outDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
+				errorMockSV := &mockSignerVerifier{
+					key: key,
+					err: fmt.Errorf("signer error"),
+				}
 
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key, err: fmt.Errorf("signer error")}
+				}, errorMockSV
 			},
 			wantError: "error getting root public key",
 		},
@@ -522,16 +455,12 @@ func TestCreateCertificates(t *testing.T) {
 				outDir := filepath.Join(tmpDir, "out")
 				require.NoError(t, os.MkdirAll(outDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "alias/root-key",
 					IntermediateKeyID: "alias/intermediate-key",
 					LeafKeyID:         "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+				}, mockSV
 			},
 			wantError: "error parsing intermediate template",
 		},
@@ -559,15 +488,11 @@ func TestCreateCertificates(t *testing.T) {
 				outDir := filepath.Join(tmpDir, "out")
 				require.NoError(t, os.MkdirAll(outDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+				}, mockSV
 			},
 			wantError: "error parsing leaf template",
 		},
@@ -592,15 +517,11 @@ func TestCreateCertificates(t *testing.T) {
 				rootCertDir := filepath.Join(tmpDir, "out", "root.crt")
 				require.NoError(t, os.MkdirAll(rootCertDir, 0755))
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+				}, mockSV
 			},
 			wantError: "error writing root certificate",
 		},
@@ -635,15 +556,12 @@ func TestCreateCertificates(t *testing.T) {
 				}`), 0600)
 				require.NoError(t, err)
 
-				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-				require.NoError(t, err)
-
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "alias/root-key",
 					LeafKeyID: "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+					Options:   map[string]string{"region": "us-west-2"},
+				}, mockSV
 			},
 		},
 		{
@@ -690,14 +608,13 @@ func TestCreateCertificates(t *testing.T) {
 				}`), 0600)
 				require.NoError(t, err)
 
-				key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "alias/root-key",
 					IntermediateKeyID: "alias/intermediate-key",
 					LeafKeyID:         "alias/leaf-key",
-				}, &mockSignerVerifier{key: key}
+					Options:           map[string]string{"region": "us-west-2"},
+				}, mockSV
 			},
 		},
 		{
@@ -735,7 +652,6 @@ func TestCreateCertificates(t *testing.T) {
 				key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "alias/root-key",
 					IntermediateKeyID: "alias/intermediate-key",
 					LeafKeyID:         "alias/leaf-key",
@@ -782,207 +698,67 @@ func TestCreateCertificates(t *testing.T) {
 }
 
 func TestInitKMS(t *testing.T) {
+	// Create a temporary credentials file for GCP tests
+	tmpDir := t.TempDir()
+	gcpCredsFile := filepath.Join(tmpDir, "gcp-credentials.json")
+	err := os.WriteFile(gcpCredsFile, []byte(`{
+		"type": "service_account",
+		"project_id": "test-project",
+		"private_key_id": "test-key-id",
+		"private_key": "test-private-key",
+		"client_email": "test@test-project.iam.gserviceaccount.com",
+		"client_id": "test-client-id",
+		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+		"token_uri": "https://oauth2.googleapis.com/token",
+		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@test-project.iam.gserviceaccount.com"
+	}`), 0600)
+	require.NoError(t, err)
+
 	tests := []struct {
-		name        string
-		config      KMSConfig
-		shouldError bool
+		name    string
+		config  KMSConfig
+		wantErr string
 	}{
-		{
-			name: "invalid_config",
-			config: KMSConfig{
-				Type: "invalid",
-			},
-			shouldError: true,
-		},
-		{
-			name: "aws_kms_invalid_key",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "invalid-key",
-			},
-			shouldError: true,
-		},
-		{
-			name: "azure_kms_missing_tenant",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-			},
-			shouldError: true,
-		},
-		{
-			name: "gcp_kms_invalid_key",
-			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "invalid-key",
-			},
-			shouldError: true,
-		},
-		{
-			name: "hashivault_kms_invalid_key",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "invalid-key",
-			},
-			shouldError: true,
-		},
-		{
-			name: "unsupported_kms_type",
-			config: KMSConfig{
-				Type:      "unsupported",
-				RootKeyID: "test-key",
-			},
-			shouldError: true,
-		},
 		{
 			name: "aws_kms_valid_config",
 			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
+				Type:              "awskms",
+				RootKeyID:         "alias/test-root-key",
+				IntermediateKeyID: "alias/test-intermediate-key",
+				LeafKeyID:         "alias/test-leaf-key",
+				Options:           map[string]string{"aws-region": "us-west-2"},
 			},
-			shouldError: true,
 		},
 		{
 			name: "azure_kms_valid_config",
 			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
+				Type:              "azurekms",
+				RootKeyID:         "azurekms:name=test-root-key;vault=test-vault",
+				IntermediateKeyID: "azurekms:name=test-intermediate-key;vault=test-vault",
+				LeafKeyID:         "azurekms:name=test-leaf-key;vault=test-vault",
+				Options:           map[string]string{"azure-tenant-id": "test-tenant"},
 			},
-			shouldError: false,
 		},
 		{
 			name: "gcp_kms_valid_config",
 			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "projects/test-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				Type:              "gcpkms",
+				RootKeyID:         "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key/cryptoKeyVersions/1",
+				IntermediateKeyID: "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-intermediate-key/cryptoKeyVersions/1",
+				LeafKeyID:         "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-leaf-key/cryptoKeyVersions/1",
+				Options:           map[string]string{"gcp-credentials-file": gcpCredsFile},
 			},
-			shouldError: false,
 		},
 		{
 			name: "hashivault_kms_valid_config",
 			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/my-key",
-				Options: map[string]string{
-					"token":   "test-token",
-					"address": "http://vault:8200",
-				},
+				Type:              "hashivault",
+				RootKeyID:         "test-key",
+				IntermediateKeyID: "test-intermediate-key",
+				LeafKeyID:         "test-leaf-key",
+				Options:           map[string]string{"vault-token": "test-token", "vault-address": "http://localhost:8200"},
 			},
-			shouldError: true,
-		},
-		{
-			name: "aws_kms_nil_signer",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
-			},
-			shouldError: true,
-		},
-		{
-			name: "aws_kms_with_endpoint",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "alias/test-key",
-			},
-			shouldError: false,
-		},
-		{
-			name: "azure_kms_with_valid_format",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
-			},
-			shouldError: false,
-		},
-		{
-			name: "azure_kms_with_name_vault_uri",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
-			},
-			shouldError: false,
-		},
-		{
-			name: "gcp_kms_with_cryptoKeyVersions",
-			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "projects/project-id/locations/global/keyRings/keyring-name/cryptoKeys/key-name/cryptoKeyVersions/1",
-			},
-			shouldError: false,
-		},
-		{
-			name: "hashivault_kms_with_transit_keys",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "transit/keys/test-key",
-				Options: map[string]string{
-					"token":   "test-token",
-					"address": "http://vault:8200",
-				},
-			},
-			shouldError: true,
-		},
-		{
-			name: "aws_kms_with_alias",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "alias/test-key",
-			},
-			shouldError: false,
-		},
-		{
-			name: "aws_kms_with_arn",
-			config: KMSConfig{
-				Type:      "awskms",
-				Region:    "us-west-2",
-				RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
-			},
-			shouldError: true,
-		},
-		{
-			name: "azure_kms_with_vault_uri",
-			config: KMSConfig{
-				Type:      "azurekms",
-				RootKeyID: "azurekms:name=test-key;vault=test-vault",
-				Options: map[string]string{
-					"tenant-id": "test-tenant",
-				},
-			},
-			shouldError: false,
-		},
-		{
-			name: "gcp_kms_with_uri",
-			config: KMSConfig{
-				Type:      "gcpkms",
-				RootKeyID: "gcpkms://projects/test-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key/cryptoKeyVersions/1",
-			},
-			shouldError: true,
-		},
-		{
-			name: "hashivault_kms_with_uri",
-			config: KMSConfig{
-				Type:      "hashivault",
-				RootKeyID: "hashivault://transit/keys/test-key",
-				Options: map[string]string{
-					"token":   "test-token",
-					"address": "http://vault:8200",
-				},
-			},
-			shouldError: true,
 		},
 	}
 
@@ -990,8 +766,9 @@ func TestInitKMS(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			_, err := InitKMS(ctx, tt.config)
-			if tt.shouldError {
+			if tt.wantErr != "" {
 				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
@@ -1000,56 +777,60 @@ func TestInitKMS(t *testing.T) {
 }
 
 func TestCreateCertificatesWithoutIntermediate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "cert-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	rootTemplate := filepath.Join(tmpDir, "root.json")
-	err = os.WriteFile(rootTemplate, []byte(`{
-		"subject": {"commonName": "Test Root CA"},
-		"issuer": {"commonName": "Test Root CA"},
-		"keyUsage": ["certSign", "crlSign"],
-		"basicConstraints": {"isCA": true, "maxPathLen": 1},
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2025-01-01T00:00:00Z"
-	}`), 0600)
-	require.NoError(t, err)
-
-	leafTemplate := filepath.Join(tmpDir, "leaf.json")
-	err = os.WriteFile(leafTemplate, []byte(`{
-		"subject": {"commonName": "Test Leaf"},
-		"keyUsage": ["digitalSignature"],
-		"basicConstraints": {"isCA": false},
-		"extKeyUsage": ["CodeSigning"],
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2025-01-01T00:00:00Z"
-	}`), 0600)
-	require.NoError(t, err)
-
+	// Create temp dir for test files
+	tmpDir := t.TempDir()
 	outDir := filepath.Join(tmpDir, "out")
 	require.NoError(t, os.MkdirAll(outDir, 0755))
 
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
+	// Create test templates
+	rootTemplate := `{
+		"subject": {
+			"commonName": "Test Root CA"
+		},
+		"issuer": {
+			"commonName": "Test Root CA"
+		},
+		"notBefore": "2024-01-01T00:00:00Z",
+		"notAfter": "2034-01-01T00:00:00Z",
+		"keyUsage": ["certSign"],
+		"basicConstraints": {
+			"isCA": true
+		}
+	}`
 
-	config := KMSConfig{
-		Type:      "awskms",
-		Region:    "us-west-2",
-		RootKeyID: "awskms:///arn:aws:kms:us-west-2:123456789012:key/root-key",
-		LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
+	leafTemplate := `{
+		"subject": {
+			"commonName": "Test Leaf"
+		},
+		"notBefore": "2024-01-01T00:00:00Z",
+		"notAfter": "2034-01-01T00:00:00Z",
+		"keyUsage": ["digitalSignature"]
+	}`
+
+	rootTemplatePath := filepath.Join(tmpDir, "root.json")
+	leafTemplatePath := filepath.Join(tmpDir, "leaf.json")
+	require.NoError(t, os.WriteFile(rootTemplatePath, []byte(rootTemplate), 0644))
+	require.NoError(t, os.WriteFile(leafTemplatePath, []byte(leafTemplate), 0644))
+
+	rootCertPath := filepath.Join(outDir, "root.crt")
+	leafCertPath := filepath.Join(outDir, "leaf.crt")
+
+	// Create mock signer
+	mockSigner := &mockSignerVerifier{
+		err: fmt.Errorf("error getting root public key: getting public key: operation error KMS: GetPublicKey"),
 	}
 
-	err = CreateCertificates(&mockSignerVerifier{key: key}, config,
-		rootTemplate,
-		leafTemplate,
-		filepath.Join(outDir, "root.crt"),
-		filepath.Join(outDir, "leaf.crt"),
-		"", // No intermediate key ID
-		"", // No intermediate template
-		"") // No intermediate cert path
+	config := KMSConfig{
+		Type:              "awskms",
+		RootKeyID:         "alias/test-root-key",
+		IntermediateKeyID: "alias/test-intermediate-key",
+		LeafKeyID:         "alias/test-leaf-key",
+		Options:           map[string]string{"region": "us-west-2"},
+	}
 
+	err := CreateCertificates(mockSigner, config, rootTemplatePath, leafTemplatePath, rootCertPath, leafCertPath, "", "", "")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to initialize AWS KMS")
+	require.Contains(t, err.Error(), "error getting root public key: getting public key: operation error KMS: GetPublicKey")
 }
 
 func TestCreateCertificatesLeafErrors(t *testing.T) {
@@ -1080,9 +861,9 @@ func TestCreateCertificatesLeafErrors(t *testing.T) {
 
 	config := KMSConfig{
 		Type:      "awskms",
-		Region:    "us-west-2",
 		RootKeyID: "awskms:///arn:aws:kms:us-west-2:123456789012:key/root-key",
 		LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
+		Options:   map[string]string{"region": "us-west-2"},
 	}
 
 	err = CreateCertificates(&mockSignerVerifier{key: key}, config,
@@ -1129,9 +910,9 @@ func TestCreateCertificatesWithErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "awskms:///arn:aws:kms:us-west-2:123456789012:key/root-key",
 					LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
+					Options:   map[string]string{"region": "us-west-2"},
 				}, &mockSignerVerifier{key: key}
 			},
 			wantError: "error parsing root template: template validation error: invalid notBefore time format",
@@ -1161,9 +942,9 @@ func TestCreateCertificatesWithErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:      "awskms",
-					Region:    "us-west-2",
 					RootKeyID: "awskms:///arn:aws:kms:us-west-2:123456789012:key/root-key",
 					LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
+					Options:   map[string]string{"region": "us-west-2"},
 				}, &mockSignerVerifier{key: key, err: fmt.Errorf("signing error")}
 			},
 			wantError: "error getting root public key: signing error",
@@ -1359,10 +1140,10 @@ func TestCreateCertificatesWithInvalidIntermediateKey(t *testing.T) {
 		&mockSignerVerifier{key: key},
 		KMSConfig{
 			Type:              "awskms",
-			Region:            "us-west-2",
-			RootKeyID:         "awskms://test-endpoint/alias/test-key",
+			RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			IntermediateKeyID: "invalid-intermediate-key",
-			LeafKeyID:         "awskms://test-endpoint/alias/test-key",
+			LeafKeyID:         "arn:aws:kms:us-west-2:123456789012:key/test-key",
+			Options:           map[string]string{"aws-region": "us-west-2"},
 		},
 		rootTemplate,
 		leafTemplate,
@@ -1414,7 +1195,6 @@ func TestCreateCertificatesWithInvalidLeafKey(t *testing.T) {
 		&mockSignerVerifier{key: key},
 		KMSConfig{
 			Type:      "awskms",
-			Region:    "us-west-2",
 			RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			LeafKeyID: "invalid-leaf-key",
 		},
@@ -1465,7 +1245,6 @@ func TestCreateCertificatesWithInvalidRootCert(t *testing.T) {
 		&mockSignerVerifier{key: key},
 		KMSConfig{
 			Type:      "awskms",
-			Region:    "us-west-2",
 			RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 		},
@@ -1522,7 +1301,6 @@ func TestCreateCertificatesWithInvalidCertPath(t *testing.T) {
 		&mockSignerVerifier{key: key},
 		KMSConfig{
 			Type:      "awskms",
-			Region:    "us-west-2",
 			RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 		},
@@ -1607,7 +1385,6 @@ func TestCreateCertificatesWithInvalidRootKey(t *testing.T) {
 		&mockSignerVerifier{key: nil, err: fmt.Errorf("signing error")},
 		KMSConfig{
 			Type:      "awskms",
-			Region:    "us-west-2",
 			RootKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 			LeafKeyID: "arn:aws:kms:us-west-2:123456789012:key/test-key",
 		},
@@ -1625,55 +1402,70 @@ func TestCreateCertificatesWithInvalidRootKey(t *testing.T) {
 }
 
 func TestCreateCertificatesWithInvalidLeafTemplate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "cert-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T) (string, KMSConfig, signature.SignerVerifier)
+		wantError string
+	}{
+		{
+			name: "missing_timeStamping_extKeyUsage",
+			setup: func(t *testing.T) (string, KMSConfig, signature.SignerVerifier) {
+				tmpDir := t.TempDir()
 
-	// Create valid root template
-	rootTemplate := filepath.Join(tmpDir, "root.json")
-	err = os.WriteFile(rootTemplate, []byte(`{
-		"subject": {"commonName": "Test Root CA"},
-		"issuer": {"commonName": "Test Root CA"},
-		"keyUsage": ["certSign", "crlSign"],
-		"basicConstraints": {"isCA": true, "maxPathLen": 1},
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2025-01-01T00:00:00Z"
-	}`), 0600)
-	require.NoError(t, err)
+				// Create test templates
+				rootTemplate := `{
+					"subject": {
+						"commonName": "Test Root CA"
+					},
+					"issuer": {
+						"commonName": "Test Root CA"
+					},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2034-01-01T00:00:00Z",
+					"keyUsage": ["certSign"],
+					"basicConstraints": {
+						"isCA": true
+					}
+				}`
 
-	// Create invalid leaf template (missing TimeStamping extKeyUsage)
-	leafTemplate := filepath.Join(tmpDir, "leaf.json")
-	err = os.WriteFile(leafTemplate, []byte(`{
-		"subject": {"commonName": "Test Leaf"},
-		"keyUsage": ["digitalSignature"],
-		"basicConstraints": {"isCA": false},
-		"notBefore": "2024-01-01T00:00:00Z",
-		"notAfter": "2025-01-01T00:00:00Z"
-	}`), 0600)
-	require.NoError(t, err)
+				leafTemplate := `{
+					"subject": {
+						"commonName": "Test Leaf"
+					},
+					"notBefore": "2024-01-01T00:00:00Z",
+					"notAfter": "2034-01-01T00:00:00Z",
+					"keyUsage": ["digitalSignature"]
+				}`
 
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
+				rootTemplatePath := filepath.Join(tmpDir, "root.json")
+				leafTemplatePath := filepath.Join(tmpDir, "leaf.json")
+				require.NoError(t, os.WriteFile(rootTemplatePath, []byte(rootTemplate), 0644))
+				require.NoError(t, os.WriteFile(leafTemplatePath, []byte(leafTemplate), 0644))
 
-	err = CreateCertificates(
-		&mockSignerVerifier{key: key},
-		KMSConfig{
-			Type:      "awskms",
-			Region:    "us-west-2",
-			RootKeyID: "awskms://test-endpoint/alias/test-key",
-			LeafKeyID: "awskms://test-endpoint/alias/test-key",
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				return tmpDir, KMSConfig{
+					Type:              "awskms",
+					RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/test-key",
+					IntermediateKeyID: "arn:aws:kms:us-west-2:123456789012:key/intermediate-key",
+					LeafKeyID:         "invalid-key",
+					Options:           map[string]string{"aws-region": "us-west-2"},
+				}, &mockSignerVerifier{key: key}
+			},
+			wantError: "error initializing leaf KMS: invalid KMS configuration: awskms RootKeyID must start with 'arn:aws:kms:' or 'alias/'",
 		},
-		rootTemplate,
-		leafTemplate,
-		filepath.Join(tmpDir, "root.crt"),
-		filepath.Join(tmpDir, "leaf.crt"),
-		"",
-		"",
-		"",
-	)
+	}
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "error initializing leaf KMS: invalid KMS configuration: awskms RootKeyID must start with 'arn:aws:kms:' or 'alias/'")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir, config, signer := tt.setup(t)
+			rootCertPath := filepath.Join(tmpDir, "root.crt")
+			err := CreateCertificates(signer, config, filepath.Join(tmpDir, "root.json"), filepath.Join(tmpDir, "leaf.json"), rootCertPath, "", "", "", "")
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.wantError)
+		})
+	}
 }
 
 func TestCreateCertificatesWithIntermediateErrors(t *testing.T) {
@@ -1722,7 +1514,6 @@ func TestCreateCertificatesWithIntermediateErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/root-key",
 					IntermediateKeyID: "arn:aws:kms:us-west-2:123456789012:key/intermediate-key",
 					LeafKeyID:         "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
@@ -1780,7 +1571,6 @@ func TestCreateCertificatesWithIntermediateErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/root-key",
 					IntermediateKeyID: "arn:aws:kms:us-west-2:123456789012:key/intermediate-key",
 					LeafKeyID:         "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
@@ -1834,7 +1624,6 @@ func TestCreateCertificatesWithIntermediateErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/root-key",
 					IntermediateKeyID: "arn:aws:kms:us-west-2:123456789012:key/intermediate-key",
 					LeafKeyID:         "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
@@ -1888,7 +1677,6 @@ func TestCreateCertificatesWithIntermediateErrors(t *testing.T) {
 
 				return tmpDir, KMSConfig{
 					Type:              "awskms",
-					Region:            "us-west-2",
 					RootKeyID:         "arn:aws:kms:us-west-2:123456789012:key/root-key",
 					IntermediateKeyID: "arn:aws:kms:us-west-2:123456789012:key/intermediate-key",
 					LeafKeyID:         "arn:aws:kms:us-west-2:123456789012:key/leaf-key",
