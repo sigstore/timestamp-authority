@@ -432,10 +432,14 @@ func ValidateKMSConfig(config KMSConfig) error {
 			if keyID == "" {
 				return nil
 			}
-			if strings.Contains(keyID, "/") {
-				return fmt.Errorf("hashivault %s must be a simple key name without path separators", keyType)
+			parts := strings.Split(keyID, "/")
+			if len(parts) < 3 {
+				return fmt.Errorf("hashivault %s must be in format: transit/keys/keyname", keyType)
 			}
-			if strings.TrimSpace(keyID) == "" {
+			if parts[0] != "transit" || parts[1] != "keys" {
+				return fmt.Errorf("hashivault %s must start with 'transit/keys/'", keyType)
+			}
+			if parts[2] == "" {
 				return fmt.Errorf("key name cannot be empty for %s", keyType)
 			}
 			return nil

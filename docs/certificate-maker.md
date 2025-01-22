@@ -5,6 +5,8 @@ This tool creates root, intermediate (optional), and leaf certificates for Times
 - Two-level chain (root -> leaf)
 - Three-level chain (root -> intermediate -> leaf)
 
+Relies on [x509util](https://pkg.go.dev/go.step.sm/crypto/x509util) which builds X.509 certificates from JSON templates.
+
 ## Requirements
 
 - Access to one of the supported KMS providers (AWS, Google Cloud, Azure)

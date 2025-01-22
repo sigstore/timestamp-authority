@@ -174,14 +174,18 @@ func runCreate(_ *cobra.Command, _ []string) error {
 	}
 
 	// Validate template paths
-	if err := certmaker.ValidateTemplatePath(viper.GetString("root-template")); err != nil {
+	rootTemplate := viper.GetString("root-template")
+	leafTemplate := viper.GetString("leaf-template")
+	intermediateTemplate := viper.GetString("intermediate-template")
+
+	if err := certmaker.ValidateTemplatePath(rootTemplate); err != nil {
 		return fmt.Errorf("root template error: %w", err)
 	}
-	if err := certmaker.ValidateTemplatePath(viper.GetString("leaf-template")); err != nil {
+	if err := certmaker.ValidateTemplatePath(leafTemplate); err != nil {
 		return fmt.Errorf("leaf template error: %w", err)
 	}
 	if viper.GetString("intermediate-key-id") != "" {
-		if err := certmaker.ValidateTemplatePath(viper.GetString("intermediate-template")); err != nil {
+		if err := certmaker.ValidateTemplatePath(intermediateTemplate); err != nil {
 			return fmt.Errorf("intermediate template error: %w", err)
 		}
 	}

@@ -45,9 +45,9 @@ type CertificateTemplate struct {
 	Issuer struct {
 		CommonName string `json:"commonName"`
 	} `json:"issuer"`
-	NotBefore        string   `json:"notBefore"`
-	NotAfter         string   `json:"notAfter"`
+	CertLifetime     string   `json:"certLife"` // Duration string e.g. "8760h" for 1 year
 	KeyUsage         []string `json:"keyUsage"`
+	ExtKeyUsage      []string `json:"extKeyUsage,omitempty"`
 	BasicConstraints struct {
 		IsCA       bool `json:"isCA"`
 		MaxPathLen int  `json:"maxPathLen"`
@@ -101,18 +101,37 @@ func ParseTemplate(filename string, parent *x509.Certificate) (*x509.Certificate
 
 // ValidateTemplate performs validation checks on the certificate template.
 func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error {
-	if tmpl.NotBefore == "" {
-		return fmt.Errorf("notBefore time must be specified")
+	var notBefore, notAfter time.Time
+	var err error
+
+	if tmpl.CertLifetime != "" {
+		duration, err := time.ParseDuration(tmpl.CertLifetime)
+		if err != nil {
+			return fmt.Errorf("invalid certLife format: %w", err)
+		}
+		if duration <= 0 {
+			return fmt.Errorf("certLife must be positive")
+		}
+		notBefore = time.Now().UTC()
+		notAfter = notBefore.Add(duration)
+	} else {
+		if tmpl.CertLifetime == "" {
+			return fmt.Errorf("certLife must be specified")
+		}
+		notBefore, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
+		if err != nil {
+			return fmt.Errorf("invalid certLife format: %w", err)
+		}
+		notAfter, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
+		if err != nil {
+			return fmt.Errorf("invalid certLife format: %w", err)
+		}
 	}
-	if tmpl.NotAfter == "" {
-		return fmt.Errorf("notAfter time must be specified")
+
+	if notBefore.After(notAfter) {
+		return fmt.Errorf("NotBefore time must be before NotAfter time")
 	}
-	if _, err := time.Parse(time.RFC3339, tmpl.NotBefore); err != nil {
-		return fmt.Errorf("invalid notBefore time format: %w", err)
-	}
-	if _, err := time.Parse(time.RFC3339, tmpl.NotAfter); err != nil {
-		return fmt.Errorf("invalid notAfter time format: %w", err)
-	}
+
 	if tmpl.Subject.CommonName == "" {
 		return fmt.Errorf("template subject.commonName cannot be empty")
 	}
@@ -120,17 +139,24 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 		return fmt.Errorf("template issuer.commonName cannot be empty for root certificate")
 	}
 
+	// Check if the certificate has certSign key usage
+	hasKeyUsageCertSign := false
+	for _, usage := range tmpl.KeyUsage {
+		if usage == "certSign" {
+			hasKeyUsageCertSign = true
+			break
+		}
+	}
+
+	// For certificates with certSign key usage, they must be CA certificates
+	if hasKeyUsageCertSign && !tmpl.BasicConstraints.IsCA {
+		return fmt.Errorf("CA certificate must have isCA set to true")
+	}
+
 	// For CA certs
 	if tmpl.BasicConstraints.IsCA {
 		if len(tmpl.KeyUsage) == 0 {
 			return fmt.Errorf("CA certificate must specify at least one key usage")
-		}
-		hasKeyUsageCertSign := false
-		for _, usage := range tmpl.KeyUsage {
-			if usage == "certSign" {
-				hasKeyUsageCertSign = true
-				break
-			}
 		}
 		if !hasKeyUsageCertSign {
 			return fmt.Errorf("CA certificate must have certSign key usage")
@@ -168,6 +194,41 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 		if !hasDigitalSignature {
 			return fmt.Errorf("timestamp authority certificate must have digitalSignature key usage")
 		}
+
+		// Check for TimeStamping extended key usage
+		hasTimeStamping := false
+
+		// Check extKeyUsage field first
+		if len(tmpl.ExtKeyUsage) > 0 {
+			for _, usage := range tmpl.ExtKeyUsage {
+				if usage == "TimeStamping" {
+					hasTimeStamping = true
+					break
+				}
+			}
+		}
+
+		// If not found in extKeyUsage, check Extensions
+		if !hasTimeStamping {
+			for _, ext := range tmpl.Extensions {
+				if ext.ID == "2.5.29.37" { // Extended Key Usage OID
+					// Decode the base64 value
+					value, err := base64.StdEncoding.DecodeString(ext.Value)
+					if err != nil {
+						return fmt.Errorf("error decoding extension value: %w", err)
+					}
+					// Check if the value contains the TimeStamping OID (1.3.6.1.5.5.7.3.8)
+					if bytes.Contains(value, []byte{0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x08}) {
+						hasTimeStamping = true
+						break
+					}
+				}
+			}
+		}
+
+		if !hasTimeStamping {
+			return fmt.Errorf("timestamp authority certificate must have TimeStamping extended key usage")
+		}
 	}
 
 	// Validate extensions
@@ -183,25 +244,34 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 		}
 	}
 
-	notBefore, _ := time.Parse(time.RFC3339, tmpl.NotBefore)
-	notAfter, _ := time.Parse(time.RFC3339, tmpl.NotAfter)
-	if notBefore.After(notAfter) {
-		return fmt.Errorf("NotBefore time must be before NotAfter time")
-	}
-
 	return nil
 }
 
 // CreateCertificateFromTemplate creates an x509.Certificate from the provided template
 func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) (*x509.Certificate, error) {
-	notBefore, err := time.Parse(time.RFC3339, tmpl.NotBefore)
-	if err != nil {
-		return nil, fmt.Errorf("invalid notBefore time format: %w", err)
+	var notBefore, notAfter time.Time
+	var err error
+
+	if tmpl.CertLifetime != "" {
+		duration, err := time.ParseDuration(tmpl.CertLifetime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid certLife format: %w", err)
+		}
+		notBefore = time.Now().UTC()
+		notAfter = notBefore.Add(duration)
+	} else {
+		notBefore, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid certLife format: %w", err)
+		}
+		notAfter, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid certLife format: %w", err)
+		}
 	}
 
-	notAfter, err := time.Parse(time.RFC3339, tmpl.NotAfter)
-	if err != nil {
-		return nil, fmt.Errorf("invalid notAfter time format: %w", err)
+	if notBefore.After(notAfter) {
+		return nil, fmt.Errorf("NotBefore time must be before NotAfter time")
 	}
 
 	cert := &x509.Certificate{
@@ -228,9 +298,16 @@ func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certi
 	if tmpl.BasicConstraints.IsCA {
 		cert.MaxPathLen = tmpl.BasicConstraints.MaxPathLen
 		cert.MaxPathLenZero = tmpl.BasicConstraints.MaxPathLen == 0
+	} else {
+		// For non-CA certificates, set the extended key usage
+		for _, usage := range tmpl.ExtKeyUsage {
+			if usage == "TimeStamping" {
+				cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+			}
+		}
 	}
 
-	SetKeyUsages(cert, tmpl.KeyUsage)
+	SetCertificateUsages(cert, tmpl.KeyUsage, tmpl.ExtKeyUsage)
 
 	// Sets extensions (e.g. Timestamping)
 	for _, ext := range tmpl.Extensions {
@@ -260,10 +337,12 @@ func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certi
 	return cert, nil
 }
 
-// SetKeyUsages applies the specified key usage to cert(s)
-// supporting certSign, crlSign, and digitalSignature usages.
-func SetKeyUsages(cert *x509.Certificate, usages []string) {
-	for _, usage := range usages {
+// SetCertificateUsages applies both basic key usages and extended key usages to the certificate.
+// Supports basic usages: certSign, crlSign, digitalSignature
+// Supports extended usages: CodeSigning, TimeStamping
+func SetCertificateUsages(cert *x509.Certificate, keyUsages []string, extKeyUsages []string) {
+	// Set basic key usages
+	for _, usage := range keyUsages {
 		switch usage {
 		case "certSign":
 			cert.KeyUsage |= x509.KeyUsageCertSign
@@ -271,6 +350,16 @@ func SetKeyUsages(cert *x509.Certificate, usages []string) {
 			cert.KeyUsage |= x509.KeyUsageCRLSign
 		case "digitalSignature":
 			cert.KeyUsage |= x509.KeyUsageDigitalSignature
+		}
+	}
+
+	// Set extended key usages
+	for _, usage := range extKeyUsages {
+		switch usage {
+		case "CodeSigning":
+			cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+		case "TimeStamping":
+			cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
 		}
 	}
 }
