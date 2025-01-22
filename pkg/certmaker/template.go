@@ -135,6 +135,24 @@ func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error
 		if !hasKeyUsageCertSign {
 			return fmt.Errorf("CA certificate must have certSign key usage")
 		}
+
+		// For root certificates, the SKID and AKID should match
+		if parent == nil && len(tmpl.Extensions) > 0 {
+			var hasAKID, hasSKID bool
+			var akidValue, skidValue string
+			for _, ext := range tmpl.Extensions {
+				if ext.ID == "2.5.29.35" { // AKID OID
+					hasAKID = true
+					akidValue = ext.Value
+				} else if ext.ID == "2.5.29.14" { // SKID OID
+					hasSKID = true
+					skidValue = ext.Value
+				}
+			}
+			if hasAKID && hasSKID && akidValue != skidValue {
+				return fmt.Errorf("root certificate SKID and AKID must match")
+			}
+		}
 	} else {
 		// For non-CA certs
 		if len(tmpl.KeyUsage) == 0 {
