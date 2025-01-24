@@ -5,11 +5,11 @@ This tool creates root, intermediate (optional), and leaf certificates for Times
 - Two-level chain (root -> leaf)
 - Three-level chain (root -> intermediate -> leaf)
 
-Relies on [x509util](https://pkg.go.dev/go.step.sm/crypto/x509util) which builds X.509 certificates from JSON templates.
+Relies on [x509util](https://pkg.go.dev/go.step.sm/crypto/x509util) which builds X.509 certificates from JSON templates. The tool includes embedded default templates that are compiled into the binary, making it ready to use without external template files.
 
 ## Requirements
 
-- Access to one of the supported KMS providers (AWS, Google Cloud, Azure)
+- Access to one of the supported KMS providers (AWS, Google Cloud, Azure, HashiCorp Vault)
 - Pre-existing KMS keys (the tool uses existing keys and does not create new ones)
 
 ## Local Development
@@ -26,6 +26,14 @@ make cert-maker
 The tool can be configured using either command-line flags or environment variables.
 
 ### Command-Line Interface
+
+The `create` command accepts an optional positional argument for the common name:
+
+```bash
+./bin/tsa-certificate-maker create [common-name]
+```
+
+If no common name is provided, the values from the templates will be used.
 
 Available flags:
 
@@ -44,6 +52,9 @@ Available flags:
 - `--intermediate-key-id`: KMS key identifier for intermediate certificate
 - `--intermediate-template`: Path to intermediate certificate template
 - `--intermediate-cert`: Output path for intermediate certificate
+- `--root-lifetime`: Root certificate lifetime (default: 87600h, 10 years)
+- `--intermediate-lifetime`: Intermediate certificate lifetime (default: 43800h, 5 years)
+- `--leaf-lifetime`: Leaf certificate lifetime (default: 8760h, 1 year)
 
 ### Environment Variables
 
@@ -52,7 +63,6 @@ Available flags:
 - `KMS_INTERMEDIATE_KEY_ID`: Key identifier for intermediate certificate
 - `LEAF_KEY_ID`: Key identifier for leaf certificate
 - `AWS_REGION`: AWS Region (required for AWS KMS)
-- `KMS_VAULT_NAME`: Azure Key Vault name
 - `AZURE_TENANT_ID`: Azure tenant ID
 - `GCP_CREDENTIALS_FILE`: Path to credentials file (for Google Cloud KMS)
 - `VAULT_ADDR`: HashiCorp Vault address
@@ -60,13 +70,17 @@ Available flags:
 
 ### Certificate Templates
 
-The tool uses JSON templates to define certificate properties:
+The embedded templates are located in `pkg/certmaker/templates/` in the source code and are compiled into the binary. You can override these defaults by providing your own template files using:
 
-- `root-template.json`: Defines root CA certificate properties
-- `intermediate-template.json`: Defines intermediate CA certificate properties (when using --intermediate-key-id)
-- `leaf-template.json`: Defines leaf certificate properties
+- `--root-template`: Custom root CA template
+- `--intermediate-template`: Custom intermediate CA template  
+- `--leaf-template`: Custom leaf template
 
-Templates are located in `pkg/certmaker/templates/`.
+If no custom templates are provided via flags, the tool will automatically use the embedded defaults which are designed to work with TSA's certificate requirements as long as the intended common name is used as a positional argument.
+
+More info on configuring templates can be found here:
+
+- [X.509 Templates](https://smallstep.com/docs/step-ca/templates/#x509-templates)
 
 Note: Templates use ASN.1/OID format for timestamping-specific extensions.
 
@@ -96,7 +110,7 @@ export KMS_INTERMEDIATE_KEY_ID=projects/PROJECT_ID/locations/LOCATION/keyRings/K
 ```shell
 export KMS_TYPE=azurekms
 export ROOT_KEY_ID=azurekms:name=root-key;vault=tsa-keys
-export KMS_INTERMEDIATE_KEY_ID=azurekms:name=leaf-key;vault=fulcio-keys
+export KMS_INTERMEDIATE_KEY_ID=azurekms:name=leaf-key;vault=tsa-keys
 export LEAF_KEY_ID=azurekms:name=leaf-key;vault=tsa-keys
 export AZURE_TENANT_ID=83j229-83j229-83j229-83j229-83j229
 ```
@@ -242,54 +256,65 @@ Certificate:
 Example with AWS KMS:
 
 ```bash
-tsa-certificate-maker  create \
+tsa-certificate-maker create "https://tsa.example.com" \
   --kms-type awskms \
   --aws-region us-east-1 \
   --root-key-id alias/tsa-root \
   --leaf-key-id alias/tsa-leaf \
   --root-template pkg/certmaker/templates/root-template.json \
-  --leaf-template pkg/certmaker/templates/leaf-template.json
+  --leaf-template pkg/certmaker/templates/leaf-template.json \
+  --root-lifetime 87600h \
+  --leaf-lifetime 8760h
 ```
 
 Example with Azure KMS:
 
 ```bash
-tsa-certificate-maker create \
+tsa-certificate-maker create "https://tsa.example.com" \
   --kms-type azurekms \
   --azure-tenant-id 1b4a4fed-fed8-4823-a8a0-3d5cea83d122 \
   --root-key-id "azurekms:name=sigstore-key;vault=sigstore-key" \
   --leaf-key-id "azurekms:name=sigstore-key-intermediate;vault=sigstore-key" \
-  --intermediate-key-id "azurekms:name=sigstore-key-intermediate;vault=sigstore-key” \
+  --intermediate-key-id "azurekms:name=sigstore-key-intermediate;vault=sigstore-key" \
   --root-cert root.pem \
   --leaf-cert leaf.pem \
-  --intermediate-cert intermediate.pem
+  --intermediate-cert intermediate.pem \
+  --root-lifetime 87600h \
+  --intermediate-lifetime 43800h \
+  --leaf-lifetime 8760h
 ```
 
 Example with GCP KMS:
 
 ```bash
-tsa-certificate-maker create \
+tsa-certificate-maker create "https://tsa.example.com" \
   --kms-type gcpkms \
-  ---gcp-credentials-file ~/.config/gcloud/application_default_credentials.json \
-  --root-key-id  projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/fulcio-key1/cryptoKeyVersions/<version> \
-  --intermediate-key-id projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/fulcio-key1/cryptoKeyVersions/<version> \
-  --leaf-key-id projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/fulcio-key1/cryptoKeyVersions/<version> \
+  --gcp-credentials-file ~/.config/gcloud/application_default_credentials.json \
+  --root-key-id  projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/tsa-key1/cryptoKeyVersions/<version> \
+  --intermediate-key-id projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/tsa-key1/cryptoKeyVersions/<version> \
+  --leaf-key-id projects/<project_id>/locations/<location>/keyRings/<keyring>/cryptoKeys/tsa-key1/cryptoKeyVersions/<version> \
   --root-cert root.pem \
   --leaf-cert leaf.pem \
-  --intermediate-cert intermediate.pem
+  --intermediate-cert intermediate.pem \
+  --root-lifetime 87600h \
+  --intermediate-lifetime 43800h \
+  --leaf-lifetime 8760h
 ```
 
 Example with HashiCorp Vault KMS:
 
 ```bash
-tsa-certificate-maker create \
+tsa-certificate-maker create "https://tsa.example.com" \
   --kms-type hashivault \
   --vault-address http://vault:8200 \
   --vault-token token \
   --root-key-id "transit/keys/root-key" \
   --leaf-key-id "transit/keys/leaf-key" \
-  --intermediate-key-id "transit/keys/intermediate-key” \
+  --intermediate-key-id "transit/keys/intermediate-key" \
   --root-cert root.pem \
   --leaf-cert leaf.pem \
-  --intermediate-cert intermediate.pem
+  --intermediate-cert intermediate.pem \
+  --root-lifetime 87600h \
+  --intermediate-lifetime 43800h \
+  --leaf-lifetime 8760h
 ```

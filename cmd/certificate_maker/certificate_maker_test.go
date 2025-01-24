@@ -36,7 +36,6 @@ func TestGetConfigValue(t *testing.T) {
 		envValue  string
 		want      string
 	}{
-		// KMS provider flags
 		{
 			name:      "get KMS type from flag",
 			flag:      "kms-type",
@@ -85,7 +84,6 @@ func TestGetConfigValue(t *testing.T) {
 			envValue:  "http://vault:8200",
 			want:      "http://vault:8200",
 		},
-		// Root certificate flags
 		{
 			name:      "get root key ID from env",
 			flag:      "root-key-id",
@@ -94,7 +92,6 @@ func TestGetConfigValue(t *testing.T) {
 			envValue:  "root-key-123",
 			want:      "root-key-123",
 		},
-		// Intermediate certificate flags
 		{
 			name:      "get intermediate key ID from env",
 			flag:      "intermediate-key-id",
@@ -103,7 +100,6 @@ func TestGetConfigValue(t *testing.T) {
 			envValue:  "intermediate-key-123",
 			want:      "intermediate-key-123",
 		},
-		// Leaf certificate flags
 		{
 			name:      "get leaf key ID from env",
 			flag:      "leaf-key-id",
@@ -189,11 +185,35 @@ func TestRunCreate(t *testing.T) {
 		}
 	}`
 
+	intermediateTemplate := `{
+		"subject": {
+			"commonName": "Test Intermediate CA"
+		},
+		"notBefore": "2024-01-01T00:00:00Z",
+		"notAfter": "2025-01-01T00:00:00Z",
+		"keyUsage": ["certSign", "crlSign"],
+		"basicConstraints": {
+			"isCA": true,
+			"maxPathLen": 0
+		}
+	}`
+
+	invalidIntermediateTemplate := `{
+		"invalid": json
+		"missing": comma
+	}`
+
 	rootTmplPath := filepath.Join(tmpDir, "root-template.json")
 	leafTmplPath := filepath.Join(tmpDir, "leaf-template.json")
+	intermediateTmplPath := filepath.Join(tmpDir, "intermediate-template.json")
+	invalidIntermediateTmplPath := filepath.Join(tmpDir, "invalid-intermediate-template.json")
 	err = os.WriteFile(rootTmplPath, []byte(rootTemplate), 0600)
 	require.NoError(t, err)
 	err = os.WriteFile(leafTmplPath, []byte(leafTemplate), 0600)
+	require.NoError(t, err)
+	err = os.WriteFile(intermediateTmplPath, []byte(intermediateTemplate), 0600)
+	require.NoError(t, err)
+	err = os.WriteFile(invalidIntermediateTmplPath, []byte(invalidIntermediateTemplate), 0600)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -290,7 +310,7 @@ func TestRunCreate(t *testing.T) {
 				"--leaf-template", leafTmplPath,
 			},
 			wantError: true,
-			errMsg:    "error getting root public key: getting public key: operation error KMS: GetPublicKey",
+			errMsg:    "leaf template error: leaf certificate must have a parent",
 		},
 		{
 			name: "HashiVault KMS without token",
@@ -317,6 +337,36 @@ func TestRunCreate(t *testing.T) {
 			},
 			wantError: true,
 			errMsg:    "address is required for HashiVault KMS",
+		},
+		{
+			name: "nonexistent intermediate template",
+			args: []string{
+				"--kms-type", "awskms",
+				"--aws-region", "us-west-2",
+				"--root-key-id", "alias/test-key",
+				"--leaf-key-id", "alias/test-key",
+				"--intermediate-key-id", "alias/test-key",
+				"--root-template", rootTmplPath,
+				"--leaf-template", leafTmplPath,
+				"--intermediate-template", "nonexistent.json",
+			},
+			wantError: true,
+			errMsg:    "intermediate template error: template not found at nonexistent.json",
+		},
+		{
+			name: "invalid intermediate template json",
+			args: []string{
+				"--kms-type", "awskms",
+				"--aws-region", "us-west-2",
+				"--root-key-id", "alias/test-key",
+				"--leaf-key-id", "alias/test-key",
+				"--intermediate-key-id", "alias/test-key",
+				"--root-template", rootTmplPath,
+				"--leaf-template", leafTmplPath,
+				"--intermediate-template", invalidIntermediateTmplPath,
+			},
+			wantError: true,
+			errMsg:    "intermediate template error: invalid template JSON",
 		},
 	}
 
@@ -425,7 +475,7 @@ func TestCreateCommand(t *testing.T) {
 				"--leaf-template", leafTmplPath,
 			},
 			wantError: true,
-			errMsg:    "error getting root public key: getting public key: operation error KMS: GetPublicKey",
+			errMsg:    "leaf template error: leaf certificate must have a parent",
 		},
 	}
 
