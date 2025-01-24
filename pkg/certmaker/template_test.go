@@ -13,384 +13,256 @@
 // limitations under the License.
 //
 
+// Package certmaker provides template parsing and certificate generation functionality
+// for creating X.509 certificates from JSON templates per RFC3161 standards.
 package certmaker
 
 import (
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+	"time"
 
-	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestParseTemplate(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "cert-template-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
 
-	parent := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "Parent CA",
+	notAfter := time.Now().Add(time.Hour * 24)
+
+	testRootTemplate := `{
+		"subject": {
+			"commonName": "Test Root CA"
 		},
-	}
+		"keyUsage": ["certSign", "crlSign"],
+		"basicConstraints": {
+			"isCA": true,
+			"maxPathLen": 1
+		}
+	}`
+
+	testLeafTemplate := `{
+		"subject": {
+			"commonName": "Test Leaf CA"
+		},
+		"keyUsage": ["digitalSignature"],
+		"basicConstraints": {
+			"isCA": false
+		}
+	}`
 
 	tests := []struct {
-		name      string
-		template  string
-		wantError string
+		name       string
+		input      interface{}
+		parent     *x509.Certificate
+		notAfter   time.Time
+		publicKey  crypto.PublicKey
+		commonName string
+		wantCN     string
+		wantError  string
 	}{
 		{
-			name: "valid template with duration-based validity",
-			template: `{
-				"subject": {
-					"commonName": "Test CA"
-				},
-				"issuer": {
-					"commonName": "Parent CA"
-				},
-				"certLife": "8760h",
-				"keyUsage": ["certSign", "crlSign"],
-				"basicConstraints": {
-					"isCA": true,
-					"maxPathLen": 1
-				}
-			}`,
-			wantError: "",
+			name:       "valid_root_template_with_provided_cn",
+			input:      testRootTemplate,
+			parent:     nil,
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "Test Root TSA",
+			wantCN:     "Test Root TSA",
 		},
 		{
-			name: "invalid certLife format",
-			template: `{
-				"subject": {
-					"commonName": "Test CA"
-				},
-				"issuer": {
-					"commonName": "Parent CA"
-				},
-				"certLife": "invalid",
-				"keyUsage": ["certSign", "crlSign"],
-				"basicConstraints": {
-					"isCA": true,
-					"maxPathLen": 1
-				}
-			}`,
-			wantError: "invalid certLife format",
+			name:       "valid_root_template_with_template_cn",
+			input:      testRootTemplate,
+			parent:     nil,
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "",
+			wantCN:     "Test Root CA",
 		},
 		{
-			name: "missing certLife",
-			template: `{
-				"subject": {
-					"commonName": "Test CA"
-				},
-				"issuer": {
-					"commonName": "Parent CA"
-				},
-				"keyUsage": ["certSign", "crlSign"],
-				"basicConstraints": {
-					"isCA": true,
-					"maxPathLen": 1
-				}
-			}`,
-			wantError: "certLife must be specified",
+			name:       "valid_leaf_template_with_provided_cn",
+			input:      testLeafTemplate,
+			parent:     &x509.Certificate{},
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "Test TSA",
+			wantCN:     "Test TSA",
 		},
 		{
-			name: "negative certLife",
-			template: `{
-				"subject": {
-					"commonName": "Test CA"
-				},
-				"issuer": {
-					"commonName": "Parent CA"
-				},
-				"certLife": "-8760h",
-				"keyUsage": ["certSign", "crlSign"],
-				"basicConstraints": {
-					"isCA": true,
-					"maxPathLen": 1
-				}
-			}`,
-			wantError: "certLife must be positive",
+			name:       "valid_leaf_template_with_template_cn",
+			input:      testLeafTemplate,
+			parent:     &x509.Certificate{},
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "",
+			wantCN:     "Test Leaf CA",
+		},
+		{
+			name:       "invalid_template",
+			input:      "{ invalid json",
+			parent:     nil,
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "Test TSA",
+			wantError:  "error parsing template",
+		},
+		{
+			name:       "invalid_input_type",
+			input:      123,
+			parent:     nil,
+			notAfter:   notAfter,
+			publicKey:  key.Public(),
+			commonName: "Test TSA",
+			wantError:  "input must be either a template string or template content",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			templateFile := filepath.Join(tmpDir, "template.json")
-			err := os.WriteFile(templateFile, []byte(tt.template), 0600)
-			require.NoError(t, err)
-
-			cert, err := ParseTemplate(templateFile, parent)
+			cert, err := ParseTemplate(tt.input, tt.parent, tt.notAfter, tt.publicKey, tt.commonName)
 			if tt.wantError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantError)
 			} else {
 				require.NoError(t, err)
-				assert.NotNil(t, cert)
+				require.NotNil(t, cert)
+				assert.Equal(t, tt.wantCN, cert.Subject.CommonName)
+				assert.Equal(t, tt.publicKey, cert.PublicKey)
+				assert.Equal(t, tt.notAfter, cert.NotAfter)
 			}
 		})
 	}
-}
-
-func TestParseTemplateWithInvalidExtensions(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "cert-template-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	content := `{
-		"subject": {"commonName": "Test TSA"},
-		"issuer": {"commonName": "Test TSA"},
-		"certLife": "8760h",
-		"keyUsage": ["digitalSignature"],
-		"basicConstraints": {"isCA": false},
-		"extensions": [
-			{
-				"id": "2.5.29.37",
-				"critical": true,
-				"value": "invalid-base64"
-			}
-		]
-	}`
-
-	tmpFile := filepath.Join(tmpDir, "template.json")
-	err = os.WriteFile(tmpFile, []byte(content), 0600)
-	require.NoError(t, err)
-
-	parent := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "Parent CA",
-		},
-	}
-
-	cert, err := ParseTemplate(tmpFile, parent)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "error decoding extension value")
-	assert.Nil(t, cert)
 }
 
 func TestValidateTemplate(t *testing.T) {
-	tests := []struct {
-		name      string
-		template  *CertificateTemplate
-		parent    *x509.Certificate
-		wantError string
-	}{
-		{
-			name: "valid root CA template",
-			template: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test Root CA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test Root CA",
-				},
-				CertLifetime: "8760h",
-				KeyUsage:     []string{"certSign", "crlSign"},
-				BasicConstraints: struct {
-					IsCA       bool `json:"isCA"`
-					MaxPathLen int  `json:"maxPathLen"`
-				}{
-					IsCA:       true,
-					MaxPathLen: 1,
-				},
-			},
-		},
-		{
-			name: "valid intermediate CA template",
-			template: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test Intermediate CA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test Root CA",
-				},
-				CertLifetime: "8760h",
-				KeyUsage:     []string{"certSign", "crlSign"},
-				BasicConstraints: struct {
-					IsCA       bool `json:"isCA"`
-					MaxPathLen int  `json:"maxPathLen"`
-				}{
-					IsCA:       true,
-					MaxPathLen: 0,
-				},
-			},
-			parent: &x509.Certificate{
-				Subject: pkix.Name{
-					CommonName: "Test Root CA",
-				},
-			},
-		},
-		{
-			name: "valid leaf template",
-			template: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test Leaf",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test Intermediate CA",
-				},
-				CertLifetime: "8760h",
-				KeyUsage:     []string{"digitalSignature"},
-				BasicConstraints: struct {
-					IsCA       bool `json:"isCA"`
-					MaxPathLen int  `json:"maxPathLen"`
-				}{
-					IsCA: false,
-				},
-				Extensions: []struct {
-					ID       string `json:"id"`
-					Critical bool   `json:"critical"`
-					Value    string `json:"value"`
-				}{
-					{
-						ID:       "2.5.29.37",
-						Critical: true,
-						Value:    "MCQwIgYDVR0lBBswGQYIKwYBBQUHAwgGDSsGAQQBgjcUAgICAf8=",
-					},
-				},
-			},
-			parent: &x509.Certificate{
-				Subject: pkix.Name{
-					CommonName: "Test Intermediate CA",
-				},
-			},
-		},
-	}
+	tmpDir := t.TempDir()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTemplate(tt.template, tt.parent)
-			if tt.wantError != "" {
-				if err == nil {
-					t.Error("Expected error but got none")
-				} else if !strings.Contains(err.Error(), tt.wantError) {
-					t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
-				}
-			} else if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-		})
-	}
-}
+	validTemplate := `{
+		"subject": {
+			"commonName": "Test CA"
+		},
+		"keyUsage": ["certSign", "crlSign"],
+		"basicConstraints": {
+			"isCA": true,
+			"maxPathLen": 1
+		}
+	}`
 
-func TestValidateTemplateWithMockKMS(t *testing.T) {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	invalidJSON := `{
+		"subject": {
+			"commonName": "Test CA"
+		},
+		"keyUsage": ["invalidUsage"],
+		"basicConstraints": {
+			"isCA": "not a boolean",
+			"maxPathLen": 1
+		}
+	}`
+
+	validPath := filepath.Join(tmpDir, "valid.json")
+	invalidJSONPath := filepath.Join(tmpDir, "invalid.json")
+	nonexistentPath := filepath.Join(tmpDir, "nonexistent.json")
+
+	err := os.WriteFile(validPath, []byte(validTemplate), 0600)
+	require.NoError(t, err)
+	err = os.WriteFile(invalidJSONPath, []byte(invalidJSON), 0600)
 	require.NoError(t, err)
 
-	mockSigner := &mockSignerVerifier{
-		key: privKey,
-	}
-
-	parent := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "Parent CA",
-		},
-	}
-
 	tests := []struct {
-		name      string
-		template  *CertificateTemplate
-		parent    *x509.Certificate
-		signer    signature.SignerVerifier
-		wantError string
+		name     string
+		filename string
+		parent   *x509.Certificate
+		certType string
+		wantErr  bool
+		errMsg   string
 	}{
 		{
-			name: "valid template",
-			template: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				CertLifetime: "8760h",
-				KeyUsage:     []string{"digitalSignature"},
-				Extensions: []struct {
-					ID       string `json:"id"`
-					Critical bool   `json:"critical"`
-					Value    string `json:"value"`
-				}{
-					{
-						ID:       "2.5.29.37",
-						Critical: true,
-						Value:    base64.StdEncoding.EncodeToString([]byte{0x30, 0x24, 0x30, 0x22, 0x06, 0x08, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x08}),
-					},
-				},
-			},
-			parent: &x509.Certificate{
-				Subject: pkix.Name{
-					CommonName: "Test TSA",
-				},
-			},
-			signer: mockSigner,
+			name:     "valid_root_template",
+			filename: validPath,
+			parent:   nil,
+			certType: "root",
+			wantErr:  false,
 		},
 		{
-			name: "missing certLife",
-			template: &CertificateTemplate{
-				Subject: struct {
-					Country            []string `json:"country,omitempty"`
-					Organization       []string `json:"organization,omitempty"`
-					OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-					CommonName         string   `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				Issuer: struct {
-					CommonName string `json:"commonName"`
-				}{
-					CommonName: "Test TSA",
-				},
-				KeyUsage: []string{"digitalSignature"},
-			},
-			parent:    parent,
-			signer:    mockSigner,
-			wantError: "certLife must be specified",
+			name:     "valid_intermediate_template",
+			filename: validPath,
+			parent:   &x509.Certificate{},
+			certType: "intermediate",
+			wantErr:  false,
+		},
+		{
+			name:     "valid_leaf_template",
+			filename: validPath,
+			parent:   &x509.Certificate{},
+			certType: "leaf",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid_root_with_parent",
+			filename: validPath,
+			parent:   &x509.Certificate{},
+			certType: "root",
+			wantErr:  true,
+			errMsg:   "root certificate cannot have a parent",
+		},
+		{
+			name:     "invalid_intermediate_no_parent",
+			filename: validPath,
+			parent:   nil,
+			certType: "intermediate",
+			wantErr:  true,
+			errMsg:   "intermediate certificate must have a parent",
+		},
+		{
+			name:     "invalid_leaf_no_parent",
+			filename: validPath,
+			parent:   nil,
+			certType: "leaf",
+			wantErr:  true,
+			errMsg:   "leaf certificate must have a parent",
+		},
+		{
+			name:     "invalid_cert_type",
+			filename: validPath,
+			parent:   nil,
+			certType: "invalid",
+			wantErr:  true,
+			errMsg:   "invalid certificate type",
+		},
+		{
+			name:     "nonexistent_file",
+			filename: nonexistentPath,
+			parent:   nil,
+			certType: "root",
+			wantErr:  true,
+			errMsg:   "template not found at",
+		},
+		{
+			name:     "invalid_json",
+			filename: invalidJSONPath,
+			parent:   nil,
+			certType: "root",
+			wantErr:  true,
+			errMsg:   "invalid template JSON",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTemplate(tt.template, tt.parent)
-			if tt.wantError != "" {
+			err := ValidateTemplate(tt.filename, tt.parent, tt.certType)
+			if tt.wantErr {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantError)
+				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
 				require.NoError(t, err)
 			}
@@ -398,136 +270,90 @@ func TestValidateTemplateWithMockKMS(t *testing.T) {
 	}
 }
 
-func TestParseTemplateWithInvalidJSON(t *testing.T) {
+func TestDeterminePublicKeyAlgorithm(t *testing.T) {
+	ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	_, ed25519Key, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	tests := []struct {
 		name      string
-		content   string
-		wantError string
+		publicKey crypto.PublicKey
+		want      x509.PublicKeyAlgorithm
 	}{
 		{
-			name: "invalid JSON structure",
-			content: `{
-				"subject": {
-					"commonName": "Test"
-				},
-				"keyUsage": ["certSign", // missing closing bracket
-				"certLife": "8760h"
-			}`,
-			wantError: "invalid character",
+			name:      "ECDSA key",
+			publicKey: ecKey.Public(),
+			want:      x509.ECDSA,
 		},
 		{
-			name:      "empty template",
-			content:   `{}`,
-			wantError: "certLife must be specified",
+			name:      "RSA key",
+			publicKey: rsaKey.Public(),
+			want:      x509.RSA,
 		},
 		{
-			name: "missing required fields",
-			content: `{
-				"subject": {},
-				"certLife": "8760h"
-			}`,
-			wantError: "subject.commonName cannot be empty",
+			name:      "Ed25519 key",
+			publicKey: ed25519Key,
+			want:      3,
 		},
 		{
-			name: "invalid key usage",
-			content: `{
-				"subject": {
-					"commonName": "Test"
-				},
-				"issuer": {
-					"commonName": "Test"
-				},
-				"certLife": "8760h",
-				"keyUsage": ["invalidUsage"],
-				"basicConstraints": {
-					"isCA": false
-				}
-			}`,
-			wantError: "timestamp authority certificate must have digitalSignature key usage",
+			name:      "Unknown key type",
+			publicKey: struct{}{},
+			want:      x509.ECDSA,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := os.CreateTemp("", "cert-template-*.json")
-			require.NoError(t, err)
-			defer os.Remove(tmpFile.Name())
-
-			err = os.WriteFile(tmpFile.Name(), []byte(tt.content), 0600)
-			require.NoError(t, err)
-
-			_, err = ParseTemplate(tmpFile.Name(), nil)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantError)
+			got := determinePublicKeyAlgorithm(tt.publicKey)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestSetCertificateUsagesComprehensive(t *testing.T) {
+func TestGetDefaultTemplate(t *testing.T) {
 	tests := []struct {
-		name              string
-		keyUsages         []string
-		extKeyUsages      []string
-		expectedKeyUsage  x509.KeyUsage
-		expectedExtUsages []x509.ExtKeyUsage
+		name      string
+		certType  string
+		wantError string
+		contains  string
 	}{
 		{
-			name:              "empty usages",
-			keyUsages:         []string{},
-			extKeyUsages:      []string{},
-			expectedKeyUsage:  0,
-			expectedExtUsages: nil,
+			name:     "root_template",
+			certType: "root",
+			contains: "certSign",
 		},
 		{
-			name:              "single key usage",
-			keyUsages:         []string{"certSign"},
-			extKeyUsages:      []string{},
-			expectedKeyUsage:  x509.KeyUsageCertSign,
-			expectedExtUsages: nil,
+			name:     "intermediate_template",
+			certType: "intermediate",
+			contains: "certSign",
 		},
 		{
-			name:              "single ext usage",
-			keyUsages:         []string{},
-			extKeyUsages:      []string{"CodeSigning"},
-			expectedKeyUsage:  0,
-			expectedExtUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+			name:     "leaf_template",
+			certType: "leaf",
+			contains: "oid:1.3.6.1.5.5.7.3.8", // TimeStamping OID
 		},
 		{
-			name:              "multiple key usages",
-			keyUsages:         []string{"certSign", "crlSign", "digitalSignature"},
-			extKeyUsages:      []string{},
-			expectedKeyUsage:  x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
-			expectedExtUsages: nil,
-		},
-		{
-			name:              "multiple ext usages",
-			keyUsages:         []string{},
-			extKeyUsages:      []string{"CodeSigning", "TimeStamping"},
-			expectedKeyUsage:  0,
-			expectedExtUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageTimeStamping},
-		},
-		{
-			name:              "both key and ext usages",
-			keyUsages:         []string{"certSign", "digitalSignature"},
-			extKeyUsages:      []string{"CodeSigning", "TimeStamping"},
-			expectedKeyUsage:  x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
-			expectedExtUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageTimeStamping},
-		},
-		{
-			name:              "invalid usages",
-			keyUsages:         []string{"invalidKeyUsage"},
-			extKeyUsages:      []string{"invalidExtUsage"},
-			expectedKeyUsage:  0,
-			expectedExtUsages: nil,
+			name:      "invalid_type",
+			certType:  "invalid",
+			wantError: "invalid certificate type",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cert := &x509.Certificate{}
-			SetCertificateUsages(cert, tt.keyUsages, tt.extKeyUsages)
-			assert.Equal(t, tt.expectedKeyUsage, cert.KeyUsage)
-			assert.Equal(t, tt.expectedExtUsages, cert.ExtKeyUsage)
+			template, err := GetDefaultTemplate(tt.certType)
+			if tt.wantError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantError)
+			} else {
+				require.NoError(t, err)
+				assert.Contains(t, template, tt.contains)
+			}
 		})
 	}
 }

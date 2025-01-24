@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sigstore/timestamp-authority/pkg/certmaker"
@@ -44,9 +45,14 @@ var (
 	}
 
 	createCmd = &cobra.Command{
-		Use:   "create",
+		Use:   "create [common-name]",
 		Short: "Create certificate chain",
-		RunE:  runCreate,
+		Long: `Create a certificate chain with the specified common name.
+The common name will be used as the Subject Common Name for the certificates.
+If no common name is provided, the values from the templates will be used.
+Example: tsa-certificate-maker create "https://timestamp.example.com"`,
+		Args: cobra.RangeArgs(0, 1),
+		RunE: runCreate,
 	}
 )
 
@@ -65,11 +71,24 @@ func mustBindEnv(key, envVar string) {
 func init() {
 	log.ConfigureLogger("prod")
 
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+	mustBindEnv("kms-type", "KMS_TYPE")
+	mustBindEnv("aws-region", "AWS_REGION")
+	mustBindEnv("azure-tenant-id", "AZURE_TENANT_ID")
+	mustBindEnv("gcp-credentials-file", "GCP_CREDENTIALS_FILE")
+	mustBindEnv("vault-token", "VAULT_TOKEN")
+	mustBindEnv("vault-address", "VAULT_ADDR")
+	mustBindEnv("root-key-id", "KMS_ROOT_KEY_ID")
+	mustBindEnv("intermediate-key-id", "KMS_INTERMEDIATE_KEY_ID")
+	mustBindEnv("leaf-key-id", "KMS_LEAF_KEY_ID")
+
 	rootCmd.AddCommand(createCmd)
-	rootCmd.SetVersionTemplate("{{.Version}}\n")
 
 	// KMS provider flags
-	createCmd.Flags().String("kms-type", "", "KMS provider type (awskms, gcpkms, azurekms, hashivault)")
+	createCmd.Flags().String("kms-type", "", "KMS provider type")
 	createCmd.Flags().String("aws-region", "", "AWS KMS region")
 	createCmd.Flags().String("azure-tenant-id", "", "Azure KMS tenant ID")
 	createCmd.Flags().String("gcp-credentials-file", "", "Path to credentials file for GCP KMS")
@@ -77,60 +96,58 @@ func init() {
 	createCmd.Flags().String("vault-address", "", "HashiVault server address")
 
 	// Root certificate flags
-	createCmd.Flags().String("root-template", "pkg/certmaker/templates/root-template.json", "Path to root certificate template")
 	createCmd.Flags().String("root-key-id", "", "KMS key identifier for root certificate")
+	createCmd.Flags().String("root-template", "", "Path to root certificate template (optional)")
 	createCmd.Flags().String("root-cert", "root.pem", "Output path for root certificate")
 
 	// Intermediate certificate flags
-	createCmd.Flags().String("intermediate-template", "pkg/certmaker/templates/intermediate-template.json", "Path to intermediate certificate template")
 	createCmd.Flags().String("intermediate-key-id", "", "KMS key identifier for intermediate certificate")
+	createCmd.Flags().String("intermediate-template", "", "Path to intermediate certificate template (optional)")
 	createCmd.Flags().String("intermediate-cert", "intermediate.pem", "Output path for intermediate certificate")
 
 	// Leaf certificate flags
-	createCmd.Flags().String("leaf-template", "pkg/certmaker/templates/leaf-template.json", "Path to leaf certificate template")
 	createCmd.Flags().String("leaf-key-id", "", "KMS key identifier for leaf certificate")
+	createCmd.Flags().String("leaf-template", "", "Path to leaf certificate template (optional)")
 	createCmd.Flags().String("leaf-cert", "leaf.pem", "Output path for leaf certificate")
 
-	// Bind flags to viper
+	// Lifetime flags
+	createCmd.Flags().Duration("root-lifetime", 87600*time.Hour, "Root certificate lifetime")
+	createCmd.Flags().Duration("intermediate-lifetime", 43800*time.Hour, "Intermediate certificate lifetime")
+	createCmd.Flags().Duration("leaf-lifetime", 8760*time.Hour, "Leaf certificate lifetime")
+
 	mustBindPFlag("kms-type", createCmd.Flags().Lookup("kms-type"))
 	mustBindPFlag("aws-region", createCmd.Flags().Lookup("aws-region"))
 	mustBindPFlag("azure-tenant-id", createCmd.Flags().Lookup("azure-tenant-id"))
 	mustBindPFlag("gcp-credentials-file", createCmd.Flags().Lookup("gcp-credentials-file"))
 	mustBindPFlag("vault-token", createCmd.Flags().Lookup("vault-token"))
 	mustBindPFlag("vault-address", createCmd.Flags().Lookup("vault-address"))
-
-	mustBindPFlag("root-template", createCmd.Flags().Lookup("root-template"))
 	mustBindPFlag("root-key-id", createCmd.Flags().Lookup("root-key-id"))
+	mustBindPFlag("root-template", createCmd.Flags().Lookup("root-template"))
 	mustBindPFlag("root-cert", createCmd.Flags().Lookup("root-cert"))
-
-	mustBindPFlag("intermediate-template", createCmd.Flags().Lookup("intermediate-template"))
 	mustBindPFlag("intermediate-key-id", createCmd.Flags().Lookup("intermediate-key-id"))
+	mustBindPFlag("intermediate-template", createCmd.Flags().Lookup("intermediate-template"))
 	mustBindPFlag("intermediate-cert", createCmd.Flags().Lookup("intermediate-cert"))
-
-	mustBindPFlag("leaf-template", createCmd.Flags().Lookup("leaf-template"))
 	mustBindPFlag("leaf-key-id", createCmd.Flags().Lookup("leaf-key-id"))
+	mustBindPFlag("leaf-template", createCmd.Flags().Lookup("leaf-template"))
 	mustBindPFlag("leaf-cert", createCmd.Flags().Lookup("leaf-cert"))
-
-	// Bind environment variables
-	mustBindEnv("kms-type", "KMS_TYPE")
-	mustBindEnv("aws-region", "AWS_REGION")
-	mustBindEnv("azure-tenant-id", "AZURE_TENANT_ID")
-	mustBindEnv("gcp-credentials-file", "GCP_CREDENTIALS_FILE")
-	mustBindEnv("vault-token", "VAULT_TOKEN")
-	mustBindEnv("vault-address", "VAULT_ADDR")
-
-	mustBindEnv("root-key-id", "KMS_ROOT_KEY_ID")
-	mustBindEnv("intermediate-key-id", "KMS_INTERMEDIATE_KEY_ID")
-	mustBindEnv("leaf-key-id", "KMS_LEAF_KEY_ID")
+	mustBindPFlag("root-lifetime", createCmd.Flags().Lookup("root-lifetime"))
+	mustBindPFlag("intermediate-lifetime", createCmd.Flags().Lookup("intermediate-lifetime"))
+	mustBindPFlag("leaf-lifetime", createCmd.Flags().Lookup("leaf-lifetime"))
 }
 
-func runCreate(_ *cobra.Command, _ []string) error {
-	defer func() { rootCmd.SilenceUsage = true }()
+func runCreate(_ *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Get common name from args if provided, otherwise templates used
+	commonName := viper.GetString("common-name")
+	if len(args) > 0 {
+		commonName = args[0]
+	}
+
 	// Build KMS config from flags and environment
 	config := certmaker.KMSConfig{
+		CommonName:        commonName,
 		Type:              viper.GetString("kms-type"),
 		RootKeyID:         viper.GetString("root-key-id"),
 		IntermediateKeyID: viper.GetString("intermediate-key-id"),
@@ -146,7 +163,7 @@ func runCreate(_ *cobra.Command, _ []string) error {
 		}
 	case "gcpkms":
 		if gcpCredsFile := viper.GetString("gcp-credentials-file"); gcpCredsFile != "" {
-			// Check if credentials file exists before trying to use it
+			// Check if gcp creds exists
 			if _, err := os.Stat(gcpCredsFile); err != nil {
 				if os.IsNotExist(err) {
 					return fmt.Errorf("failed to initialize KMS: credentials file not found: %s", gcpCredsFile)
@@ -173,24 +190,38 @@ func runCreate(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to initialize KMS: %w", err)
 	}
 
-	// Validate template paths
+	// Validate template paths if provided
 	rootTemplate := viper.GetString("root-template")
-	leafTemplate := viper.GetString("leaf-template")
 	intermediateTemplate := viper.GetString("intermediate-template")
+	leafTemplate := viper.GetString("leaf-template")
 
-	if err := certmaker.ValidateTemplatePath(rootTemplate); err != nil {
-		return fmt.Errorf("root template error: %w", err)
+	if rootTemplate != "" {
+		if err := certmaker.ValidateTemplate(rootTemplate, nil, "root"); err != nil {
+			return fmt.Errorf("root template error: %w", err)
+		}
 	}
-	if err := certmaker.ValidateTemplatePath(leafTemplate); err != nil {
-		return fmt.Errorf("leaf template error: %w", err)
-	}
-	if viper.GetString("intermediate-key-id") != "" {
-		if err := certmaker.ValidateTemplatePath(intermediateTemplate); err != nil {
+	if intermediateTemplate != "" {
+		if err := certmaker.ValidateTemplate(intermediateTemplate, nil, "intermediate"); err != nil {
 			return fmt.Errorf("intermediate template error: %w", err)
 		}
 	}
+	if leafTemplate != "" {
+		if err := certmaker.ValidateTemplate(leafTemplate, nil, "leaf"); err != nil {
+			return fmt.Errorf("leaf template error: %w", err)
+		}
+	}
 
-	return certmaker.CreateCertificates(km, config, viper.GetString("root-template"), viper.GetString("leaf-template"), viper.GetString("root-cert"), viper.GetString("leaf-cert"), viper.GetString("intermediate-key-id"), viper.GetString("intermediate-template"), viper.GetString("intermediate-cert"))
+	return certmaker.CreateCertificates(km, config,
+		rootTemplate,
+		leafTemplate,
+		viper.GetString("root-cert"),
+		viper.GetString("leaf-cert"),
+		viper.GetString("intermediate-key-id"),
+		viper.GetString("intermediate-template"),
+		viper.GetString("intermediate-cert"),
+		viper.GetDuration("root-lifetime"),
+		viper.GetDuration("intermediate-lifetime"),
+		viper.GetDuration("leaf-lifetime"))
 }
 
 func main() {

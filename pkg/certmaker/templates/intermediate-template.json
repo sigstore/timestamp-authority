@@ -9,18 +9,14 @@
         "organizationalUnit": [
             ""
         ],
-        "commonName": ""
-    },
-    "issuer": {
-        "commonName": ""
-    },
-    "certLife": "43800h",
-    "basicConstraints": {
-        "isCA": true,
-        "maxPathLen": 0
+        "commonName": "{{ .Subject.CommonName }}"
     },
     "keyUsage": [
         "certSign",
         "crlSign"
-    ]
+    ],
+    "basicConstraints": {
+        "isCA": true,
+        "maxPathLen": 0
+    }
 }

@@ -9,12 +9,8 @@
     "organizationalUnit": [
       ""
     ],
-    "commonName": ""
+    "commonName": "{{ .Subject.CommonName }}"
   },
-  "issuer": {
-    "commonName": ""
-  },
-  "certLife": "87600h",
   "basicConstraints": {
     "isCA": true,
     "maxPathLen": 1

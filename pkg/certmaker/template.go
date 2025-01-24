@@ -18,348 +18,153 @@
 package certmaker
 
 import (
-	"bytes"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
-	"encoding/json"
+	_ "embed"
 	"fmt"
-	"math/big"
 	"os"
-	"strconv"
-	"strings"
-	"text/template"
 	"time"
 
 	"go.step.sm/crypto/x509util"
 )
 
-// CertificateTemplate defines the structure for the JSON certificate templates
-type CertificateTemplate struct {
-	Subject struct {
-		Country            []string `json:"country,omitempty"`
-		Organization       []string `json:"organization,omitempty"`
-		OrganizationalUnit []string `json:"organizationalUnit,omitempty"`
-		CommonName         string   `json:"commonName"`
-	} `json:"subject"`
-	Issuer struct {
-		CommonName string `json:"commonName"`
-	} `json:"issuer"`
-	CertLifetime     string   `json:"certLife"` // Duration string e.g. "8760h" for 1 year
-	KeyUsage         []string `json:"keyUsage"`
-	ExtKeyUsage      []string `json:"extKeyUsage,omitempty"`
-	BasicConstraints struct {
-		IsCA       bool `json:"isCA"`
-		MaxPathLen int  `json:"maxPathLen"`
-	} `json:"basicConstraints"`
-	Extensions []struct {
-		ID       string `json:"id"`
-		Critical bool   `json:"critical"`
-		Value    string `json:"value"`
-	} `json:"extensions,omitempty"`
+//go:embed templates/root-template.json
+var rootTemplate string
+
+//go:embed templates/intermediate-template.json
+var intermediateTemplate string
+
+//go:embed templates/leaf-template.json
+var leafTemplate string
+
+func ParseTemplate(input interface{}, parent *x509.Certificate, notAfter time.Time, publicKey crypto.PublicKey, commonName string) (*x509.Certificate, error) {
+	var content string
+
+	switch v := input.(type) {
+	case string:
+		content = v
+	case []byte:
+		content = string(v)
+	default:
+		return nil, fmt.Errorf("input must be either a template string or template content ([]byte)")
+	}
+
+	// Parse/validate template
+	if err := x509util.ValidateTemplate([]byte(content)); err != nil {
+		return nil, fmt.Errorf("error parsing template: %w", err)
+	}
+
+	// Get cert life and subject from template
+	data := x509util.NewTemplateData()
+	if commonName != "" {
+		fmt.Printf("Using CN from CLI: %s\n", commonName)
+		data.SetSubject(x509util.Subject{CommonName: commonName})
+	} else {
+		// Get CN from template
+		cert, err := x509util.NewCertificateFromX509(&x509.Certificate{}, x509util.WithTemplate(content, data))
+		if err == nil && cert != nil {
+			fmt.Printf("Using CN from template: %s\n", cert.Subject.CommonName)
+			data.SetSubject(x509util.Subject{CommonName: cert.Subject.CommonName})
+		} else {
+			fmt.Printf("Using CN from template: <none>\n")
+		}
+	}
+
+	// Create base cert with public key
+	baseCert := &x509.Certificate{
+		PublicKey:          publicKey,
+		PublicKeyAlgorithm: determinePublicKeyAlgorithm(publicKey),
+		NotBefore:          time.Now().UTC(),
+		NotAfter:           notAfter,
+	}
+
+	cert, err := x509util.NewCertificateFromX509(baseCert, x509util.WithTemplate(content, data))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template: %w", err)
+	}
+
+	x509Cert := cert.GetCertificate()
+	if commonName != "" {
+		x509Cert.Subject.CommonName = commonName
+	}
+
+	// Set parent cert info
+	if parent != nil {
+		x509Cert.Issuer = parent.Subject
+		x509Cert.AuthorityKeyId = parent.SubjectKeyId
+	}
+
+	// Ensure cert life is set
+	x509Cert.NotBefore = baseCert.NotBefore
+	x509Cert.NotAfter = baseCert.NotAfter
+
+	return x509Cert, nil
 }
 
-// TemplateData holds context data passed to the template parser
-type TemplateData struct {
-	Parent *x509.Certificate
+func determinePublicKeyAlgorithm(publicKey crypto.PublicKey) x509.PublicKeyAlgorithm {
+	switch publicKey.(type) {
+	case *ecdsa.PublicKey:
+		return x509.ECDSA
+	case *rsa.PublicKey:
+		return x509.RSA
+	case ed25519.PublicKey:
+		return x509.Ed25519
+	default:
+		return x509.ECDSA // Default to ECDSA if key type is unknown
+	}
 }
 
-// ParseTemplate creates an x509 certificate from JSON template
-func ParseTemplate(filename string, parent *x509.Certificate) (*x509.Certificate, error) {
+// Performs validation checks on the cert template
+func ValidateTemplate(filename string, parent *x509.Certificate, certType string) error {
 	content, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error reading template file: %w", err)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("template not found at %s", filename)
+		}
+		return fmt.Errorf("error reading template file: %w", err)
 	}
 
-	data := &TemplateData{
-		Parent: parent,
-	}
-
-	// Borrows x509util functions to create template
-	tmpl, err := template.New("cert").Funcs(x509util.GetFuncMap()).Parse(string(content))
+	// Parse template via x509util to avoid issues with templating
+	data := x509util.NewTemplateData()
+	baseCert := &x509.Certificate{}
+	_, err = x509util.NewCertificateFromX509(baseCert, x509util.WithTemplate(string(content), data))
 	if err != nil {
-		return nil, fmt.Errorf("leaf template error: %w", err)
+		return fmt.Errorf("invalid template JSON: %w", err)
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return nil, fmt.Errorf("leaf template error: %w", err)
-	}
-
-	// Parse template as JSON
-	var certTmpl CertificateTemplate
-	if err := json.Unmarshal(buf.Bytes(), &certTmpl); err != nil {
-		return nil, fmt.Errorf("leaf template error: invalid JSON after template execution: %w", err)
-	}
-
-	if err := ValidateTemplate(&certTmpl, parent); err != nil {
-		return nil, fmt.Errorf("template validation error: %w", err)
-	}
-
-	return CreateCertificateFromTemplate(&certTmpl, parent)
-}
-
-// ValidateTemplate performs validation checks on the certificate template.
-func ValidateTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) error {
-	var notBefore, notAfter time.Time
-	var err error
-
-	if tmpl.CertLifetime != "" {
-		duration, err := time.ParseDuration(tmpl.CertLifetime)
-		if err != nil {
-			return fmt.Errorf("invalid certLife format: %w", err)
+	switch certType {
+	case "root":
+		if parent != nil {
+			return fmt.Errorf("root certificate cannot have a parent")
 		}
-		if duration <= 0 {
-			return fmt.Errorf("certLife must be positive")
+	case "intermediate":
+		if parent == nil {
+			return fmt.Errorf("intermediate certificate must have a parent")
 		}
-		notBefore = time.Now().UTC()
-		notAfter = notBefore.Add(duration)
-	} else {
-		if tmpl.CertLifetime == "" {
-			return fmt.Errorf("certLife must be specified")
+	case "leaf":
+		if parent == nil {
+			return fmt.Errorf("leaf certificate must have a parent")
 		}
-		notBefore, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
-		if err != nil {
-			return fmt.Errorf("invalid certLife format: %w", err)
-		}
-		notAfter, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
-		if err != nil {
-			return fmt.Errorf("invalid certLife format: %w", err)
-		}
-	}
-
-	if notBefore.After(notAfter) {
-		return fmt.Errorf("NotBefore time must be before NotAfter time")
-	}
-
-	if tmpl.Subject.CommonName == "" {
-		return fmt.Errorf("template subject.commonName cannot be empty")
-	}
-	if parent == nil && tmpl.Issuer.CommonName == "" {
-		return fmt.Errorf("template issuer.commonName cannot be empty for root certificate")
-	}
-
-	// Check if the certificate has certSign key usage
-	hasKeyUsageCertSign := false
-	for _, usage := range tmpl.KeyUsage {
-		if usage == "certSign" {
-			hasKeyUsageCertSign = true
-			break
-		}
-	}
-
-	// For certificates with certSign key usage, they must be CA certificates
-	if hasKeyUsageCertSign && !tmpl.BasicConstraints.IsCA {
-		return fmt.Errorf("CA certificate must have isCA set to true")
-	}
-
-	// For CA certs
-	if tmpl.BasicConstraints.IsCA {
-		if len(tmpl.KeyUsage) == 0 {
-			return fmt.Errorf("CA certificate must specify at least one key usage")
-		}
-		if !hasKeyUsageCertSign {
-			return fmt.Errorf("CA certificate must have certSign key usage")
-		}
-
-		// For root certificates, the SKID and AKID should match
-		if parent == nil && len(tmpl.Extensions) > 0 {
-			var hasAKID, hasSKID bool
-			var akidValue, skidValue string
-			for _, ext := range tmpl.Extensions {
-				if ext.ID == "2.5.29.35" { // AKID OID
-					hasAKID = true
-					akidValue = ext.Value
-				} else if ext.ID == "2.5.29.14" { // SKID OID
-					hasSKID = true
-					skidValue = ext.Value
-				}
-			}
-			if hasAKID && hasSKID && akidValue != skidValue {
-				return fmt.Errorf("root certificate SKID and AKID must match")
-			}
-		}
-	} else {
-		// For non-CA certs
-		if len(tmpl.KeyUsage) == 0 {
-			return fmt.Errorf("certificate must specify at least one key usage")
-		}
-		hasDigitalSignature := false
-		for _, usage := range tmpl.KeyUsage {
-			if usage == "digitalSignature" {
-				hasDigitalSignature = true
-				break
-			}
-		}
-		if !hasDigitalSignature {
-			return fmt.Errorf("timestamp authority certificate must have digitalSignature key usage")
-		}
-
-		// Check for TimeStamping extended key usage
-		hasTimeStamping := false
-
-		// Check extKeyUsage field first
-		if len(tmpl.ExtKeyUsage) > 0 {
-			for _, usage := range tmpl.ExtKeyUsage {
-				if usage == "TimeStamping" {
-					hasTimeStamping = true
-					break
-				}
-			}
-		}
-
-		// If not found in extKeyUsage, check Extensions
-		if !hasTimeStamping {
-			for _, ext := range tmpl.Extensions {
-				if ext.ID == "2.5.29.37" { // Extended Key Usage OID
-					// Decode the base64 value
-					value, err := base64.StdEncoding.DecodeString(ext.Value)
-					if err != nil {
-						return fmt.Errorf("error decoding extension value: %w", err)
-					}
-					// Check if the value contains the TimeStamping OID (1.3.6.1.5.5.7.3.8)
-					if bytes.Contains(value, []byte{0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x08}) {
-						hasTimeStamping = true
-						break
-					}
-				}
-			}
-		}
-
-		if !hasTimeStamping {
-			return fmt.Errorf("timestamp authority certificate must have TimeStamping extended key usage")
-		}
-	}
-
-	// Validate extensions
-	for _, ext := range tmpl.Extensions {
-		if ext.ID == "" {
-			return fmt.Errorf("extension ID cannot be empty")
-		}
-		// Validate OID format
-		for _, n := range strings.Split(ext.ID, ".") {
-			if _, err := strconv.Atoi(n); err != nil {
-				return fmt.Errorf("invalid OID component in extension: %s", ext.ID)
-			}
-		}
+	default:
+		return fmt.Errorf("invalid certificate type: %s", certType)
 	}
 
 	return nil
 }
 
-// CreateCertificateFromTemplate creates an x509.Certificate from the provided template
-func CreateCertificateFromTemplate(tmpl *CertificateTemplate, parent *x509.Certificate) (*x509.Certificate, error) {
-	var notBefore, notAfter time.Time
-	var err error
-
-	if tmpl.CertLifetime != "" {
-		duration, err := time.ParseDuration(tmpl.CertLifetime)
-		if err != nil {
-			return nil, fmt.Errorf("invalid certLife format: %w", err)
-		}
-		notBefore = time.Now().UTC()
-		notAfter = notBefore.Add(duration)
-	} else {
-		notBefore, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
-		if err != nil {
-			return nil, fmt.Errorf("invalid certLife format: %w", err)
-		}
-		notAfter, err = time.Parse(time.RFC3339, tmpl.CertLifetime)
-		if err != nil {
-			return nil, fmt.Errorf("invalid certLife format: %w", err)
-		}
-	}
-
-	if notBefore.After(notAfter) {
-		return nil, fmt.Errorf("NotBefore time must be before NotAfter time")
-	}
-
-	cert := &x509.Certificate{
-		Subject: pkix.Name{
-			Country:            tmpl.Subject.Country,
-			Organization:       tmpl.Subject.Organization,
-			OrganizationalUnit: tmpl.Subject.OrganizationalUnit,
-			CommonName:         tmpl.Subject.CommonName,
-		},
-		Issuer: func() pkix.Name {
-			if parent != nil {
-				return parent.Subject
-			}
-			return pkix.Name{CommonName: tmpl.Issuer.CommonName}
-		}(),
-		SerialNumber:          big.NewInt(time.Now().Unix()),
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		BasicConstraintsValid: true,
-		IsCA:                  tmpl.BasicConstraints.IsCA,
-		ExtraExtensions:       []pkix.Extension{},
-	}
-
-	if tmpl.BasicConstraints.IsCA {
-		cert.MaxPathLen = tmpl.BasicConstraints.MaxPathLen
-		cert.MaxPathLenZero = tmpl.BasicConstraints.MaxPathLen == 0
-	} else {
-		// For non-CA certificates, set the extended key usage
-		for _, usage := range tmpl.ExtKeyUsage {
-			if usage == "TimeStamping" {
-				cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
-			}
-		}
-	}
-
-	SetCertificateUsages(cert, tmpl.KeyUsage, tmpl.ExtKeyUsage)
-
-	// Sets extensions (e.g. Timestamping)
-	for _, ext := range tmpl.Extensions {
-		var oid []int
-		for _, n := range strings.Split(ext.ID, ".") {
-			i, err := strconv.Atoi(n)
-			if err != nil {
-				return nil, fmt.Errorf("invalid OID in extension: %s", ext.ID)
-			}
-			oid = append(oid, i)
-		}
-
-		extension := pkix.Extension{
-			Id:       oid,
-			Critical: ext.Critical,
-		}
-
-		value, err := base64.StdEncoding.DecodeString(ext.Value)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding extension value: %w", err)
-		}
-		extension.Value = value
-
-		cert.ExtraExtensions = append(cert.ExtraExtensions, extension)
-	}
-
-	return cert, nil
-}
-
-// SetCertificateUsages applies both basic key usages and extended key usages to the certificate.
-// Supports basic usages: certSign, crlSign, digitalSignature
-// Supports extended usages: CodeSigning, TimeStamping
-func SetCertificateUsages(cert *x509.Certificate, keyUsages []string, extKeyUsages []string) {
-	// Set basic key usages
-	for _, usage := range keyUsages {
-		switch usage {
-		case "certSign":
-			cert.KeyUsage |= x509.KeyUsageCertSign
-		case "crlSign":
-			cert.KeyUsage |= x509.KeyUsageCRLSign
-		case "digitalSignature":
-			cert.KeyUsage |= x509.KeyUsageDigitalSignature
-		}
-	}
-
-	// Set extended key usages
-	for _, usage := range extKeyUsages {
-		switch usage {
-		case "CodeSigning":
-			cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-		case "TimeStamping":
-			cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
-		}
+// Returns a default JSON template string for the specified cert type
+func GetDefaultTemplate(certType string) (string, error) {
+	switch certType {
+	case "root":
+		return rootTemplate, nil
+	case "intermediate":
+		return intermediateTemplate, nil
+	case "leaf":
+		return leafTemplate, nil
+	default:
+		return "", fmt.Errorf("invalid certificate type: %s", certType)
 	}
 }
