@@ -14,3 +14,5 @@ myblob
 ts_chain.pem
 enc-keyset.cfg
 chain.crt.pem
+.DS_Store
+tsa-certificate-maker
