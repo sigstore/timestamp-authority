@@ -120,10 +120,13 @@ for timestamping. We do not recommend the file signer for production since the s
 
 ### Certificate Maker
 
-TSA's Certificate Maker is a tool for creating RFC 3161 compliant certificate chains for Timestamp Authority. It supports:
+Certificate Maker is a tool for creating RFC 3161 compliant certificate chains for Timestamp Authority. It supports:
 
-* Two-level chains (root -> leaf)
-* Three-level chains (root -> intermediate -> leaf)
+* Two-level chains:
+  * root → leaf
+  * root → intermediate
+* Three-level chains:
+  * root → intermediate → leaf
 * Multiple KMS providers (AWS, Google Cloud, Azure, HashiCorp Vault)
 
 For detailed usage instructions and examples, see the [Certificate Maker documentation](docs/certificate-maker.md).

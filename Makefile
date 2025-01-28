@@ -15,7 +15,7 @@
 
 .PHONY: all test clean clean-gen lint gosec ko ko-local
 
-all: timestamp-cli timestamp-server cert-maker
+all: timestamp-cli timestamp-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml
@@ -79,17 +79,13 @@ timestamp-cli: $(SRCS) ## Build the TSA CLI
 timestamp-server: $(SRCS) ## Build the TSA server
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o bin/timestamp-server ./cmd/timestamp-server
 
-.PHONY: cert-maker
-cert-maker: ## Build the TSA Certificate Maker tool
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o bin/tsa-certificate-maker ./cmd/certificate_maker
-
 test: timestamp-cli ## Run tests
 	go test ./...
 
 clean: ## Clean all builds
 	rm -rf dist
 	rm -rf hack/tools/bin
-	rm -rf bin/timestamp-cli bin/timestamp-server bin/tsa-certificate-maker
+	rm -rf bin/timestamp-cli bin/timestamp-server
 
 clean-gen: clean ## Clean generated code
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
