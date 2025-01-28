@@ -1,11 +1,51 @@
 # TSA Certificate Maker
 
-This tool creates root, intermediate (optional), and leaf certificates for Timestamp Authority ([certificate requirements](tsa-policy.md)):
+The TSA Certificate Maker provides TSA-specific certificate templates and configuration while using the core certificate generation functionality from [fulcio-cert-maker](https://github.com/sigstore/fulcio-cert-maker).
 
-- Two-level chain (root -> leaf)
-- Three-level chain (root -> intermediate -> leaf)
+## Overview
 
-Relies on [x509util](https://pkg.go.dev/go.step.sm/crypto/x509util) which builds X.509 certificates from JSON templates. The tool includes embedded default templates that are compiled into the binary, making it ready to use without external template files.
+This package contains TSA-specific certificate templates for:
+- Root certificates (required)
+- Intermediate certificates (optional)
+- Leaf certificates (optional)
+
+The actual certificate generation logic is implemented in the fulcio-cert-maker repository. This package only provides the TSA-specific templates and configuration.
+
+## Usage
+
+To use the TSA certificate templates with fulcio-cert-maker:
+
+1. Import both packages:
+```go
+import (
+    fulciocert "github.com/sigstore/fulcio-cert-maker/pkg/certmaker"
+    tsacert "github.com/sigstore/tsa-cert-maker/pkg/certmaker"
+)
+```
+
+2. Get the TSA template and use it with fulcio-cert-maker:
+```go
+// Get TSA-specific template
+template, err := tsacert.GetTSATemplate("root") // or "intermediate" or "leaf"
+if err != nil {
+    // Handle error
+}
+
+// Use template with fulcio-cert-maker
+cert, err := fulciocert.ParseTemplate(template, parent, notAfter, publicKey, commonName)
+if err != nil {
+    // Handle error
+}
+```
+
+## Templates
+
+The TSA certificate templates are located in the `pkg/certmaker/templates` directory:
+- `root-template.json`: Template for root CA certificates
+- `intermediate-template.json`: Template for intermediate CA certificates
+- `leaf-template.json`: Template for leaf (TSA) certificates
+
+These templates are specifically configured for Timestamp Authority certificates with appropriate extensions and constraints.
 
 ## Requirements
 

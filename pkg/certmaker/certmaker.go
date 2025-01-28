@@ -13,8 +13,9 @@
 // limitations under the License.
 //
 
-// Package certmaker implements a certificate creation utility for Timestamp Authority.
-// It supports creating root, intermediate, and leaf certs using (AWS, GCP, Azure, HashiVault).
+// Package certmaker provides TSA-specific certificate templates and configuration
+// while using the core certificate generation functionality from fulcio-cert-maker.
+// See https://github.com/sigstore/fulcio-cert-maker for the implementation details.
 package certmaker
 
 import (
@@ -39,7 +40,18 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	// Initialize HashiVault KMS provider
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
+
+	_ "embed"
 )
+
+//go:embed templates/root-template.json
+var tsaRootTemplate string
+
+//go:embed templates/intermediate-template.json
+var tsaIntermediateTemplate string
+
+//go:embed templates/leaf-template.json
+var tsaLeafTemplate string
 
 // CryptoSignerVerifier extends SignerVerifier with CryptoSigner capability
 type CryptoSignerVerifier interface {
@@ -522,4 +534,18 @@ func ValidateKMSConfig(config KMSConfig) error {
 	}
 
 	return nil
+}
+
+// GetTSATemplate returns the TSA-specific template for the specified certificate type
+func GetTSATemplate(certType string) (string, error) {
+	switch certType {
+	case "root":
+		return tsaRootTemplate, nil
+	case "intermediate":
+		return tsaIntermediateTemplate, nil
+	case "leaf":
+		return tsaLeafTemplate, nil
+	default:
+		return "", fmt.Errorf("invalid certificate type: %s", certType)
+	}
 }
