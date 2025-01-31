@@ -423,5 +423,5 @@ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-sigs.k8s.io/release-utils v0.8.4 h1:4QVr3UgbyY/d9p74LBhg0njSVQofUsAZqYOzVZBhdBw=
-sigs.k8s.io/release-utils v0.8.4/go.mod h1:m1bHfscTemQp+z+pLCZnkXih9n0+WukIUU70n6nFnU0=
+sigs.k8s.io/release-utils v0.10.0 h1:j6I2XCzFXyPLk56Elv2ptYewigtnnsrfMyCrek2kEJg=
+sigs.k8s.io/release-utils v0.10.0/go.mod h1:M0TpQC2CZB+1vYcKt8SPhnGdBHY3SiY0ApPBY3WMWss=
