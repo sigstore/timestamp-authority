@@ -1,13 +1,6 @@
-*			@sigstore/timestamp-codeowners
+* @sigstore/timestamp-codeowners
 
-/.github/ 		@cpanato
-/release/ 		@cpanato
-
-asraa
-haydentherapper
-
-# The CODEOWNERS are managed via a GitHub team, but the current list is (in alphabetical order):
-
-# asraa
-# bobcallaway
-# haydentherapper
+/.github/ @sigstore/dep-maintainers
+/release/ @sigstore/dep-maintainers
+go.mod @sigstore/dep-maintainers
+go.sum @sigstore/dep-maintainers
