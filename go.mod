@@ -25,11 +25,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/rs/cors v1.11.1
-	github.com/sigstore/sigstore v1.8.12
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.12
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.12
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.12
+	github.com/sigstore/sigstore v1.8.14
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.14
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.14
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.14
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.14
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
@@ -58,7 +58,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.3.2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go v1.55.5 // indirect
+	github.com/aws/aws-sdk-go v1.55.6 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.34.0 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.55 // indirect
@@ -106,7 +106,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/vault/api v1.15.0 // indirect
+	github.com/hashicorp/vault/api v1.16.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
@@ -130,6 +130,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
+	github.com/sigstore/protobuf-specs v0.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
@@ -144,7 +145,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/oauth2 v0.26.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
