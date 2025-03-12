@@ -55,7 +55,7 @@ Create certificate chain with a KMS signing key, a KMS intermediate and a CA roo
     --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
     --output="chain.crt.pem"
 
-Create certificate chain with a signing key encrypted with KMS KEK, a KMS intermediate and a CA root:
+Create certificate chain with a Tink signing key encrypted with KMS KEK, a KMS intermediate and a CA root:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
     --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
@@ -64,8 +64,7 @@ Create certificate chain with a signing key encrypted with KMS KEK, a KMS interm
     --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
     --output="chain.crt.pem"
 
-Create certificate chain with a signing key encrypted with KMS KEK and a self-signed root/intermediate certificate
-(currently unimplemented):
+Create certificate chain with a Tink signing key encrypted with KMS KEK and a self-signed parent certificate:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
     --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
@@ -81,7 +80,7 @@ tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key
 
 var (
 	// likely the root CA
-	gcpCaParent = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA. If unset, the intermediate cert will be self-signed instead")
+	gcpCaRoot = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA. If unset, the intermediate cert will be self-signed instead")
 	// key only used for fetching intermediate certificate from root and signing leaf certificate
 	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
 	// leafKMSKey or Tink flags required
@@ -101,8 +100,8 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 	if err != nil {
 		return nil, err
 	}
-
-	parentPubKey, err := cryptoutils.MarshalPublicKeyToPEM(parentSigner.Public())
+	parentPubKey := parentSigner.Public()
+	parentPEMPubKey, err := cryptoutils.MarshalPublicKeyToPEM(parentPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,37 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 
 	if root == "" {
 		// Create a self signed signing certificate for parentPubKey
-		return nil, fmt.Errorf("self-signed certificate chain is not implemented yet")
+		parentSn, err := cryptoutils.GenerateSerialNumber()
+		if err != nil {
+			return nil, fmt.Errorf("generating serial number: %w", err)
+		}
+
+		parentSkid, err := cryptoutils.SKID(parentPubKey)
+		if err != nil {
+			return nil, fmt.Errorf("generating SKID hash: %w", err)
+		}
+		now := time.Now()
+		cert := &x509.Certificate{
+			SerialNumber: parentSn,
+			Subject: pkix.Name{
+				CommonName:   "sigstore-tsa-selfsigned",
+				Organization: []string{"sigstore.dev"},
+			},
+			SubjectKeyId: parentSkid,
+			NotBefore:    now,
+			NotAfter:     now.AddDate(20, 0, 0),
+			KeyUsage:     x509.KeyUsageCertSign,
+		}
+		ParentCertDER, err := x509.CreateCertificate(rand.Reader, cert, cert, parentPubKey, parentSigner)
+		if err != nil {
+			return nil, fmt.Errorf("creating self-signed parent certificate: %w", err)
+		}
+		parentCert, err := x509.ParseCertificate(ParentCertDER)
+		if err != nil {
+			return nil, fmt.Errorf("parsing leaf certificate: %w", err)
+		}
+		certChain = append(certChain, parentCert)
+
 	} else {
 		// Use CA to get an intermediate signing certificate for parentPubKey
 		isCa := true
@@ -140,7 +169,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 					Config: &privatecapb.CertificateConfig{
 						PublicKey: &privatecapb.PublicKey{
 							Format: privatecapb.PublicKey_PEM,
-							Key:    parentPubKey,
+							Key:    parentPEMPubKey,
 						},
 						X509Config: &privatecapb.X509Parameters{
 							KeyUsage: &privatecapb.KeyUsage{
@@ -287,7 +316,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	parsedCerts, err := fetchCertificateChain(context.Background(), *gcpCaParent, *intermediateKMSKey, *leafKMSKey, *tinkKeysetPath, *tinkKmsKey, client)
+	parsedCerts, err := fetchCertificateChain(context.Background(), *gcpCaRoot, *intermediateKMSKey, *leafKMSKey, *tinkKeysetPath, *tinkKmsKey, client)
 	if err != nil {
 		log.Fatal(err)
 	}
