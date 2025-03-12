@@ -67,6 +67,7 @@ Create certificate chain with a Tink signing key encrypted with KMS KEK, a KMS i
 Create certificate chain with a Tink signing key encrypted with KMS KEK and a self-signed parent certificate:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
+    --intermediate-validity=365 \
     --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
     --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
     --tink-keyset-path="enc-keyset.cfg" \
@@ -79,9 +80,11 @@ tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key
 */
 
 var (
-	// likely the root CA
+	// Optional root CA
 	gcpCaRoot = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA. If unset, the intermediate cert will be self-signed instead")
-	// key only used for fetching intermediate certificate from root and signing leaf certificate
+	// optional intermediate cert validity in days
+	intermediateValidity = flag.Int("intermediate-validity", 20*365, "Days the intermediate certificate will be valid for. Default 20*365. Value will be truncated by CA if one is used.")
+	// The kms key to use for "parent" certificate (intermediate if CA is used, self-signed certificate otherwise)
 	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
 	// leafKMSKey or Tink flags required
 	leafKMSKey     = flag.String("leaf-kms-resource", "", "Resource path to the asymmetric signing KMS key for the leaf, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
@@ -157,14 +160,11 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 		isCa := true
 		// default value of 0 for int32
 		var maxIssuerPathLength int32
-
 		csr := &privatecapb.CreateCertificateRequest{
 			Parent: root,
 			Certificate: &privatecapb.Certificate{
-				// Default to a very large lifetime - CA Service will truncate the
-				// lifetime to be no longer than the root's lifetime.
-				// 20 years (24 hours * 365 days * 20)
-				Lifetime: durationpb.New(time.Hour * 24 * 365 * 20),
+				// CA Service will truncate the lifetime to be no longer than the root's lifetime.
+				Lifetime: durationpb.New(time.Hour * 24 * time.Duration(*intermediateValidity)),
 				CertificateConfig: &privatecapb.Certificate_Config{
 					Config: &privatecapb.CertificateConfig{
 						PublicKey: &privatecapb.PublicKey{
