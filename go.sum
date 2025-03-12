@@ -149,8 +149,8 @@ github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/google/go-containerregistry v0.20.2 h1:B1wPJ1SN/S7pB+ZAimcciVD+r+yV/l/DSArMxlbwseo=
-github.com/google/go-containerregistry v0.20.2/go.mod h1:z38EKdKh4h7IP2gSfUUqEvalZBqs6AoLeWfUy34nQC8=
+github.com/google/go-containerregistry v0.20.3 h1:oNx7IdTI936V8CQRveCjaxOiegWwvM7kqkbXTpyiovI=
+github.com/google/go-containerregistry v0.20.3/go.mod h1:w00pIgBRDVUDFM6bq+Qx8lwNWK+cxgCuX1vd3PIBDNI=
 github.com/google/s2a-go v0.1.9 h1:LGD7gtMgezd8a/Xak7mEWL0PjoTQFvpRudN895yqKW0=
 github.com/google/s2a-go v0.1.9/go.mod h1:YA0Ei2ZQL3acow2O62kdp9UlnvMmU7kA6Eutn0dXayM=
 github.com/google/tink/go v1.7.0 h1:6Eox8zONGebBFcCBqkVmt60LaWZa6xg1cl/DwAh/J1w=
@@ -281,8 +281,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15 h1:K2GstKWXftcpmg/w
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15/go.mod h1:tOSdKYXCkplk54FSR/58UYQm1S/GlQK4Y1GgMhiq40U=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.15 h1:ThpZMfR2TecI6Ji7s/nFlcCIkwXYhZUYziJdZs3pOaw=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.15/go.mod h1:x+4wvq6tzIQRZaSdMS6/VT9nuCoepypozfzP4Tqwnqw=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.15 h1:mR+VaOSx2sUpaE8lXarinHcT8UXi+fKE4ESNBzDRAtQ=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.15/go.mod h1:6olKNL2BGrsZPLbO/7kiJzZPxU74270nDI5G3HSSykw=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1 h1:sIW6xe4yU5eIMH8fve2C78d+r29KmHnIb+7po+80bsY=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1/go.mod h1:3pNf99GnK9eu3XUa5ebHzgEQSVYf9hqAoPFwbwD6O6M=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
