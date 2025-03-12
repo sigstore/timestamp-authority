@@ -140,10 +140,14 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 				CommonName:   "sigstore-tsa-selfsigned",
 				Organization: []string{"sigstore.dev"},
 			},
-			SubjectKeyId: parentSkid,
-			NotBefore:    now,
-			NotAfter:     now.AddDate(20, 0, 0),
-			KeyUsage:     x509.KeyUsageCertSign,
+			SubjectKeyId:          parentSkid,
+			NotBefore:             now,
+			NotAfter:              now.AddDate(20, 0, 0),
+			KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+			BasicConstraintsValid: true,
+			MaxPathLen:            0,
+			MaxPathLenZero:        true,
+			IsCA:                  true,
 		}
 		ParentCertDER, err := x509.CreateCertificate(rand.Reader, cert, cert, parentPubKey, parentSigner)
 		if err != nil {
@@ -153,6 +157,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 		if err != nil {
 			return nil, fmt.Errorf("parsing leaf certificate: %w", err)
 		}
+
 		certChain = append(certChain, parentCert)
 
 	} else {
