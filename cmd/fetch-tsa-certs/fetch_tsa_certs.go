@@ -47,19 +47,31 @@ import (
 )
 
 /*
-To run:
-go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-  --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-  --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
-  --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
-  --output="chain.crt.pem"
+Create certificate chain with a KMS signing key, a KMS intermediate and a CA root:
 
-go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-  --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-  --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
-  --tink-keyset-path="enc-keyset.cfg" \
-  --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
-  --output="chain.crt.pem"
+  go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
+    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+    --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
+    --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
+    --output="chain.crt.pem"
+
+Create certificate chain with a signing key encrypted with KMS KEK, a KMS intermediate and a CA root:
+
+  go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
+    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
+    --tink-keyset-path="enc-keyset.cfg" \
+    --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
+    --output="chain.crt.pem"
+
+Create certificate chain with a signing key encrypted with KMS KEK and a self-signed root/intermediate certificate
+(currently unimplemented):
+
+  go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
+    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
+    --tink-keyset-path="enc-keyset.cfg" \
+    --output="chain.crt.pem"
 
 You must have the permissions to read, sign with, and decrypt with the KMS keys, and create a certificate in the CA pool.
 
@@ -69,7 +81,7 @@ tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key
 
 var (
 	// likely the root CA
-	gcpCaParent = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA")
+	gcpCaParent = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA. If unset, the intermediate cert will be self-signed instead")
 	// key only used for fetching intermediate certificate from root and signing leaf certificate
 	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
 	// leafKMSKey or Tink flags required
@@ -79,18 +91,18 @@ var (
 	outputPath     = flag.String("output", "", "Path to the output file")
 )
 
-func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leafKMSKey, tinkKeysetPath, tinkKmsKey string,
+func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, tinkKeysetPath, tinkKmsKey string,
 	client *privateca.CertificateAuthorityClient) ([]*x509.Certificate, error) {
-	intermediateKMSSigner, err := kms.Get(ctx, intermediateKMSKey, crypto.SHA256)
+	parentKMSSigner, err := kms.Get(ctx, parentKMSKey, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
-	intermediateSigner, _, err := intermediateKMSSigner.CryptoSigner(ctx, func(_ error) {})
+	parentSigner, _, err := parentKMSSigner.CryptoSigner(ctx, func(_ error) {})
 	if err != nil {
 		return nil, err
 	}
 
-	pemPubKey, err := cryptoutils.MarshalPublicKeyToPEM(intermediateSigner.Public())
+	parentPubKey, err := cryptoutils.MarshalPublicKeyToPEM(parentSigner.Public())
 	if err != nil {
 		return nil, err
 	}
@@ -106,68 +118,77 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 		Value:    timestampExt,
 	}}
 
-	isCa := true
-	// default value of 0 for int32
-	var maxIssuerPathLength int32
+	var certChain []*x509.Certificate
 
-	csr := &privatecapb.CreateCertificateRequest{
-		Parent: parent,
-		Certificate: &privatecapb.Certificate{
-			// Default to a very large lifetime - CA Service will truncate the
-			// lifetime to be no longer than the root's lifetime.
-			// 20 years (24 hours * 365 days * 20)
-			Lifetime: durationpb.New(time.Hour * 24 * 365 * 20),
-			CertificateConfig: &privatecapb.Certificate_Config{
-				Config: &privatecapb.CertificateConfig{
-					PublicKey: &privatecapb.PublicKey{
-						Format: privatecapb.PublicKey_PEM,
-						Key:    pemPubKey,
-					},
-					X509Config: &privatecapb.X509Parameters{
-						KeyUsage: &privatecapb.KeyUsage{
-							BaseKeyUsage: &privatecapb.KeyUsage_KeyUsageOptions{
-								CertSign: true,
-								CrlSign:  true,
+	if root == "" {
+		// Create a self signed signing certificate for parentPubKey
+		return nil, fmt.Errorf("self-signed certificate chain is not implemented yet")
+	} else {
+		// Use CA to get an intermediate signing certificate for parentPubKey
+		isCa := true
+		// default value of 0 for int32
+		var maxIssuerPathLength int32
+
+		csr := &privatecapb.CreateCertificateRequest{
+			Parent: root,
+			Certificate: &privatecapb.Certificate{
+				// Default to a very large lifetime - CA Service will truncate the
+				// lifetime to be no longer than the root's lifetime.
+				// 20 years (24 hours * 365 days * 20)
+				Lifetime: durationpb.New(time.Hour * 24 * 365 * 20),
+				CertificateConfig: &privatecapb.Certificate_Config{
+					Config: &privatecapb.CertificateConfig{
+						PublicKey: &privatecapb.PublicKey{
+							Format: privatecapb.PublicKey_PEM,
+							Key:    parentPubKey,
+						},
+						X509Config: &privatecapb.X509Parameters{
+							KeyUsage: &privatecapb.KeyUsage{
+								BaseKeyUsage: &privatecapb.KeyUsage_KeyUsageOptions{
+									CertSign: true,
+									CrlSign:  true,
+								},
 							},
+							CaOptions: &privatecapb.X509Parameters_CaOptions{
+								IsCa:                &isCa,
+								MaxIssuerPathLength: &maxIssuerPathLength,
+							},
+							AdditionalExtensions: additionalExtensions,
 						},
-						CaOptions: &privatecapb.X509Parameters_CaOptions{
-							IsCa:                &isCa,
-							MaxIssuerPathLength: &maxIssuerPathLength,
-						},
-						AdditionalExtensions: additionalExtensions,
-					},
-					SubjectConfig: &privatecapb.CertificateConfig_SubjectConfig{
-						Subject: &privatecapb.Subject{
-							CommonName:   "sigstore-tsa-intermediate",
-							Organization: "sigstore.dev",
+						SubjectConfig: &privatecapb.CertificateConfig_SubjectConfig{
+							Subject: &privatecapb.Subject{
+								CommonName:   "sigstore-tsa-intermediate",
+								Organization: "sigstore.dev",
+							},
 						},
 					},
 				},
 			},
-		},
-	}
+		}
 
-	resp, err := client.CreateCertificate(ctx, csr)
-	if err != nil {
-		return nil, err
-	}
-
-	var pemCerts []string
-	pemCerts = append(pemCerts, resp.PemCertificate)
-	pemCerts = append(pemCerts, resp.PemCertificateChain...)
-
-	var parsedCerts []*x509.Certificate
-	for _, c := range pemCerts {
-		certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(c))
+		resp, err := client.CreateCertificate(ctx, csr)
 		if err != nil {
 			return nil, err
 		}
-		if len(certs) != 1 {
-			return nil, errors.New("unexpected number of certificates returned")
+
+		var pemCerts []string
+		pemCerts = append(pemCerts, resp.PemCertificate)
+		pemCerts = append(pemCerts, resp.PemCertificateChain...)
+
+		for _, c := range pemCerts {
+			certs, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(c))
+			if err != nil {
+				return nil, err
+			}
+			if len(certs) != 1 {
+				return nil, errors.New("unexpected number of certificates returned")
+			}
+			certChain = append(certChain, certs[0])
 		}
-		parsedCerts = append(parsedCerts, certs[0])
 	}
-	intermediate := parsedCerts[0]
+
+	// parent may be intermediate or self signed root
+	parent := certChain[0]
 
 	// generate leaf certificate
 	var leafKMSSigner crypto.Signer
@@ -220,8 +241,8 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 			Organization: []string{"sigstore.dev"},
 		},
 		SubjectKeyId: skid,
-		NotBefore:    intermediate.NotBefore,
-		NotAfter:     intermediate.NotAfter,
+		NotBefore:    parent.NotBefore,
+		NotAfter:     parent.NotAfter,
 		IsCA:         false,
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		// set EKU to x509.ExtKeyUsageTimeStamping but with a critical bit
@@ -233,7 +254,7 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 			},
 		},
 	}
-	certDER, err := x509.CreateCertificate(rand.Reader, cert, intermediate, leafPubKey, intermediateSigner)
+	certDER, err := x509.CreateCertificate(rand.Reader, cert, parent, leafPubKey, parentSigner)
 	if err != nil {
 		return nil, fmt.Errorf("creating tsa certificate: %w", err)
 	}
@@ -241,17 +262,14 @@ func fetchCertificateChain(ctx context.Context, parent, intermediateKMSKey, leaf
 	if err != nil {
 		return nil, fmt.Errorf("parsing leaf certificate: %w", err)
 	}
-	parsedCerts = append([]*x509.Certificate{leafCert}, parsedCerts...)
+	certChain = append([]*x509.Certificate{leafCert}, certChain...)
 
-	return parsedCerts, nil
+	return certChain, nil
 }
 
 func main() {
 	flag.Parse()
 
-	if *gcpCaParent == "" {
-		log.Fatal("gcp-ca-parent must be set")
-	}
 	if *intermediateKMSKey == "" {
 		log.Fatal("intermediate-kms-resource must be set")
 	}
