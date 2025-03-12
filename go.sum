@@ -281,8 +281,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15 h1:K2GstKWXftcpmg/w
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15/go.mod h1:tOSdKYXCkplk54FSR/58UYQm1S/GlQK4Y1GgMhiq40U=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.15 h1:ThpZMfR2TecI6Ji7s/nFlcCIkwXYhZUYziJdZs3pOaw=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.15/go.mod h1:x+4wvq6tzIQRZaSdMS6/VT9nuCoepypozfzP4Tqwnqw=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.15 h1:mR+VaOSx2sUpaE8lXarinHcT8UXi+fKE4ESNBzDRAtQ=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.15/go.mod h1:6olKNL2BGrsZPLbO/7kiJzZPxU74270nDI5G3HSSykw=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1 h1:sIW6xe4yU5eIMH8fve2C78d+r29KmHnIb+7po+80bsY=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1/go.mod h1:3pNf99GnK9eu3XUa5ebHzgEQSVYf9hqAoPFwbwD6O6M=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=

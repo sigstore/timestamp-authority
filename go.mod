@@ -29,7 +29,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.15
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.15
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.15
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
