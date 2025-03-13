@@ -50,27 +50,27 @@ import (
 Create certificate chain with a KMS signing key, a KMS intermediate and a CA root:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-    --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
+    --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<leaf-key>/versions/1" \
+    --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1" \
     --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
     --output="chain.crt.pem"
 
 Create certificate chain with a Tink signing key encrypted with KMS KEK, a KMS intermediate and a CA root:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>" \
     --tink-keyset-path="enc-keyset.cfg" \
+    --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1" \
     --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
     --output="chain.crt.pem"
 
 Create certificate chain with a Tink signing key encrypted with KMS KEK and a self-signed parent certificate:
 
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-    --intermediate-validity=365 \
-    --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>" \
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key-encryption-key>" \
     --tink-keyset-path="enc-keyset.cfg" \
+    --parent-validity=365 \
+    --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<parent-key>/versions/1" \
     --output="chain.crt.pem"
 
 You must have the permissions to read, sign with, and decrypt with the KMS keys, and create a certificate in the CA pool.
@@ -81,16 +81,18 @@ tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key
 
 var (
 	// Optional root CA
-	gcpCaRoot = flag.String("gcp-ca-parent", "", "Resource path to GCP CA Service CA. If unset, the intermediate cert will be self-signed instead")
-	// optional intermediate cert validity in days
-	intermediateValidity = flag.Int("intermediate-validity", 20*365, "Days the intermediate certificate will be valid for. Default 20*365. Value will be truncated by CA if one is used.")
+	gcpCaRoot = flag.String("gcp-ca-root", "", "Resource path to GCP CA Service CA. If set, the parent certificate will be an intermediate one. If unset, the parent certificate is a self-signed one.")
+
 	// The kms key to use for "parent" certificate (intermediate if CA is used, self-signed certificate otherwise)
-	intermediateKMSKey = flag.String("intermediate-kms-resource", "", "Resource path to the asymmetric signing KMS key for the intermediate CA, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	parentKMSKey   = flag.String("parent-kms-resource", "", "Resource path to the asymmetric signing KMS key for the parent certificate, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
+	parentValidity = flag.Int("parent-validity", 20*365, "Days the parent certificate will be valid for. Default 20*365. Value will be truncated by CA if one is used.")
+
 	// leafKMSKey or Tink flags required
 	leafKMSKey     = flag.String("leaf-kms-resource", "", "Resource path to the asymmetric signing KMS key for the leaf, starting with gcpkms://, awskms://, azurekms:// or hashivault://")
 	tinkKeysetPath = flag.String("tink-keyset-path", "", "Path to Tink keyset")
 	tinkKmsKey     = flag.String("tink-kms-resource", "", "Resource path to symmetric encryption KMS key to decrypt Tink keyset, starting with gcp-kms:// or aws-kms://")
-	outputPath     = flag.String("output", "", "Path to the output file")
+
+	outputPath = flag.String("output", "", "Path to write the certificate chain to")
 )
 
 func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, tinkKeysetPath, tinkKmsKey string,
@@ -169,7 +171,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 			Parent: root,
 			Certificate: &privatecapb.Certificate{
 				// CA Service will truncate the lifetime to be no longer than the root's lifetime.
-				Lifetime: durationpb.New(time.Hour * 24 * time.Duration(*intermediateValidity)),
+				Lifetime: durationpb.New(time.Hour * 24 * time.Duration(*parentValidity)),
 				CertificateConfig: &privatecapb.Certificate_Config{
 					Config: &privatecapb.CertificateConfig{
 						PublicKey: &privatecapb.PublicKey{
@@ -304,8 +306,8 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 func main() {
 	flag.Parse()
 
-	if *intermediateKMSKey == "" {
-		log.Fatal("intermediate-kms-resource must be set")
+	if *parentKMSKey == "" {
+		log.Fatal("parent-kms-resource must be set")
 	}
 	if *leafKMSKey == "" && *tinkKeysetPath == "" {
 		log.Fatal("either leaf-kms-resource or tink-keyset-path must be set")
@@ -321,7 +323,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	parsedCerts, err := fetchCertificateChain(context.Background(), *gcpCaRoot, *intermediateKMSKey, *leafKMSKey, *tinkKeysetPath, *tinkKmsKey, client)
+	parsedCerts, err := fetchCertificateChain(context.Background(), *gcpCaRoot, *parentKMSKey, *leafKMSKey, *tinkKeysetPath, *tinkKmsKey, client)
 	if err != nil {
 		log.Fatal(err)
 	}

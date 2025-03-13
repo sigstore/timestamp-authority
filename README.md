@@ -148,22 +148,22 @@ used to generate the certificate chain if you do not want to use GCP.
 * Run the following to create a certificate chain of root, intermediate and leaf certificates
     ```shell
     go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-      --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-      --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
+      --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
+      --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1" \
       --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
       --output="chain.crt.pem"
     ```
 
 #### Example: signing key on GCP, self-signed root on GCP
 
-* Create an asymmetric certificate signing key on KMS that will be used in the self-signed certificate to sign the actual timestamp certificate.
+* Create an asymmetric certificate signing key on KMS that will be used in the self-signed certificate to sign the TSA certificate.
 * Create an asymmetric timestamp signing key on KMS.
 * Run the following to create a chain of self-signed certificate and leaf signing certificate:
     ```shell
     go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-      --intermediate-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<key-ring>/cryptoKeys/<key>/versions/1" \
-      --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<leaf-key-ring>/cryptoKeys/<key>/versions/1" \
-      --intermediate-validity=<DAYS>
+      --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
+      --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<parent-key>/versions/1" \
+      --parent-validity=<DAYS>
       --output="chain.crt.pem"
     ```
 
@@ -196,7 +196,7 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
 * Create a symmetric key encryption key in GCP
 * Run the following to create the local encrypted signing key, changing key URI and the key template if desired:
     ```shell
-    tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://path-to-key-encryption-key
+    tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>
     ```
 * Create a root CA with [GCP CA Service](https://cloud.google.com/certificate-authority-service). Configure lifetime, and other defaults
   can remain. You will need to first create a CA pool, and then create one CA in that pool.
@@ -204,10 +204,10 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
 * Run the following:
   ```shell
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-    --intermediate-kms-resource="gcpkms://asymmetric-kms-key"\
-    --tink-kms-resource="gcp-kms://tink-encryption-key"\
-    --gcp-ca-parent="projects/<project>/locations/<location>/caPools/<pool-name>"\
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>"\
     --tink-keyset-path="enc-keyset.cfg"\
+    --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1"\
+    --gcp-ca-parent="projects/<project>/locations/<location>/caPools/<pool-name>"\
     --output="chain.crt.pem"
   ```
 
@@ -216,16 +216,16 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
 * Create a symmetric key encryption key in GCP
 * Run the following to create the local encrypted signing key, changing key URI and the key template if desired:
     ```shell
-    tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://path-to-key-encryption-key
+    tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>
     ```
-* Create an asymmetric signing key on KMS that will be used in the self-signed certificate to sign the actual timestamp certificate.
+* Create an asymmetric signing key on KMS that will be used in the self-signed certificate to sign the TSA certificate.
 * Run the following:
   ```shell
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
-    --intermediate-kms-resource="gcpkms://asymmetric-kms-key"\
-    --intermediate-validity=<DAYS>
-    --tink-kms-resource="gcp-kms://tink-encryption-key"\
+    --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>"\
     --tink-keyset-path="enc-keyset.cfg"\
+    --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<parent-key>/versions/1"\
+    --parent-validity=<DAYS>
     --output="chain.crt.pem"
   ```
 
