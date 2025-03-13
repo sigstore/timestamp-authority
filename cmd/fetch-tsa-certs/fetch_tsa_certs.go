@@ -151,11 +151,11 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 			MaxPathLenZero:        true,
 			IsCA:                  true,
 		}
-		ParentCertDER, err := x509.CreateCertificate(rand.Reader, cert, cert, parentPubKey, parentSigner)
+		parentCertDER, err := x509.CreateCertificate(rand.Reader, cert, cert, parentPubKey, parentSigner)
 		if err != nil {
 			return nil, fmt.Errorf("creating self-signed parent certificate: %w", err)
 		}
-		parentCert, err := x509.ParseCertificate(ParentCertDER)
+		parentCert, err := x509.ParseCertificate(parentCertDER)
 		if err != nil {
 			return nil, fmt.Errorf("parsing leaf certificate: %w", err)
 		}
