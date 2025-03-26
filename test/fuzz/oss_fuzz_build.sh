@@ -16,8 +16,8 @@
 
 go get github.com/AdamKorcz/go-118-fuzz-build/testing
 
-compile_native_go_fuzzer github.com/sigstore/timestamp-authority/pkg/api FuzzParseJSONRequest FuzzParseJSONRequest
-compile_native_go_fuzzer github.com/sigstore/timestamp-authority/pkg/api FuzzParseDERRequest FuzzParseDERRequest
+compile_go_fuzzer github.com/sigstore/timestamp-authority/pkg/api FuzzParseJSONRequest FuzzParseJSONRequest
+compile_go_fuzzer github.com/sigstore/timestamp-authority/pkg/api FuzzParseDERRequest FuzzParseDERRequest
 
 zip -j $OUT/FuzzParseJSONRequest_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
 cp $SRC/afl-fuzz/dictionaries/json.dict $OUT/FuzzParseJSONRequest.dict
