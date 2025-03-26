@@ -54,7 +54,7 @@ var inspectCmd = &cobra.Command{
 		tsr := viper.GetString("timestamp")
 		tsrBytes, err := os.ReadFile(filepath.Clean(tsr))
 		if err != nil {
-			return nil, fmt.Errorf("Error reading request from TSR file: %w", err)
+			return nil, fmt.Errorf("error reading request from TSR file: %w", err)
 		}
 
 		ts, err := timestamp.ParseResponse(tsrBytes)

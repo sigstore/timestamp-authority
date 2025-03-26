@@ -124,9 +124,9 @@ func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
 		_, curve, _ := getECDSAParamNames(privKey.PublicKey.Params)
 		p := new(ecdsa.PrivateKey)
 		c := subtle.GetCurve(curve)
-		p.PublicKey.Curve = c
+		p.Curve = c
 		p.D = new(big.Int).SetBytes(privKey.GetKeyValue())
-		p.PublicKey.X, p.PublicKey.Y = c.ScalarBaseMult(privKey.GetKeyValue())
+		p.X, p.Y = c.ScalarBaseMult(privKey.GetKeyValue())
 		return p, nil
 	case ed25519SignerTypeURL:
 		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L47
