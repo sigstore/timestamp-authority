@@ -17,13 +17,13 @@ package api
 import "testing"
 
 func FuzzParseJSONRequest(f *testing.F) {
-	f.Fuzz(func(t *testing.T, reqBytes []byte) {
+	f.Fuzz(func(_ *testing.T, reqBytes []byte) {
 		_, _, _ = ParseJSONRequest(reqBytes)
 	})
 }
 
 func FuzzParseDERRequest(f *testing.F) {
-	f.Fuzz(func(t *testing.T, reqBytes []byte) {
+	f.Fuzz(func(_ *testing.T, reqBytes []byte) {
 		_, _, _ = parseDERRequest(reqBytes)
 	})
 }
