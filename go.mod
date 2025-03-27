@@ -32,7 +32,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/urfave/negroni v1.0.0
 	go.step.sm/crypto v0.59.1
 	go.uber.org/zap v1.27.0
