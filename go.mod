@@ -2,7 +2,7 @@ module github.com/sigstore/timestamp-authority
 
 go 1.23.0
 
-toolchain go1.23.6
+toolchain go1.24.1
 
 require (
 	cloud.google.com/go/security v1.18.4
@@ -36,7 +36,7 @@ require (
 	github.com/urfave/negroni v1.0.0
 	go.step.sm/crypto v0.60.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/release-utils v0.11.1
