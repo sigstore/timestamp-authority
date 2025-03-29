@@ -35,7 +35,12 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/x509"
 
 	"github.com/go-openapi/runtime"
+	"go.uber.org/goleak"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 // TestSigner encapsulates a public key for verification
 type TestSigner struct {
