@@ -14,3 +14,4 @@ myblob
 ts_chain.pem
 enc-keyset.cfg
 chain.crt.pem
+timestamp-cli
