@@ -13,29 +13,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+version: "2"
+run:
+  issues-exit-code: 1
 linters:
   enable:
-    - errcheck
-    - gofmt
-    - goimports
-    - gosec
     - gocritic
+    - gosec
     - misspell
     - revive
-    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gosec
+        path: _test\.go
+      - linters:
+          - staticcheck
+        path: pkg/signer/tink.go
+        text: SA1019
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-    - path: pkg/signer/tink.go
-      linters:
-        - staticcheck
-      text: SA1019
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: false
-run:
-  issues-exit-code: 1
-  timeout: 10m
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

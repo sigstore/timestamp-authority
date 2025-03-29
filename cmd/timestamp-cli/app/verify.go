@@ -158,6 +158,7 @@ func getRootAndIntermediateCerts() ([]*x509.Certificate, []*x509.Certificate, er
 	// 2. Called with only the --certificate-chain flag
 
 	// this early exit if statement is only entered if neither of those combinations is valid
+	//nolint:staticcheck // code readability
 	if !((rootPEM != "" && certChainPEM == "") || (intermediatePEM == "" && rootPEM == "" && certChainPEM != "")) {
 		return nil, nil, fmt.Errorf("the verify command must be called with either only the --certificate-chain flag or with the --root-certificates and --intermediate-certificates flags")
 	}

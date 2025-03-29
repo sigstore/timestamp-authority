@@ -37,9 +37,10 @@ func TestGetTimestampClientWithOptions(t *testing.T) {
 			}
 
 			var expectedAccept string
-			if r.URL.Path == "/api/v1/timestamp/certchain" {
+			switch r.URL.Path {
+			case "/api/v1/timestamp/certchain":
 				expectedAccept = "application/pem-certificate-chain"
-			} else if r.URL.Path == "/api/v1/timestamp" {
+			case "/api/v1/timestamp":
 				expectedAccept = "application/timestamp-reply"
 			}
 
