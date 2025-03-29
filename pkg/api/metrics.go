@@ -66,7 +66,7 @@ var (
 
 	_ = promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{
-			Name: "timestamp_authority_certificate_validity_days_remaining",
+			Name: "timestamp_authority_certificate_valid_days_remaining",
 			Help: "Number of days remaining in validity period of signing certificate",
 		},
 		func() float64 {
