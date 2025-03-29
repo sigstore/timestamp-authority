@@ -76,7 +76,14 @@ var (
 			if api == nil {
 				return math.MaxFloat64
 			}
-			return time.Until(api.certChain[0].NotAfter).Hours() / 24
+			// compute minimum validity inclusive of leaf, any intermediates (if present), and root
+			min := api.certChain[0].NotAfter
+			for _, cert := range api.certChain[1:] {
+				if cert.NotAfter.Before(min) {
+					min = cert.NotAfter
+				}
+			}
+			return time.Until(min).Hours() / 24
 		})
 
 	_ = promauto.NewGaugeFunc(
