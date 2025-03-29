@@ -79,7 +79,7 @@ var (
 			// compute minimum validity inclusive of leaf, any intermediates (if present), and root
 			minValidity := api.certChain[0].NotAfter
 			for _, cert := range api.certChain[1:] {
-				if cert.NotAfter.Before(min) {
+				if cert.NotAfter.Before(minValidity) {
 					minValidity = cert.NotAfter
 				}
 			}
