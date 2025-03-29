@@ -52,9 +52,12 @@ jobs:
       uses: github/codeql-action/init@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
       with:
         languages: ${{ matrix.language }}
+        build-mode: manual
+        dependency-caching: true
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
+    - name: Build Code
+      run: |
+        make all test
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@1b549b9259bda1cb5ddde3b41741a82a2d15a841 # v3.28.13
