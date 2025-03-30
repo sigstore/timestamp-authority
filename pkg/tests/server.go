@@ -39,6 +39,7 @@ func createServer(t *testing.T) string {
 	if err != nil || response.StatusCode != 200 {
 		t.Fatalf("unexpected error starting up server - status code: %d, err: %v", response.StatusCode, err)
 	}
+	defer response.Body.Close()
 
 	return server.URL
 }
