@@ -16,6 +16,7 @@
 package api
 
 import (
+	"math"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -62,6 +63,28 @@ var (
 		Name: "timestamp_authority_ntp_errors_total",
 		Help: "Total number of NTP related errors",
 	}, []string{"reason"})
+
+	_ = promauto.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "timestamp_authority_certificate_valid_days_remaining",
+			Help: "Number of days remaining in validity period of signing certificate",
+		},
+		func() float64 {
+			// if api hasn't been initialized yet, then we can't know the validity period;
+			// so we return MaxFloat64 to not cause an alarm if someone fetches the metric
+			// before the initialization has completed
+			if api == nil {
+				return math.MaxFloat64
+			}
+			// compute minimum validity inclusive of leaf, any intermediates (if present), and root
+			minValidity := api.certChain[0].NotAfter
+			for _, cert := range api.certChain[1:] {
+				if cert.NotAfter.Before(minValidity) {
+					minValidity = cert.NotAfter
+				}
+			}
+			return time.Until(minValidity).Hours() / 24
+		})
 
 	_ = promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{
