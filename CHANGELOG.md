@@ -1,3 +1,46 @@
+# v1.2.5
+
+### Enhancements
+
+* Exposes validity period of signing certificate as prometheus metric for monitoring
+* fetch-tsa-certs now supports fetching a self-signed certificate chain
+
+## Changes
+
+### Bug fixes
+
+* Minor tweaks to CI configuration for hardening
+
+### Misc
+
+* Add fuzzing coverage with oss-fuzz
+* Dependabot updates
+
+# v1.2.4
+
+## Changes
+
+### Bug fixes
+
+* Fix timestamp response to always be returned in GMT
+
+### Misc
+
+* Relax go directive to permit 1.22.x
+* Dependabot updates
+
+# v1.2.3
+
+## Changes
+
+### Bug fixes
+
+* Don't mark hash argument as required in timestamp-cli
+
+### Misc
+
+* Dependabot updates
+
 # v1.2.2
 
 ## Changes
