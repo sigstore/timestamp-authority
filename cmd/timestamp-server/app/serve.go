@@ -19,6 +19,7 @@ import (
 	"flag"
 	"net/http"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
@@ -96,6 +97,9 @@ var serveCmd = &cobra.Command{
 				ntpm.Start()
 			}()
 		}
+
+		// overrides the correlation ID printed in logs, if config is set
+		middleware.RequestIDHeader = viper.GetString("http-request-id-header-name")
 
 		host := viper.GetString("host")
 		port := int(viper.GetUint("port"))
