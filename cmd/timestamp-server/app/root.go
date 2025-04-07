@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/timestamp-authority/pkg/log"
 	"github.com/spf13/cobra"
@@ -74,6 +75,8 @@ func init() {
 	// NTP time introspection
 	rootCmd.PersistentFlags().String("ntp-monitoring", "", "Path to a file configuring ntp monitoring. Uses pkg/ntpmonitor/ntpsync.yaml as the default configuration if none is provided")
 	rootCmd.PersistentFlags().Bool("disable-ntp-monitoring", false, "Disables NTP monitoring. Defaults to false")
+
+	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
