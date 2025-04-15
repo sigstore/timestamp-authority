@@ -113,7 +113,15 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 
 	var leafCert *x509.Certificate
 	if len(ts.Certificates) != 0 {
-		leafCert = ts.Certificates[0]
+		for _, c := range ts.Certificates {
+			if !c.IsCA {
+				leafCert = c
+				break
+			}
+		}
+		if leafCert == nil {
+			return fmt.Errorf("no leaf certificate found in chain")
+		}
 
 		err := verifyEmbeddedLeafCert(leafCert, opts)
 		if err != nil {
