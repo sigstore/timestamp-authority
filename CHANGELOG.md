@@ -1,3 +1,13 @@
+# v1.2.6
+
+## Features
+
+* allow operators to customize the HTTP header used to customize request correlation IDs (#1026)
+
+## Bug Fixes
+
+* Do not assume leaf certificate is first in chain (#1040)
+
 # v1.2.5
 
 ### Enhancements
