@@ -182,7 +182,9 @@ func TestVerifyLeafCert(t *testing.T) {
 	type test struct {
 		useOptsCert         bool
 		useTSCert           bool
+		onlyCACerts         bool
 		expectVerifySuccess bool
+		expectedErrMsg      string
 	}
 
 	tests := []test{
@@ -190,6 +192,7 @@ func TestVerifyLeafCert(t *testing.T) {
 			useOptsCert:         false,
 			useTSCert:           false,
 			expectVerifySuccess: false,
+			expectedErrMsg:      "leaf certificate must be present the in TSR or as a verify option",
 		},
 		{
 			useOptsCert:         true,
@@ -205,6 +208,12 @@ func TestVerifyLeafCert(t *testing.T) {
 			useOptsCert:         true,
 			useTSCert:           true,
 			expectVerifySuccess: true,
+		},
+		// test when a chain only contains CA certificates
+		{
+			onlyCACerts:         true,
+			expectVerifySuccess: false,
+			expectedErrMsg:      "no leaf certificate found in chain",
 		},
 	}
 
@@ -237,10 +246,19 @@ func TestVerifyLeafCert(t *testing.T) {
 			ts.Certificates = []*x509.Certificate{sampleCert}
 		}
 
+		if tc.onlyCACerts {
+			sampleCert.IsCA = true
+			ts.Certificates = []*x509.Certificate{sampleCert}
+		}
+
 		err := verifyLeafCert(ts, opts)
 
 		if err != nil && tc.expectVerifySuccess {
 			t.Fatalf("expected error to be nil, actual error: %v", err)
+		}
+
+		if err != nil && !strings.Contains(err.Error(), tc.expectedErrMsg) {
+			t.Fatalf("expected error message %s, got %s", tc.expectedErrMsg, err.Error())
 		}
 
 		if err == nil && !tc.expectVerifySuccess {
