@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 //go:embed ntpsync.yaml
@@ -29,13 +29,13 @@ var defaultConfigData []byte
 
 // Config holds the configuration for a NTPMonitor
 type Config struct {
-	RequestAttempts int      `yaml:"request_attempts"`
-	RequestTimeout  int      `yaml:"request_timeout"`
-	NumServers      int      `yaml:"num_servers"`
-	MaxTimeDelta    int      `yaml:"max_time_delta"`
-	ServerThreshold int      `yaml:"server_threshold"`
-	Period          int      `yaml:"period"`
-	Servers         []string `yaml:"servers"`
+	RequestAttempts int      `json:"request_attempts"`
+	RequestTimeout  int      `json:"request_timeout"`
+	NumServers      int      `json:"num_servers"`
+	MaxTimeDelta    int      `json:"max_time_delta"`
+	ServerThreshold int      `json:"server_threshold"`
+	Period          int      `json:"period"`
+	Servers         []string `json:"servers"`
 }
 
 // LoadConfig reads a yaml file from a provided path, instantiating a new
