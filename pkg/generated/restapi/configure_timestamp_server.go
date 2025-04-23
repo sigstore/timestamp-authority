@@ -110,7 +110,7 @@ const pingPath = "/ping"
 func httpPingOnly() func(http.Handler) http.Handler {
 	f := func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Scheme != "https" && !strings.EqualFold(r.URL.Path, pingPath) {
+			if r.TLS == nil && !strings.EqualFold(r.URL.Path, pingPath) {
 				w.Header().Set("Content-Type", "text/plain")
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte("http server supports only the " + pingPath + " entrypoint")) //nolint:errcheck
