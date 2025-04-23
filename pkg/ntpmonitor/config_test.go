@@ -20,7 +20,7 @@ import (
 	"path"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 var yamlData = `
