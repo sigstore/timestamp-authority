@@ -32,10 +32,11 @@ import (
 
 	privateca "cloud.google.com/go/security/privateca/apiv1"
 	"cloud.google.com/go/security/privateca/apiv1/privatecapb"
-	"github.com/google/tink/go/keyset"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
 	"github.com/sigstore/timestamp-authority/pkg/signer"
 	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
+	"github.com/tink-crypto/tink-go/v2/keyset"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	// Register the provider-specific plugins
@@ -252,7 +253,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 		if err != nil {
 			return nil, err
 		}
-		leafKMSSigner, err = signer.KeyHandleToSigner(kh)
+		leafKMSSigner, err = tinkUtils.KeyHandleToSigner(kh)
 		if err != nil {
 			return nil, err
 		}

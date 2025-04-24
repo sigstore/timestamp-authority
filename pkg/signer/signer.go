@@ -56,7 +56,7 @@ func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer, kmsKey, tink
 		if err != nil {
 			return nil, err
 		}
-		return NewTinkSigner(ctx, tinkKeysetPath, primaryKey)
+		return NewTinkSigner(tinkKeysetPath, primaryKey)
 	default:
 		return nil, fmt.Errorf("unsupported signer type: %s", signer)
 	}
