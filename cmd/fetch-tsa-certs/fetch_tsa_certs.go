@@ -92,6 +92,8 @@ var (
 	tinkKeysetPath = flag.String("tink-keyset-path", "", "Path to Tink keyset")
 	tinkKmsKey     = flag.String("tink-kms-resource", "", "Resource path to symmetric encryption KMS key to decrypt Tink keyset, starting with gcp-kms:// or aws-kms://")
 
+	orgName = flag.String("org-name", "", "Issuer organization name to use in created certificates")
+
 	outputPath = flag.String("output", "", "Path to write the certificate chain to")
 )
 
@@ -140,7 +142,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 			SerialNumber: parentSn,
 			Subject: pkix.Name{
 				CommonName:   "sigstore-tsa-selfsigned",
-				Organization: []string{"sigstore.dev"},
+				Organization: []string{*orgName},
 			},
 			SubjectKeyId:          parentSkid,
 			NotBefore:             now,
@@ -194,7 +196,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 						SubjectConfig: &privatecapb.CertificateConfig_SubjectConfig{
 							Subject: &privatecapb.Subject{
 								CommonName:   "sigstore-tsa-intermediate",
-								Organization: "sigstore.dev",
+								Organization: *orgName,
 							},
 						},
 					},
@@ -274,7 +276,7 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 		SerialNumber: sn,
 		Subject: pkix.Name{
 			CommonName:   "sigstore-tsa",
-			Organization: []string{"sigstore.dev"},
+			Organization: []string{*orgName},
 		},
 		SubjectKeyId: skid,
 		NotBefore:    parent.NotBefore,
