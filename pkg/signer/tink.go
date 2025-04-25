@@ -17,41 +17,22 @@ package signer
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
 	"errors"
-	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/google/tink/go/core/registry"
-	"github.com/google/tink/go/integration/awskms"
-	"github.com/google/tink/go/integration/gcpkms"
-	"github.com/google/tink/go/integration/hcvault"
-	signatureSubtle "github.com/google/tink/go/signature/subtle"
-	"github.com/google/tink/go/subtle"
-	"github.com/google/tink/go/tink"
-
-	"github.com/golang/protobuf/proto" //lint:ignore SA1019 needed for unmarshalling
-	"github.com/google/tink/go/insecurecleartextkeyset"
-	"github.com/google/tink/go/keyset"
-	commonpb "github.com/google/tink/go/proto/common_go_proto"
-	ecdsapb "github.com/google/tink/go/proto/ecdsa_go_proto"
-	ed25519pb "github.com/google/tink/go/proto/ed25519_go_proto"
-	tinkpb "github.com/google/tink/go/proto/tink_go_proto"
-)
-
-var (
-	ecdsaSignerKeyVersion   = 0
-	ecdsaSignerTypeURL      = "type.googleapis.com/google.crypto.tink.EcdsaPrivateKey"
-	ed25519SignerKeyVersion = 0
-	ed25519SignerTypeURL    = "type.googleapis.com/google.crypto.tink.Ed25519PrivateKey"
+	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
+	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
+	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
+	"github.com/tink-crypto/tink-go-hcvault/v2/integration/hcvault"
+	"github.com/tink-crypto/tink-go/v2/core/registry"
+	"github.com/tink-crypto/tink-go/v2/keyset"
+	"github.com/tink-crypto/tink-go/v2/tink"
 )
 
 // NewTinkSigner creates a signer by decrypting a local Tink keyset with a remote KMS encryption key
-func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
+func NewTinkSigner(tinkKeysetPath string, primaryKey tink.AEAD) (crypto.Signer, error) {
 	f, err := os.Open(filepath.Clean(tinkKeysetPath))
 	if err != nil {
 		return nil, err
@@ -62,7 +43,7 @@ func NewTinkSigner(_ context.Context, tinkKeysetPath string, primaryKey tink.AEA
 	if err != nil {
 		return nil, err
 	}
-	signer, err := KeyHandleToSigner(kh)
+	signer, err := tinkUtils.KeyHandleToSigner(kh)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +62,7 @@ func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD,
 		registry.RegisterKMSClient(gcpClient)
 		return gcpClient.GetAEAD(kmsKey)
 	case strings.HasPrefix(kmsKey, "aws-kms://"):
-		awsClient, err := awskms.NewClient(kmsKey)
+		awsClient, err := awskms.NewClientWithOptions(kmsKey)
 		if err != nil {
 			return nil, err
 		}
@@ -97,92 +78,4 @@ func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD,
 	default:
 		return nil, errors.New("unsupported Tink KMS key type")
 	}
-}
-
-// KeyHandleToSigner converts a key handle to the crypto.Signer interface.
-// Heavily pulls from Tink's signature and subtle packages.
-func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, error) {
-	// extract the key material from the key handle
-	ks := insecurecleartextkeyset.KeysetMaterial(kh)
-
-	k := getPrimaryKey(ks)
-	if k == nil {
-		return nil, errors.New("no enabled key found in keyset")
-	}
-
-	switch k.GetTypeUrl() {
-	case ecdsaSignerTypeURL:
-		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ecdsa_signer_key_manager.go#L48
-		privKey := new(ecdsapb.EcdsaPrivateKey)
-		if err := proto.Unmarshal(k.GetValue(), privKey); err != nil {
-			return nil, fmt.Errorf("error unmarshalling ecdsa private key: %w", err)
-		}
-		if err := validateEcdsaPrivKey(privKey); err != nil {
-			return nil, fmt.Errorf("error validating ecdsa private key: %w", err)
-		}
-		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/subtle/ecdsa_signer.go#L39
-		_, curve, _ := getECDSAParamNames(privKey.PublicKey.Params)
-		p := new(ecdsa.PrivateKey)
-		c := subtle.GetCurve(curve)
-		p.Curve = c
-		p.D = new(big.Int).SetBytes(privKey.GetKeyValue())
-		p.X, p.Y = c.ScalarBaseMult(privKey.GetKeyValue())
-		return p, nil
-	case ed25519SignerTypeURL:
-		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L47
-		privKey := new(ed25519pb.Ed25519PrivateKey)
-		if err := proto.Unmarshal(k.GetValue(), privKey); err != nil {
-			return nil, fmt.Errorf("error unmarshalling ed25519 private key: %w", err)
-		}
-		if err := validateEd25519PrivKey(privKey); err != nil {
-			return nil, fmt.Errorf("error validating ed25519 private key: %w", err)
-		}
-		// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/subtle/ed25519_signer.go#L29
-		p := ed25519.NewKeyFromSeed(privKey.GetKeyValue())
-		return p, nil
-	default:
-		return nil, fmt.Errorf("unsupported key type: %s", k.GetTypeUrl())
-	}
-}
-
-// getPrimaryKey returns the first enabled key from a keyset.
-func getPrimaryKey(ks *tinkpb.Keyset) *tinkpb.KeyData {
-	for _, k := range ks.GetKey() {
-		if k.GetKeyId() == ks.GetPrimaryKeyId() && k.GetStatus() == tinkpb.KeyStatusType_ENABLED {
-			return k.GetKeyData()
-		}
-	}
-	return nil
-}
-
-// validateEcdsaPrivKey validates the given ECDSAPrivateKey.
-// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ecdsa_signer_key_manager.go#L139
-func validateEcdsaPrivKey(key *ecdsapb.EcdsaPrivateKey) error {
-	if err := keyset.ValidateKeyVersion(key.Version, uint32(ecdsaSignerKeyVersion)); err != nil { //nolint:gosec
-		return fmt.Errorf("ecdsa_signer_key_manager: invalid key: %w", err)
-	}
-	hash, curve, encoding := getECDSAParamNames(key.PublicKey.Params)
-	return signatureSubtle.ValidateECDSAParams(hash, curve, encoding)
-}
-
-// getECDSAParamNames returns the string representations of each parameter in
-// the given ECDSAParams.
-// https://github.com/google/tink/blob/4cc630dfc711555f6bbbad64f8c573b39b7af500/go/signature/proto.go#L26
-func getECDSAParamNames(params *ecdsapb.EcdsaParams) (string, string, string) {
-	hashName := commonpb.HashType_name[int32(params.HashType)]
-	curveName := commonpb.EllipticCurveType_name[int32(params.Curve)]
-	encodingName := ecdsapb.EcdsaSignatureEncoding_name[int32(params.Encoding)]
-	return hashName, curveName, encodingName
-}
-
-// validateEd25519PrivKey validates the given ED25519PrivateKey.
-// https://github.com/google/tink/blob/9753ffddd4d04aa56e0605ff4a0db46f2fb80529/go/signature/ed25519_signer_key_manager.go#L132
-func validateEd25519PrivKey(key *ed25519pb.Ed25519PrivateKey) error {
-	if err := keyset.ValidateKeyVersion(key.Version, uint32(ed25519SignerKeyVersion)); err != nil { //nolint:gosec
-		return fmt.Errorf("ed25519_signer_key_manager: invalid key: %w", err)
-	}
-	if len(key.KeyValue) != ed25519.SeedSize {
-		return fmt.Errorf("ed2219_signer_key_manager: invalid key length, got %d", len(key.KeyValue))
-	}
-	return nil
 }
