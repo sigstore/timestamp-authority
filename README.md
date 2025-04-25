@@ -151,6 +151,7 @@ used to generate the certificate chain if you do not want to use GCP.
       --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
       --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1" \
       --gcp-ca-parent="projects/<project>/locations/<region>/caPools/<ca-pool>" \
+      --org-name="example.com"
       --output="chain.crt.pem"
     ```
 
@@ -164,6 +165,7 @@ used to generate the certificate chain if you do not want to use GCP.
       --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
       --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<parent-key>/versions/1" \
       --parent-validity=<DAYS>
+      --org-name="example.com"
       --output="chain.crt.pem"
     ```
 
@@ -208,6 +210,7 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
     --tink-keyset-path="enc-keyset.cfg"\
     --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<intermediate-key>/versions/1"\
     --gcp-ca-parent="projects/<project>/locations/<location>/caPools/<pool-name>"\
+    --org-name="example.com"
     --output="chain.crt.pem"
   ```
 
@@ -226,6 +229,7 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
     --tink-keyset-path="enc-keyset.cfg"\
     --parent-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<parent-key>/versions/1"\
     --parent-validity=<DAYS>
+    --org-name="example.com"
     --output="chain.crt.pem"
   ```
 
