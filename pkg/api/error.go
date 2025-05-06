@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	failedToGenerateTimestampResponse = "Error generating timestamp response"
-	WeakHashAlgorithmTimestampRequest = "Weak hash algorithm in timestamp request"
+	failedToGenerateTimestampResponse        = "Error generating timestamp response"
+	WeakHashAlgorithmTimestampRequest        = "Weak hash algorithm in timestamp request"
+	InconsistentDigestLengthTimestampRequest = "Message digest has incorrect length for specified algorithm"
 )
 
 func errorMsg(message string, code int) *models.Error {
