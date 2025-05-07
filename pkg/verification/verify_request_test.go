@@ -16,23 +16,63 @@ package verification
 
 import (
 	"crypto"
+	"errors"
 	"testing"
 
 	"github.com/digitorus/timestamp"
 )
 
 func TestVerifyRequest(t *testing.T) {
-	tsReq := &timestamp.Request{}
-
-	for _, alg := range []crypto.Hash{crypto.SHA256, crypto.SHA384, crypto.SHA512} {
-		tsReq.HashAlgorithm = alg
-		if err := VerifyRequest(tsReq); err != nil {
-			t.Fatalf("unexpected error verifying request, got %v", err)
-		}
+	tests := []struct {
+		name          string
+		tsReq         *timestamp.Request
+		expectedError error
+	}{
+		{
+			name:          "Valid SHA256",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA256, HashedMessage: make([]byte, crypto.SHA256.Size())},
+			expectedError: nil,
+		},
+		{
+			name:          "Valid SHA384",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA384, HashedMessage: make([]byte, crypto.SHA384.Size())},
+			expectedError: nil,
+		},
+		{
+			name:          "Valid SHA512",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA512, HashedMessage: make([]byte, crypto.SHA512.Size())},
+			expectedError: nil,
+		},
+		{
+			name:          "Weak Hash SHA1",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA1, HashedMessage: make([]byte, crypto.SHA1.Size())},
+			expectedError: ErrWeakHashAlg,
+		},
+		{
+			name:          "Unsupported Hash Algorithm",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA224, HashedMessage: make([]byte, crypto.SHA224.Size())},
+			expectedError: ErrUnsupportedHashAlg,
+		},
+		{
+			name:          "Inconsistent Digest Length",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA256, HashedMessage: make([]byte, 31)}, // SHA256 size is 32
+			expectedError: ErrInconsistentDigestLength,
+		},
 	}
 
-	tsReq.HashAlgorithm = crypto.SHA1
-	if err := VerifyRequest(tsReq); err != ErrWeakHashAlg {
-		t.Fatalf("expected error with weak hash algorithm, got %v", err)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := VerifyRequest(tc.tsReq)
+			if tc.expectedError != nil {
+				if err == nil {
+					t.Fatalf("expected error %v, got nil", tc.expectedError)
+				}
+				if !errors.Is(err, tc.expectedError) {
+					t.Fatalf("expected error to be or wrap %v, but got %v (error message: %q)", tc.expectedError, err, err.Error())
+				}
+			} else if err != nil {
+				t.Fatalf("expected no error, but got %v", err)
+			}
+		})
 	}
 }

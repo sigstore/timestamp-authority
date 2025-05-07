@@ -99,7 +99,7 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		TSAPolicyOID:  oidInts,
 	}
 
-	return &tsReq, "", nil
+	return verifyTimestampRequest(&tsReq)
 }
 
 func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
@@ -108,12 +108,7 @@ func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		return nil, failedToGenerateTimestampResponse, err
 	}
 
-	// verify that the request's hash algorithm is supported
-	if err := verification.VerifyRequest(parsed); err != nil {
-		return nil, WeakHashAlgorithmTimestampRequest, err
-	}
-
-	return parsed, "", nil
+	return verifyTimestampRequest(parsed)
 }
 
 func getContentType(r *http.Request) (string, error) {
@@ -187,4 +182,24 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 
 func GetTimestampCertChainHandler(_ ts.GetTimestampCertChainParams) middleware.Responder {
 	return ts.NewGetTimestampCertChainOK().WithPayload(api.certChainPem)
+}
+
+func verifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, string, error) {
+	if err := verification.VerifyRequest(tsReq); err != nil {
+		// verify that the request's hash algorithm is not weak
+		if errors.Is(err, verification.ErrWeakHashAlg) {
+			return nil, WeakHashAlgorithmTimestampRequest, err
+		}
+		// verify that the request's hash algorithm is supported
+		if errors.Is(err, verification.ErrUnsupportedHashAlg) {
+			return nil, failedToGenerateTimestampResponse, err
+		}
+		// verify that the request's digest length is consistent with the request's hash algorithm
+		if errors.Is(err, verification.ErrInconsistentDigestLength) {
+			return nil, InconsistentDigestLengthTimestampRequest, err
+		}
+		return nil, failedToGenerateTimestampResponse, err
+	}
+
+	return tsReq, "", nil
 }
