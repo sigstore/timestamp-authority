@@ -49,10 +49,9 @@ func TestVerifyRequest(t *testing.T) {
 			expectedError: ErrWeakHashAlg,
 		},
 		{
-			name: "Unavailable Hash Algorithm",
-			// crypto.Hash(0) is an "unknown hash function," so Available() returns false.
-			tsReq:         &timestamp.Request{HashAlgorithm: crypto.Hash(0), HashedMessage: make([]byte, 32)},
-			expectedError: ErrUnavailableHashAlg,
+			name:          "Unsupported Hash Algorithm",
+			tsReq:         &timestamp.Request{HashAlgorithm: crypto.SHA224, HashedMessage: make([]byte, crypto.SHA224.Size())},
+			expectedError: ErrUnsupportedHashAlg,
 		},
 		{
 			name:          "Inconsistent Digest Length",
