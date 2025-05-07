@@ -186,7 +186,7 @@ func GetTimestampCertChainHandler(_ ts.GetTimestampCertChainParams) middleware.R
 
 func VerifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, string, error) {
 	if err := verification.VerifyRequest(tsReq); err != nil {
-		// verify that the request's hash algorithm is supported
+		// verify that the request's hash algorithm is not weak
 		if errors.Is(err, verification.ErrWeakHashAlg) {
 			return nil, WeakHashAlgorithmTimestampRequest, err
 		}
