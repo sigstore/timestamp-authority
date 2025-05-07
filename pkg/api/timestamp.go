@@ -99,7 +99,7 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		TSAPolicyOID:  oidInts,
 	}
 
-	return VerifyTimestampRequest(&tsReq)
+	return verifyTimestampRequest(&tsReq)
 }
 
 func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
@@ -108,7 +108,7 @@ func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 		return nil, failedToGenerateTimestampResponse, err
 	}
 
-	return VerifyTimestampRequest(parsed)
+	return verifyTimestampRequest(parsed)
 }
 
 func getContentType(r *http.Request) (string, error) {
@@ -184,7 +184,7 @@ func GetTimestampCertChainHandler(_ ts.GetTimestampCertChainParams) middleware.R
 	return ts.NewGetTimestampCertChainOK().WithPayload(api.certChainPem)
 }
 
-func VerifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, string, error) {
+func verifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, string, error) {
 	if err := verification.VerifyRequest(tsReq); err != nil {
 		// verify that the request's hash algorithm is not weak
 		if errors.Is(err, verification.ErrWeakHashAlg) {
