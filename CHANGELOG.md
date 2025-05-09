@@ -1,3 +1,14 @@
+# v1.2.7
+
+## Features
+
+* fetch-tsa-certs: Add "--org-name" (#1056)
+
+## Bug Fixes
+
+* Fix: Disallow timestamp requests where digest length is inconsistent with hash algorithm (#1066)
+* Fix --http-ping-only flag to not affect https listener (#1051)
+
 # v1.2.6
 
 ## Features
