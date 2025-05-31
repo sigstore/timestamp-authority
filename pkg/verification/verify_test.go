@@ -450,7 +450,7 @@ func TestVerifyESSCertID(t *testing.T) {
 	}
 }
 
-func TestVerifyExtendedKeyUsage(t *testing.T) {
+func TestVerifyLeafExtendedKeyUsage(t *testing.T) {
 	type test struct {
 		eku                 []x509.ExtKeyUsage
 		expectVerifySuccess bool
@@ -476,9 +476,53 @@ func TestVerifyExtendedKeyUsage(t *testing.T) {
 			ExtKeyUsage: tc.eku,
 		}
 
-		err := verifyExtendedKeyUsage(&cert)
+		err := verifyLeafExtendedKeyUsage(&cert)
 		if err != nil && tc.expectVerifySuccess {
-			t.Errorf("expected verifyExtendedKeyUsage to return nil error")
+			t.Errorf("expected verifyLeafExtendedKeyUsage to return nil error")
+		}
+		if err == nil && !tc.expectVerifySuccess {
+			t.Errorf("expected verification to fail")
+		}
+	}
+}
+
+func TestVerifyIntermediateExtendedKeyUsage(t *testing.T) {
+	type test struct {
+		eku                 []x509.ExtKeyUsage
+		expectVerifySuccess bool
+	}
+
+	tests := []test{
+		{
+			eku:                 []x509.ExtKeyUsage{},
+			expectVerifySuccess: true,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			expectVerifySuccess: true,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping, x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: true,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny, x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: true,
+		},
+		{
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageIPSECTunnel},
+			expectVerifySuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		cert := x509.Certificate{
+			ExtKeyUsage: tc.eku,
+		}
+
+		err := verifyIntermediateExtendedKeyUsage(&cert)
+		if err != nil && tc.expectVerifySuccess {
+			t.Errorf("expected verifyIntermediateExtendedKeyUsage to return nil error")
 		}
 		if err == nil && !tc.expectVerifySuccess {
 			t.Errorf("expected verification to fail")
