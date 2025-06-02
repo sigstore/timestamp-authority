@@ -26,9 +26,12 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/server"
 )
 
-func createServer(t *testing.T) string {
+func createServer(t *testing.T, flagsToSet ...func()) string {
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
+	for _, flag := range flagsToSet {
+		flag()
+	}
 	// unused port
 	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
 	server := httptest.NewServer(apiServer.GetHandler())

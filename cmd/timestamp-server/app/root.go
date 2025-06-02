@@ -61,6 +61,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&httpPingOnly, "http-ping-only", false, "serve only /ping in the http server")
 	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
 	rootCmd.PersistentFlags().String("timestamp-signer-hash", "sha256", "Hash algorithm used by the signer. Must match the hash algorithm specified for a KMS or Tink key. Valid options include: [sha256, sha384, sha512]. Ignored for Memory signer.")
+	rootCmd.PersistentFlags().Bool("include-chain-in-response", false, "Whether to include the issuing chain in the timestamp response when certReq is set in the timestamp request. When false, only the leaf certificate is included in the response.")
 	// KMS flags
 	rootCmd.PersistentFlags().String("kms-key-resource", "", "KMS key for signing timestamp responses. Valid options include: [gcpkms://resource, azurekms://resource, hashivault://resource, awskms://resource]")
 	// Tink flags

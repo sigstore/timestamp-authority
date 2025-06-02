@@ -171,6 +171,9 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		AddTSACertificate: req.Certificates,
 		ExtraExtensions:   req.Extensions,
 	}
+	if api.includeChain {
+		tsStruct.Certificates = api.certChain[1:] // Issuing CA certificate down to root
+	}
 
 	resp, err := tsStruct.CreateResponseWithOpts(api.certChain[0], api.tsaSigner, api.tsaSignerHash)
 	if err != nil {
