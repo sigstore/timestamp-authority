@@ -1,3 +1,10 @@
+# v1.2.8
+
+## Features
+
+* Allow full issuing chain in response (#1082)
+* Relax EKU chaining rules verification for intermediate certs (#1078)
+
 # v1.2.7
 
 ## Features
