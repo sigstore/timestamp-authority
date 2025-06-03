@@ -38,6 +38,7 @@ type API struct {
 	tsaSignerHash crypto.Hash         // hash algorithm used to hash pre-signed timestamps
 	certChain     []*x509.Certificate // timestamping cert chain
 	certChainPem  string              // PEM encoded timestamping cert chain
+	includeChain  bool                // Whether to include the full issuing chain or just the leaf certificate
 }
 
 func NewAPI() (*API, error) {
@@ -91,6 +92,7 @@ func NewAPI() (*API, error) {
 		tsaSignerHash: tsaSignerHash,
 		certChain:     certChain,
 		certChainPem:  string(certChainPEM),
+		includeChain:  viper.GetBool("include-chain-in-response"),
 	}, nil
 }
 
