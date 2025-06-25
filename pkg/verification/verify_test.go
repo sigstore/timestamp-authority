@@ -690,11 +690,13 @@ func TestVerifyTSRWithChain(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		err = verifyTSRWithChain(tc.ts, tc.opts)
-		if tc.expectVerifySuccess && err != nil {
-			t.Errorf("test '%s' unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", tc.name, err)
-		} else if !tc.expectVerifySuccess && err == nil {
-			t.Errorf("testg '%s' unexpectedly passed \nExpected verifyTSRWithChain to fail verification", tc.name)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			err = verifyTSRWithChain(tc.ts, tc.opts)
+			if tc.expectVerifySuccess && err != nil {
+				t.Errorf("unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", err)
+			} else if !tc.expectVerifySuccess && err == nil {
+				t.Errorf("unexpectedly passed \nExpected verifyTSRWithChain to fail verification")
+			}
+		})
 	}
 }

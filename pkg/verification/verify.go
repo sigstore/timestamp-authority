@@ -285,24 +285,18 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	if len(opts.Roots) == 0 {
 		return fmt.Errorf("no root certificates provided for verifying the certificate chain")
 	}
-	rootFound := false
-	for _, cert := range opts.Roots {
-		if cert != nil {
-			rootFound = true
-			break
-		}
-	}
-	if !rootFound {
-		return fmt.Errorf("no valid root certificates provided for verifying the certificate chain - nil opts.Roots")
-	}
 	rootCertPool := x509.NewCertPool()
 	for _, cert := range opts.Roots {
-		rootCertPool.AddCert(cert)
+		if cert != nil {
+			rootCertPool.AddCert(cert)
+		}
 	}
 
 	intermediateCertPool := x509.NewCertPool()
 	for _, cert := range opts.Intermediates {
-		intermediateCertPool.AddCert(cert)
+		if cert != nil {
+			intermediateCertPool.AddCert(cert)
+		}
 	}
 
 	x509Opts := x509.VerifyOptions{
