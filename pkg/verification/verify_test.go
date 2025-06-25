@@ -629,6 +629,15 @@ func TestVerifyTSRWithChain(t *testing.T) {
 			expectVerifySuccess: true,
 		},
 		{
+			name: "Verification fails due to invalid nil root certificate",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{nil},
+				Intermediates: []*x509.Certificate{intermediate},
+			},
+			expectVerifySuccess: false,
+		},
+		{
 			name: "Verification fails due to invalid intermediate certificate",
 			ts:   tsWithCerts,
 			opts: VerifyOpts{
