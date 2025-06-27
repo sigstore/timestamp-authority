@@ -137,7 +137,7 @@ For detailed usage instructions and examples, see the [Certificate Maker documen
 Generate a certificate chain, which must include a leaf certificate whose public key pairs to the private key
 in cloud KMS, may include any number of intermediate certificates, and must include a root certificate.
 We recommend reviewing the [code](https://github.com/sigstore/timestamp-authority/blob/main/cmd/fetch-tsa-certs/fetch_tsa_certs.go)
-used to generate the certificate chain if you do not want to use GCP. 
+used to generate the certificate chain if you do not want to use GCP.
 
 #### Example: timestamp signing key on GCP, intermediate key on GCP, root CA on GCP
 
@@ -168,6 +168,10 @@ used to generate the certificate chain if you do not want to use GCP.
       --org-name="example.com"
       --output="chain.crt.pem"
     ```
+
+#### Example: keys on AWS
+
+See [these instructions](docs/aws-kms.md) for the general process to use AWS KMS-based keys and Certificate Maker to run a server.
 
 #### Other KMSs
 
