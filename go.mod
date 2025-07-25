@@ -42,7 +42,7 @@ require (
 	golang.org/x/net v0.42.0
 	google.golang.org/protobuf v1.36.6
 	sigs.k8s.io/release-utils v0.12.0
-	sigs.k8s.io/yaml v1.5.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
