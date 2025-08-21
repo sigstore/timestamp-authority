@@ -27,23 +27,23 @@ func TestVerifyCertChain(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
 	leafCert, leafKey, _ := testutils.GenerateLeafCert(subCert, subKey)
-	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafKey); err != nil {
+	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafKey, true); err != nil {
 		t.Fatalf("unexpected failure verifying certificate chain: %v", err)
 	}
 
 	// success with leaf and root
 	leafFromRootCert, leafFromRootKey, _ := testutils.GenerateLeafCert(rootCert, rootKey)
-	if err := VerifyCertChain([]*x509.Certificate{leafFromRootCert, rootCert}, leafFromRootKey); err != nil {
+	if err := VerifyCertChain([]*x509.Certificate{leafFromRootCert, rootCert}, leafFromRootKey, true); err != nil {
 		t.Fatalf("unexpected failure verifying certificate chain: %v", err)
 	}
 
 	// failure: not enough certificates
-	if err := VerifyCertChain([]*x509.Certificate{leafCert}, leafKey); err == nil || !strings.Contains(err.Error(), "must contain at least two") {
+	if err := VerifyCertChain([]*x509.Certificate{leafCert}, leafKey, true); err == nil || !strings.Contains(err.Error(), "must contain at least two") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
 	}
 
 	// failure: mismatched public key
-	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafFromRootKey); err == nil || !strings.Contains(err.Error(), "public keys are not equal") {
+	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafFromRootKey, true); err == nil || !strings.Contains(err.Error(), "public keys are not equal") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
 	}
 }

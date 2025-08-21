@@ -76,7 +76,7 @@ func TestGetTimestampCertChain(t *testing.T) {
 	}
 
 	signer := TestSigner{pubKey: certs[0].PublicKey}
-	if err := x509.VerifyCertChain(certs, signer); err != nil {
+	if err := x509.VerifyCertChain(certs, signer, true); err != nil {
 		t.Fatalf("unexpected error verifying cert chain: %v", err)
 	}
 }
