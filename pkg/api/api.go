@@ -71,7 +71,7 @@ func NewAPI() (*API, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := tsx509.VerifyCertChain(certChain, tsaSigner); err != nil {
+		if err := tsx509.VerifyCertChain(certChain, tsaSigner, viper.GetBool("enforce-intermediate-eku")); err != nil {
 			return nil, err
 		}
 	} else {

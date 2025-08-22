@@ -32,7 +32,7 @@ var (
 // VerifyCertChain verifies that the certificate chain is valid for issuing
 // timestamping certificates. The chain should start with a leaf certificate,
 // followed by any number of intermediates, and end with the root certificate.
-func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer) error {
+func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceIntermediateEku bool) error {
 	// Chain must contain at least one CA certificate and a leaf certificate
 	if len(certs) < 2 {
 		return errors.New("certificate chain must contain at least two certificates")
@@ -85,19 +85,21 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer) error {
 		return errors.New("certificate must set EKU to critical")
 	}
 
-	// If the chain contains intermediates, verify that the extended key
-	// usage includes the extended key usage timestamping for EKU chaining
-	if len(certs) > 2 {
-		for _, c := range certs[1 : len(certs)-1] {
-			var hasExtKeyUsageTimeStamping bool
-			for _, extKeyUsage := range c.ExtKeyUsage {
-				if extKeyUsage == x509.ExtKeyUsageTimeStamping {
-					hasExtKeyUsageTimeStamping = true
-					break
+	if enforceIntermediateEku {
+		// If the chain contains intermediates, verify that the extended key
+		// usage includes the extended key usage timestamping for EKU chaining
+		if len(certs) > 2 {
+			for _, c := range certs[1 : len(certs)-1] {
+				var hasExtKeyUsageTimeStamping bool
+				for _, extKeyUsage := range c.ExtKeyUsage {
+					if extKeyUsage == x509.ExtKeyUsageTimeStamping {
+						hasExtKeyUsageTimeStamping = true
+						break
+					}
 				}
-			}
-			if !hasExtKeyUsageTimeStamping {
-				return errors.New(`certificate must have extended key usage timestamping set to sign timestamping certificates`)
+				if !hasExtKeyUsageTimeStamping {
+					return errors.New(`certificate must have extended key usage timestamping set to sign timestamping certificates`)
+				}
 			}
 		}
 	}

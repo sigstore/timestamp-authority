@@ -62,7 +62,7 @@ func TestNewTimestampingCertWithChain(t *testing.T) {
 	}
 
 	// verify that VerifyCertChain will successfully verify the chain
-	if err := x509.VerifyCertChain(certChain, signer); err != nil {
+	if err := x509.VerifyCertChain(certChain, signer, true); err != nil {
 		t.Fatalf("failed to verify certificate chain: %v", err)
 	}
 }
