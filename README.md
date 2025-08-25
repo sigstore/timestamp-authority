@@ -118,6 +118,10 @@ To deploy to production, the timestamp authority currently supports signing with
 a certificate chain (leaf, any intermediates, and root), where the certificate chain's purpose (extended key usage) is
 for timestamping. We do not recommend the file signer for production since the signing key will only be password protected.
 
+#### Intermediate Certificates
+
+Note that the default is for `timestamp-server` to enforce that both the leaf certificate *and* any intermediate certificates have extended key usage of timestamping and set as critical. If you wish to disable this enforcement for intermediates, set `--enforce-intermediate-eku=false`.
+
 ### Certificate Maker
 
 Certificate Maker is a tool for creating RFC 3161 compliant certificate chains for Timestamp Authority. It supports:
