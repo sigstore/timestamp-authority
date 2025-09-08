@@ -50,7 +50,11 @@ func handleTimestampAPIError(params interface{}, code int, err error, message st
 	handler := re.FindStringSubmatch(typeStr)[1]
 
 	logMsg := func(r *http.Request) {
-		log.RequestIDLogger(r).Errorw("exiting with error", append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message, "error", err}, fields...)...)
+		if code < http.StatusInternalServerError {
+			log.RequestIDLogger(r).Warnw(message, append([]interface{}{"handler", handler, "statusCode", code, "error", err}, fields...)...)
+		} else {
+			log.RequestIDLogger(r).Errorw(message, append([]interface{}{"handler", handler, "statusCode", code, "error", err}, fields...)...)
+		}
 		paramsFields := map[string]interface{}{}
 		if err := mapstructure.Decode(params, &paramsFields); err == nil {
 			log.RequestIDLogger(r).Debug(paramsFields)

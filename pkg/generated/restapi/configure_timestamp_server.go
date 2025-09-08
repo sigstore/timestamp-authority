@@ -197,7 +197,7 @@ func cacheForDay(handler http.Handler) http.Handler {
 }
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
-	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() == http.StatusNotFound {
+	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() < http.StatusInternalServerError {
 		log.RequestIDLogger(r).Warn(err)
 	} else {
 		log.RequestIDLogger(r).Error(err)
