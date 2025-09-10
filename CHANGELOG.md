@@ -1,3 +1,9 @@
+# v1.2.9
+
+* logging: Don't use Error when logging 4xx responses (#1159)
+* add feature to disable intermediate cert EKU enforcement (#1146)
+* add documentation for AWS KMS example (#1094)
+
 # v1.2.8
 
 ## Features
