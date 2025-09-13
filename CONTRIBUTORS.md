@@ -122,7 +122,12 @@ git push origin your-branch --force
 
 Alternatively, a core member can squash your commits within Github.
 
+## DCO Signoff
+
+Make sure to sign the [Developer Certificate of
+Origin](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signoff).
+
 ## Code of Conduct
 
-{project-name} adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
-Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/timestamp-authority/blob/main/CODE_OF_CONDUCT.md) document.
+Sigstore Timestamp-Authority adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
+Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/timestamp-authority/blob/master/CODE_OF_CONDUCT.md) document.
