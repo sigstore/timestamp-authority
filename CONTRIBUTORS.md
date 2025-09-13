@@ -12,13 +12,13 @@ to make via an [issue](https://github.com/sigstore/timestamp-authority/issues).
 4. Update the README.md with details of changes to any interface, this includes new environment
    variables, exposed ports, useful file locations, CLI parameters and
    new or changed configuration values.
-5. Correctly format your commit message see [Commit Messages](#Commit-Message-Guidelines)
+5. Correctly format your commit message see [Commit Messages](#commit-message-guidelines)
    below.
 6. Ensure that CI passes, if it fails, fix the failures.
 7. Every pull request requires a review from the [core timestamp-authority team](https://github.com/orgs/github.com/sigstore/teams/tsa-codeowners)
    before merging.
 8. If your pull request consists of more than one commit, please squash your
-   commits as described in [Squash Commits](#Squash-Commits)
+   commits as described in [Squash Commits](#squash-commits)
 
 ## Commit Message Guidelines
 
@@ -30,7 +30,7 @@ are used to generate release notes.
 
 A good example of a commit message would be as follows:
 
-```
+```text
 Summarize changes in around 50 characters or less
 
 More detailed explanatory text, if necessary. Wrap it to about 72
@@ -63,8 +63,7 @@ See also: #456, #789
 Note the `Resolves #123` tag, this references the issue raised and allows us to
 ensure issues are associated and closed when a pull request is merged.
 
-Please refer to [the github help page on message types](https://help.github.com/articles/closing-issues-using-keywords/)
-for a complete list of issue references.
+Please refer to [the github help page on message types](https://help.github.com/articles/closing-issues-using-keywords/) for a complete list of issue references.
 
 ## Squash Commits
 
@@ -74,43 +73,60 @@ once a reviewer has approved your pull request.
 
 A squash can be performed as follows. Let's say you have the following commits:
 
-    initial commit
-    second commit
-    final commit
+```text
+initial commit
+second commit
+final commit
+```
 
 Run the command below with the number set to the total commits you wish to
 squash (in our case 3 commits):
 
-    git rebase -i HEAD~3
+```shell
+git rebase -i HEAD~3
+```
 
-You default text editor will then open up and you will see the following::
+You default text editor will then open up and you will see the following:
 
-    pick eb36612 initial commit
-    pick 9ac8968 second commit
-    pick a760569 final commit
+```shell
+pick eb36612 initial commit
+pick 9ac8968 second commit
+pick a760569 final commit
 
-    # Rebase eb1429f..a760569 onto eb1429f (3 commands)
+# Rebase eb1429f..a760569 onto eb1429f (3 commands)
+```
 
 We want to rebase on top of our first commit, so we change the other two commits
 to `squash`:
 
-    pick eb36612 initial commit
-    squash 9ac8968 second commit
-    squash a760569 final commit
+```shell
+pick eb36612 initial commit
+squash 9ac8968 second commit
+squash a760569 final commit
+```
 
 After this, should you wish to update your commit message to better summarise
 all of your pull request, run:
 
-    git commit --amend
+```shell
+git commit --amend
+```
 
 You will then need to force push (assuming your initial commit(s) were posted
 to github):
 
-    git push origin your-branch --force
+```shell
+git push origin your-branch --force
+```
 
 Alternatively, a core member can squash your commits within Github.
 
+## DCO Signoff
+
+Make sure to sign the [Developer Certificate of
+Origin](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signoff).
+
 ## Code of Conduct
 
-{project-name} adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
-Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/timestamp-authority/blob/main/CODE_OF_CONDUCT.md) document.
+Sigstore Timestamp-Authority adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
+Please take a moment to read the [CODE_OF_CONDUCT.md](/CODE_OF_CONDUCT.md) document.

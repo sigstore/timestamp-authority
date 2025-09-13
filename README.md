@@ -31,14 +31,14 @@ As a artifact signer, you can:
 * Fetch a timestamp for that signature (more below in [What to sign](#what-to-sign))
 * Upload the signature, artifact hash, and certificate to Rekor (hashedrekord record type)
 * Upload the timestamp to Rekor (rfc3161 record type)
-   * This step is important because it makes the timestamps publicly auditable
+  * This step is important because it makes the timestamps publicly auditable
 
 As an artifact verifier:
 
 * Fetch the artifact entry from Rekor
 * If the artifact was signed with a certificate, verify its expiration
-   * If you trust Rekor's clock, verify the certificate with the timestamp in the Rekor response
-   * If you trust an external timestamp authority, fetch the timestamp from Rekor, verify the
+  * If you trust Rekor's clock, verify the certificate with the timestamp in the Rekor response
+  * If you trust an external timestamp authority, fetch the timestamp from Rekor, verify the
      signed timestamp, and verify the certificate using the signed timestamp
 
 ### What to sign
@@ -57,6 +57,7 @@ brew install openssl
 ```
 
 To launch the server, run either:
+
 * `docker-compose up`
 * `make timestamp-server && ./bin/timestamp-server serve --port 3000`
 
@@ -99,9 +100,9 @@ If you would like to make a request for a timestamp using a JSON based request, 
 
 The service expects the JSON body to be in the shape:
 
-```
+```json
 {
-  "artifactHash": "<base64 encoded artifact hash>",
+  "artifactHash": "<base64-encoded artifact hash>",
   "certificates": true,
   "hashAlgorithm": "sha256",
   "nonce": 1123343434,
@@ -109,12 +110,12 @@ The service expects the JSON body to be in the shape:
 }
 ```
 
-The artifact hash must be represented as a base64 encoded string.
+The artifact hash must be represented as a base64-encoded string.
 
 ## Production deployment
 
 To deploy to production, the timestamp authority currently supports signing with Cloud KMS or
-[Tink](https://github.com/google/tink). You will need to provide
+[Tink](https://github.com/tink-crypto). You will need to provide
 a certificate chain (leaf, any intermediates, and root), where the certificate chain's purpose (extended key usage) is
 for timestamping. We do not recommend the file signer for production since the signing key will only be password protected.
 
@@ -137,7 +138,6 @@ For detailed usage instructions and examples, see the [Certificate Maker documen
 
 ### Cloud KMS
 
-
 Generate a certificate chain, which must include a leaf certificate whose public key pairs to the private key
 in cloud KMS, may include any number of intermediate certificates, and must include a root certificate.
 We recommend reviewing the [code](https://github.com/sigstore/timestamp-authority/blob/main/cmd/fetch-tsa-certs/fetch_tsa_certs.go)
@@ -150,6 +150,7 @@ used to generate the certificate chain if you do not want to use GCP.
 * Create an asymmetric certificate signing key on KMS that will be used as an intermediate CA to sign the TSA certificate.
 * Create an asymmetric timestamp signing key on KMS.
 * Run the following to create a certificate chain of root, intermediate and leaf certificates
+
     ```shell
     go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
       --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
@@ -164,6 +165,7 @@ used to generate the certificate chain if you do not want to use GCP.
 * Create an asymmetric certificate signing key on KMS that will be used in the self-signed certificate to sign the TSA certificate.
 * Create an asymmetric timestamp signing key on KMS.
 * Run the following to create a chain of self-signed certificate and leaf signing certificate:
+
     ```shell
     go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
       --leaf-kms-resource="gcpkms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<timestamp-key>/versions/1" \
@@ -180,6 +182,7 @@ See [these instructions](docs/aws-kms.md) for the general process to use AWS KMS
 #### Other KMSs
 
 If you are not using GCP, there are many possible options but the steps for setting up the certificates could be similar to the following:
+
 * create a KMS private key (for example, in the AWS KMS)
 * use this private key to create a CSR
 * assuming you have an external (for example, corporate etc.) Certificate Authority entity
@@ -205,13 +208,16 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
 
 * Create a symmetric key encryption key in GCP
 * Run the following to create the local encrypted signing key, changing key URI and the key template if desired:
+
     ```shell
     tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>
     ```
+
 * Create a root CA with [GCP CA Service](https://cloud.google.com/certificate-authority-service). Configure lifetime, and other defaults
   can remain. You will need to first create a CA pool, and then create one CA in that pool.
 * Create an asymmetric signing key on KMS that will be used as an intermediate CA to sign the TSA certificate.
 * Run the following:
+
   ```shell
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
     --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>"\
@@ -226,11 +232,14 @@ Install [tinkey](https://github.com/google/tink/blob/master/docs/TINKEY.md) firs
 
 * Create a symmetric key encryption key in GCP
 * Run the following to create the local encrypted signing key, changing key URI and the key template if desired:
+
     ```shell
     tinkey create-keyset --key-template ECDSA_P384 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>
     ```
+
 * Create an asymmetric signing key on KMS that will be used in the self-signed certificate to sign the TSA certificate.
 * Run the following:
+
   ```shell
   go run cmd/fetch-tsa-certs/fetch_tsa_certs.go \
     --tink-kms-resource="gcp-kms://projects/<project>/locations/<region>/keyRings/<keyring>/cryptoKeys/<key-encryption-key>"\

@@ -12,7 +12,7 @@ Once you've created the keys, you'll want to note the ARNs for each; you'll need
 
 Next, you will need to clone the [`fulcio`](https://github.com/sigstore/fulcio/) repository, which contains the Certificate Maker utility, and build the utility itself:
 
-```
+```shell
 git clone https://github.com/sigstore/fulcio/
 cd fulcio
 make cert-maker
@@ -26,36 +26,37 @@ Create a work directory somewhere, and create templates for your certificates (e
 
 Set your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables with values corresponding to the AWS identity which has permission to use your newly-created KMS keys, and then run `certificate-maker` to create your new certificates, replacing the `{YOUR-VALUE}` values:
 
-### Root and leaf certificates:
+### Root and leaf certificates
 
-```
+```shell
 /path/to/certificate-maker create \
-	--kms-type=awskms \
-	--aws-region={YOUR-REGION} \
-	--root-key-id={YOUR-ROOT-KEY-ARN} \
-	--leaf-key-id={YOUR-LEAF-KEY-ARN} \
-	--root-template=./root-template.json \
-	--leaf-template=./leaf-template.json
+    --kms-type=awskms \
+    --aws-region={YOUR-REGION} \
+    --root-key-id={YOUR-ROOT-KEY-ARN} \
+    --leaf-key-id={YOUR-LEAF-KEY-ARN} \
+    --root-template=./root-template.json \
+    --leaf-template=./leaf-template.json
 ```
 
-### Root, intermediate, and leaf certificates:
+### Root, intermediate, and leaf certificates
 
-```
+```shell
 /path/to/certificate-maker create \
-	--kms-type=awskms \
-	--aws-region={YOUR-REGION} \
-	--root-key-id={YOUR-ROOT-KEY-ARN} \
-	--intermediate-key-id={YOUR-INTERMEDIATE-KEY-ARN} \
-	--leaf-key-id={YOUR-LEAF-KEY-ARN} \
-	--root-template=./root-template.json \
-	--intermediate-template=./intermediate-template.json \
-	--leaf-template=./leaf-template.json
+    --kms-type=awskms \
+    --aws-region={YOUR-REGION} \
+    --root-key-id={YOUR-ROOT-KEY-ARN} \
+    --intermediate-key-id={YOUR-INTERMEDIATE-KEY-ARN} \
+    --leaf-key-id={YOUR-LEAF-KEY-ARN} \
+    --root-template=./root-template.json \
+    --intermediate-template=./intermediate-template.json \
+    --leaf-template=./leaf-template.json
 ```
+
 This should result in files for each of your new certificates (e.g., `root.pem`, `leaf.pem`, and then `intermediate.pem` if you generated an intermediate certificate).
 
 Concatenate all your certificates into a single file, with the leaf certificate first, the intermediate cert next (if you generated one), and then the root certificate:
 
-```
+```shell
 cat leaf.pem intermediate.pem root.pem > certchain.pem
 ```
 
@@ -63,14 +64,14 @@ cat leaf.pem intermediate.pem root.pem > certchain.pem
 
 Finally, run `timestamp-server`, specifying that your timestamp authority signer is a KMS, pointing it to your full certificate chain, and providing the ARN for the AWS KMS key you created for your leaf certificate (noting that AWS KMS keys are specified with the prefix `awskms:///`, with **three** slashes before the ARN):
 
-```
+```shell
 timestamp-server serve \
-	--host=0.0.0.0 \
-	--port=3004 \
-	--timestamp-signer=kms \
-	--certificate-chain-path=/path/to/certchain.pem \
-	--kms-key-resource=awskms:///{YOUR-LEAF-KEY-ARN} \
-	--log-type=prod
+    --host=0.0.0.0 \
+    --port=3004 \
+    --timestamp-signer=kms \
+    --certificate-chain-path=/path/to/certchain.pem \
+    --kms-key-resource=awskms:///{YOUR-LEAF-KEY-ARN} \
+    --log-type=prod
 ```
 
 (Note that the shell running `timestamp-server` needs to have access to the AWS access key and secret for the identity with permission to use the leaf key, so you'll need to either export environment variables for `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or have Docker set the environemnt variables appropriately, or however else you're choosing to run the server.)
