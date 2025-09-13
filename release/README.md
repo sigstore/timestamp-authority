@@ -2,10 +2,11 @@
 
 This directory contain the files and scripts to run a timestamp release.
 
-# Cutting a timestamp Release
+## Cutting a timestamp Release
 
 1. Release notes: Create a PR to update and review release notes in [CHANGELOG.md](../CHANGELOG.md).
-  - Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
+  
+- Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
 
 You can get a list of pull requests since the last release by substituting in the date of the last release and running:
 
@@ -19,7 +20,7 @@ and a list of authors by running:
 git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
 ```
 
-1. Merge the CHANGELOG.md pull request 
+1. Merge the CHANGELOG.md pull request
 
 1. Sync your repository's main branch and tag the repository
 

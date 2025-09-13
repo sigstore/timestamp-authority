@@ -110,7 +110,7 @@ The service expects the JSON body to be in the shape:
 }
 ```
 
-The artifact hash must be represented as a base64 encoded string.
+The artifact hash must be represented as a base64-encoded string.
 
 ## Production deployment
 

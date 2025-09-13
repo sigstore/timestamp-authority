@@ -63,8 +63,7 @@ See also: #456, #789
 Note the `Resolves #123` tag, this references the issue raised and allows us to
 ensure issues are associated and closed when a pull request is merged.
 
-Please refer to [the github help page on message types](https://help.github.com/articles/closing-issues-using-keywords/)
-for a complete list of issue references.
+Please refer to [the github help page on message types](https://help.github.com/articles/closing-issues-using-keywords/) for a complete list of issue references.
 
 ## Squash Commits
 
