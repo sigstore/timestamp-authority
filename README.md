@@ -115,7 +115,7 @@ The artifact hash must be represented as a base64 encoded string.
 ## Production deployment
 
 To deploy to production, the timestamp authority currently supports signing with Cloud KMS or
-[Tink](https://github.com/google/tink). You will need to provide
+[Tink](https://github.com/tink-crypto). You will need to provide
 a certificate chain (leaf, any intermediates, and root), where the certificate chain's purpose (extended key usage) is
 for timestamping. We do not recommend the file signer for production since the signing key will only be password protected.
 
