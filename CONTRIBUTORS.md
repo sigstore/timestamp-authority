@@ -129,4 +129,4 @@ Origin](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt---signo
 ## Code of Conduct
 
 Sigstore Timestamp-Authority adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
-Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/timestamp-authority/blob/master/CODE_OF_CONDUCT.md) document.
+Please take a moment to read the [CODE_OF_CONDUCT.md](/CODE_OF_CONDUCT.md) document.
