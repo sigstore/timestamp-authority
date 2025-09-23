@@ -1,11 +1,11 @@
 module github.com/sigstore/timestamp-authority
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.1
 
 require (
-	cloud.google.com/go/security v1.19.1
+	cloud.google.com/go/security v1.19.2
 	github.com/beevik/ntp v1.4.3
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
@@ -40,8 +40,8 @@ require (
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.43.0
-	google.golang.org/protobuf v1.36.8
-	sigs.k8s.io/release-utils v0.12.1
+	google.golang.org/protobuf v1.36.9
+	sigs.k8s.io/release-utils v0.12.2
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -159,10 +159,10 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/api v0.247.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
