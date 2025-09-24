@@ -29,7 +29,7 @@ RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/timestamp-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o timestamp-server_debug ./cmd/timestamp-server
 
 # Multi-Stage production build
-FROM golang:1.25.1@sha256:8305f5fa8ea63c7b5bc85bd223ccc62941f852318ebfbd22f53bbd0b358c07e1 as deploy
+FROM golang:1.25.1@sha256:8305f5fa8ea63c7b5bc85bd223ccc62941f852318ebfbd22f53bbd0b358c07e1 AS deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
@@ -38,7 +38,7 @@ COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-
 CMD ["timestamp-server", "serve"]
 
 # debug compile options & debugger
-FROM deploy as debug
+FROM deploy AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.22.1
 
 # overwrite server and include debugger
