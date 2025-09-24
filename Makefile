@@ -91,8 +91,8 @@ clean-gen: clean ## Clean generated code
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_timestamp_server.go)
 
 up: ## Run the TSA with Docker Compose
-	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
-	docker-compose -f docker-compose.yml up
+	docker compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
+	docker compose -f docker-compose.yml up
 
 ko: ## Run Ko
 	# timestamp-server
