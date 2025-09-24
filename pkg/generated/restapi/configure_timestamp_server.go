@@ -128,11 +128,12 @@ func httpPingOnly() func(http.Handler) http.Handler {
 // limitRequestBody restricts the maximum size of incoming request bodies based on the configured "max-request-body-size" value.
 // Requests exceeding the limit are terminated with an HTTP 413 error.
 func limitRequestBody(next http.Handler) http.Handler {
+	const maxInt64Limit int64 = math.MaxInt64
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		maxRequestBodySize := viper.GetUint64("max-request-body-size")
 		if maxRequestBodySize > 0 {
 			if maxRequestBodySize > uint64(math.MaxInt64) {
-				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, math.MaxInt64)
+				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, maxInt64Limit)
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
 		} else {
