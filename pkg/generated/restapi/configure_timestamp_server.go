@@ -19,6 +19,7 @@ package restapi
 
 import (
 	"crypto/tls"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/cors"
+	"github.com/spf13/viper"
 	"github.com/urfave/negroni"
 
 	pkgapi "github.com/sigstore/timestamp-authority/pkg/api"
@@ -123,6 +125,24 @@ func httpPingOnly() func(http.Handler) http.Handler {
 	return f
 }
 
+// limitRequestBody restricts the maximum size of incoming request bodies based on the configured "max-request-body-size" value.
+// Requests exceeding the limit are terminated with an HTTP 413 error.
+func limitRequestBody(next http.Handler) http.Handler {
+	const maxInt64Limit int64 = math.MaxInt64
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		maxRequestBodySize := viper.GetUint64("max-request-body-size")
+		if maxRequestBodySize > 0 {
+			if maxRequestBodySize > uint64(math.MaxInt64) {
+				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, maxInt64Limit)
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
+		} else {
+			log.Logger.Debug("max-request-body-size is set to 0; no limit will be enforced on request body sizes")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics.
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
@@ -139,6 +159,8 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler = handleCORS(returnHandler)
 
 	returnHandler = wrapMetrics(returnHandler)
+
+	returnHandler = limitRequestBody(returnHandler)
 
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
