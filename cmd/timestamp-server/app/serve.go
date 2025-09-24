@@ -122,4 +122,9 @@ var serveCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(version.Version())
+
+	serveCmd.Flags().Int64("max-request-body-size", 1048576, "Maximum allowed size for request bodies in bytes (1MB by default)")
+	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
+		log.Logger.Fatal(err)
+	}
 }

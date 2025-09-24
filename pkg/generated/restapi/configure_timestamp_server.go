@@ -29,6 +29,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/cors"
+	"github.com/spf13/viper"
 	"github.com/urfave/negroni"
 
 	pkgapi "github.com/sigstore/timestamp-authority/pkg/api"
@@ -123,6 +124,20 @@ func httpPingOnly() func(http.Handler) http.Handler {
 	return f
 }
 
+// limitRequestBody restricts the maximum size of incoming request bodies based on the configured "max-request-body-size" value.
+// Requests exceeding the limit are terminated with an HTTP 413 error.
+func limitRequestBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		maxRequestBodySize := viper.GetInt64("max-request-body-size")
+		if maxRequestBodySize <= 0 {
+			// Set a default minimum (1MB)
+			maxRequestBodySize = 1 * 1024 * 1024
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics.
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
@@ -139,6 +154,8 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler = handleCORS(returnHandler)
 
 	returnHandler = wrapMetrics(returnHandler)
+
+	returnHandler = limitRequestBody(returnHandler)
 
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
