@@ -132,7 +132,7 @@ func limitRequestBody(next http.Handler) http.Handler {
 		maxRequestBodySize := viper.GetUint64("max-request-body-size")
 		if maxRequestBodySize > 0 {
 			if maxRequestBodySize > uint64(math.MaxInt64) {
-				log.Logger.Fatalf("max-request-body-size (%d) exceeds supported maximum (%d)", maxRequestBodySize, math.MaxInt64)
+				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, math.MaxInt64)
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
 		} else {
