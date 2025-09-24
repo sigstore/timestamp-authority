@@ -129,10 +129,6 @@ func httpPingOnly() func(http.Handler) http.Handler {
 func limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		maxRequestBodySize := viper.GetInt64("max-request-body-size")
-		if maxRequestBodySize <= 0 {
-			// Set a default minimum (1MB)
-			maxRequestBodySize = 1 * 1024 * 1024
-		}
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 		next.ServeHTTP(w, r)
 	})
