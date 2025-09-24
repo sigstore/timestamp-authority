@@ -19,6 +19,7 @@ package restapi
 
 import (
 	"crypto/tls"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -128,11 +129,14 @@ func httpPingOnly() func(http.Handler) http.Handler {
 // Requests exceeding the limit are terminated with an HTTP 413 error.
 func limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		maxRequestBodySize := viper.GetInt64("max-request-body-size")
+		maxRequestBodySize := viper.GetUint64("max-request-body-size")
 		if maxRequestBodySize > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+			if maxRequestBodySize > uint64(math.MaxInt64) {
+				log.Logger.Fatalf("max-request-body-size (%d) exceeds supported maximum (%d)", maxRequestBodySize, math.MaxInt64)
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
 		} else {
-			log.Logger.Debugf("max-request-body-size is set to a non-positive value (%d); no limit will be enforced on request body sizes", maxRequestBodySize)
+			log.Logger.Debug("max-request-body-size is set to 0; no limit will be enforced on request body sizes")
 		}
 		next.ServeHTTP(w, r)
 	})
