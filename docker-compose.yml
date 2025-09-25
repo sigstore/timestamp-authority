@@ -37,3 +37,14 @@ services:
       retries: 3
       start_period: 5s
 
+  k6-loadtest:
+    # this is a one off task that only makes outbound requests
+    image: grafana/k6
+    volumes:
+      - ./test/loadtest:/loadtest
+    environment:
+      - TIMESTAMP_URL=http://timestamp-server:3004
+    command: run /loadtest/k6_load_test.js
+    depends_on:
+      timestamp-server:
+        condition: service_healthy
