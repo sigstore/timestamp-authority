@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/runtime v0.28.0
 	github.com/go-openapi/spec v0.22.0
 	github.com/go-openapi/strfmt v0.24.0
-	github.com/go-openapi/swag v0.24.1
+	github.com/go-openapi/swag v0.25.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/go-cmp v0.7.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -90,14 +90,14 @@ require (
 	github.com/go-openapi/analysis v0.24.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.2 // indirect
-	github.com/go-openapi/swag/cmdutils v0.24.0 // indirect
+	github.com/go-openapi/swag/cmdutils v0.25.1 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
-	github.com/go-openapi/swag/fileutils v0.24.0 // indirect
+	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.1 // indirect
 	github.com/go-openapi/swag/jsonutils v0.25.1 // indirect
 	github.com/go-openapi/swag/loading v0.25.1 // indirect
 	github.com/go-openapi/swag/mangling v0.25.1 // indirect
-	github.com/go-openapi/swag/netutils v0.24.0 // indirect
+	github.com/go-openapi/swag/netutils v0.25.1 // indirect
 	github.com/go-openapi/swag/stringutils v0.25.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
