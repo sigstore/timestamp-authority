@@ -39,7 +39,7 @@ require (
 	go.step.sm/crypto v0.70.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.44.0
+	golang.org/x/net v0.45.0
 	google.golang.org/protobuf v1.36.10
 	sigs.k8s.io/release-utils v0.12.2
 	sigs.k8s.io/yaml v1.6.0
