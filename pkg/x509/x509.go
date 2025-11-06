@@ -34,8 +34,17 @@ var (
 // followed by any number of intermediates, and end with the root certificate.
 func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceIntermediateEku bool) error {
 	// Chain must contain at least one CA certificate and a leaf certificate
+	if len(certs) == 0 || certs[0] == nil {
+		return errors.New("certificate chain must contain a leaf certificate")
+	}
+	leaf := certs[0]
+
 	if len(certs) < 2 {
 		return errors.New("certificate chain must contain at least two certificates")
+	}
+
+	if signer == nil {
+		return errors.New("signer must not be nil")
 	}
 
 	roots := x509.NewCertPool()
@@ -56,7 +65,7 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 			x509.ExtKeyUsageTimeStamping,
 		},
 	}
-	if _, err := certs[0].Verify(opts); err != nil {
+	if _, err := leaf.Verify(opts); err != nil {
 		return err
 	}
 
@@ -69,43 +78,42 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 
 	// Verify leaf has only a single EKU for timestamping, per RFC 3161 2.3
 	// This should be enforced by Verify already
-	leafEKU := certs[0].ExtKeyUsage
+	leafEKU := leaf.ExtKeyUsage
 	if len(leafEKU) != 1 {
 		return errors.New("certificate should only contain one EKU")
 	}
 
 	// Verify leaf's EKU is set to critical, per RFC 3161 2.3
 	var criticalEKU bool
-	for _, ext := range certs[0].Extensions {
+	for _, ext := range leaf.Extensions {
 		if ext.Id.Equal(EKUOID) {
 			criticalEKU = ext.Critical
+			break
 		}
 	}
 	if !criticalEKU {
 		return errors.New("certificate must set EKU to critical")
 	}
 
-	if enforceIntermediateEku {
+	if enforceIntermediateEku && len(certs) > 2 {
 		// If the chain contains intermediates, verify that the extended key
 		// usage includes the extended key usage timestamping for EKU chaining
-		if len(certs) > 2 {
-			for _, c := range certs[1 : len(certs)-1] {
-				var hasExtKeyUsageTimeStamping bool
-				for _, extKeyUsage := range c.ExtKeyUsage {
-					if extKeyUsage == x509.ExtKeyUsageTimeStamping {
-						hasExtKeyUsageTimeStamping = true
-						break
-					}
+		for _, c := range certs[1 : len(certs)-1] {
+			var hasExtKeyUsageTimeStamping bool
+			for _, extKeyUsage := range c.ExtKeyUsage {
+				if extKeyUsage == x509.ExtKeyUsageTimeStamping {
+					hasExtKeyUsageTimeStamping = true
+					break
 				}
-				if !hasExtKeyUsageTimeStamping {
-					return errors.New(`certificate must have extended key usage timestamping set to sign timestamping certificates`)
-				}
+			}
+			if !hasExtKeyUsageTimeStamping {
+				return errors.New(`certificate must have extended key usage timestamping set to sign timestamping certificates`)
 			}
 		}
 	}
 
 	// Verify the signer's public key matches the leaf certificate
-	if err := cryptoutils.EqualKeys(certs[0].PublicKey, signer.Public()); err != nil {
+	if err := cryptoutils.EqualKeys(leaf.PublicKey, signer.Public()); err != nil {
 		return err
 	}
 
