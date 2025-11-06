@@ -42,6 +42,16 @@ func TestVerifyCertChain(t *testing.T) {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
 	}
 
+	// failure: no certificates passed
+	if err := VerifyCertChain([]*x509.Certificate{}, leafKey, true); err == nil || !strings.Contains(err.Error(), "certificate chain must contain a leaf certificate") {
+		t.Fatalf("expected failure verifying certificate chain: %v", err)
+	}
+
+	// failure: nil signer
+	if err := VerifyCertChain([]*x509.Certificate{leafFromRootCert, rootCert}, nil, true); err == nil || !strings.Contains(err.Error(), "signer must not be nil") {
+		t.Fatalf("expected failure verifying certificate chain: %v", err)
+	}
+
 	// failure: mismatched public key
 	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafFromRootKey, true); err == nil || !strings.Contains(err.Error(), "public keys are not equal") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
