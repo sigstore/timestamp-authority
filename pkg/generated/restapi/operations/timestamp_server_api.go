@@ -56,22 +56,36 @@ func NewTimestampServerAPI(spec *loads.Document) *TimestampServerAPI {
 		APIKeyAuthenticator: security.APIKeyAuth,
 		BearerAuthenticator: security.BearerAuth,
 
-		ApplicationTimestampQueryConsumer: runtime.ConsumerFunc(func(r io.Reader, target interface{}) error {
+		ApplicationTimestampQueryConsumer: runtime.ConsumerFunc(func(r io.Reader, target any) error {
+			_ = r
+			_ = target
+
 			return errors.NotImplemented("applicationTimestampQuery consumer has not yet been implemented")
 		}),
 		JSONConsumer: runtime.JSONConsumer(),
 
-		ApplicationPemCertificateChainProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+		ApplicationPemCertificateChainProducer: runtime.ProducerFunc(func(w io.Writer, data any) error {
+			_ = w
+			_ = data
+
 			return errors.NotImplemented("applicationPemCertificateChain producer has not yet been implemented")
 		}),
-		ApplicationTimestampReplyProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+		ApplicationTimestampReplyProducer: runtime.ProducerFunc(func(w io.Writer, data any) error {
+			_ = w
+			_ = data
+
 			return errors.NotImplemented("applicationTimestampReply producer has not yet been implemented")
 		}),
 
 		TimestampGetTimestampCertChainHandler: timestamp.GetTimestampCertChainHandlerFunc(func(params timestamp.GetTimestampCertChainParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation timestamp.GetTimestampCertChain has not yet been implemented")
 		}),
+
 		TimestampGetTimestampResponseHandler: timestamp.GetTimestampResponseHandlerFunc(func(params timestamp.GetTimestampResponseParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation timestamp.GetTimestampResponse has not yet been implemented")
 		}),
 	}
@@ -137,7 +151,7 @@ type TimestampServerAPI struct {
 	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
 
 	// User defined logger function.
-	Logger func(string, ...interface{})
+	Logger func(string, ...any)
 }
 
 // UseRedoc for documentation at /docs
@@ -233,6 +247,7 @@ func (o *TimestampServerAPI) Authorizer() runtime.Authorizer {
 }
 
 // ConsumersFor gets the consumers for the specified media types.
+//
 // MIME type parameters are ignored here.
 func (o *TimestampServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
 	result := make(map[string]runtime.Consumer, len(mediaTypes))
@@ -248,10 +263,12 @@ func (o *TimestampServerAPI) ConsumersFor(mediaTypes []string) map[string]runtim
 			result[mt] = c
 		}
 	}
+
 	return result
 }
 
 // ProducersFor gets the producers for the specified media types.
+//
 // MIME type parameters are ignored here.
 func (o *TimestampServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
 	result := make(map[string]runtime.Producer, len(mediaTypes))
@@ -267,6 +284,7 @@ func (o *TimestampServerAPI) ProducersFor(mediaTypes []string) map[string]runtim
 			result[mt] = p
 		}
 	}
+
 	return result
 }
 

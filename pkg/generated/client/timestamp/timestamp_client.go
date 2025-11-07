@@ -133,7 +133,7 @@ GetTimestampCertChain retrieves the certificate chain for timestamping that can 
 Returns the certificate chain for timestamping that can be used to validate trusted timestamps
 */
 func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error) {
-	// TODO: Validate the params before sending
+	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetTimestampCertChainParams()
 	}
@@ -152,17 +152,22 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 	for _, opt := range opts {
 		opt(op)
 	}
-
 	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
+
+	// only one success response has to be checked
 	success, ok := result.(*GetTimestampCertChainOK)
 	if ok {
 		return success, nil
 	}
-	// unexpected success response
+
+	// unexpected success response.
+	//
+	// a default response is provided: fill this and return an error
 	unexpectedSuccess := result.(*GetTimestampCertChainDefault)
+
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
@@ -170,7 +175,7 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 GetTimestampResponse generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
 */
 func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseCreated, error) {
-	// TODO: Validate the params before sending
+	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetTimestampResponseParams()
 	}
@@ -189,17 +194,22 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer
 	for _, opt := range opts {
 		opt(op)
 	}
-
 	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
+
+	// only one success response has to be checked
 	success, ok := result.(*GetTimestampResponseCreated)
 	if ok {
 		return success, nil
 	}
-	// unexpected success response
+
+	// unexpected success response.
+	//
+	// a default response is provided: fill this and return an error
 	unexpectedSuccess := result.(*GetTimestampResponseDefault)
+
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
