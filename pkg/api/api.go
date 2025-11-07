@@ -39,6 +39,7 @@ type API struct {
 	certChain     []*x509.Certificate // timestamping cert chain
 	certChainPem  string              // PEM encoded timestamping cert chain
 	includeChain  bool                // Whether to include the full issuing chain or just the leaf certificate
+	useHTTP201    bool                // Whether to use HTTP 201 Created instead of HTTP 200 OK for timestamp responses
 }
 
 func NewAPI() (*API, error) {
@@ -93,6 +94,7 @@ func NewAPI() (*API, error) {
 		certChain:     certChain,
 		certChainPem:  string(certChainPEM),
 		includeChain:  viper.GetBool("include-chain-in-response"),
+		useHTTP201:    viper.GetBool("use-http-201"),
 	}, nil
 }
 

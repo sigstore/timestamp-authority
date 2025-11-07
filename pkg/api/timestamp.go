@@ -180,7 +180,10 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
-	return ts.NewGetTimestampResponseCreated().WithPayload(io.NopCloser(bytes.NewReader(resp)))
+	if api.useHTTP201 {
+		return ts.NewGetTimestampResponseCreated().WithPayload(io.NopCloser(bytes.NewReader(resp)))
+	}
+	return ts.NewGetTimestampResponseOK().WithPayload(io.NopCloser(bytes.NewReader(resp)))
 }
 
 func GetTimestampCertChainHandler(_ ts.GetTimestampCertChainParams) middleware.Responder {

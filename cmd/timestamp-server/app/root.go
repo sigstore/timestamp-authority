@@ -32,6 +32,7 @@ var (
 	enablePprof            bool
 	httpPingOnly           bool
 	enforceIntermediateEku bool
+	useHTTP201             bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -61,6 +62,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable-pprof", false, "enable pprof for profiling on port 6060")
 	rootCmd.PersistentFlags().BoolVar(&httpPingOnly, "http-ping-only", false, "serve only /ping in the http server")
 	rootCmd.PersistentFlags().BoolVar(&enforceIntermediateEku, "enforce-intermediate-eku", true, "enforce requirement for intermediate certificates to have timestamping EKU")
+	rootCmd.PersistentFlags().BoolVar(&useHTTP201, "use-http-201", false, "use HTTP 201 Created response code instead of HTTP 200 OK for timestamp responses")
 	rootCmd.PersistentFlags().String("timestamp-signer", "memory", "Timestamping authority signer. Valid options include: [kms, tink, memory, file]. Memory and file-based signers should only be used for testing")
 	rootCmd.PersistentFlags().String("timestamp-signer-hash", "sha256", "Hash algorithm used by the signer. Must match the hash algorithm specified for a KMS or Tink key. Valid options include: [sha256, sha384, sha512]. Ignored for Memory signer.")
 	rootCmd.PersistentFlags().Bool("include-chain-in-response", false, "Whether to include the issuing chain in the timestamp response when certReq is set in the timestamp request. When false, only the leaf certificate is included in the response.")

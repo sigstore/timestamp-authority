@@ -70,6 +70,13 @@ func init() {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Returns a timestamp response and the location of the log entry in the transprency log",
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
           "201": {
             "description": "Returns a timestamp response and the location of the log entry in the transprency log",
             "schema": {
@@ -192,6 +199,13 @@ func init() {
           }
         ],
         "responses": {
+          "200": {
+            "description": "Returns a timestamp response and the location of the log entry in the transprency log",
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
           "201": {
             "description": "Returns a timestamp response and the location of the log entry in the transprency log",
             "schema": {

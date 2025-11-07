@@ -29,6 +29,49 @@ import (
 	"github.com/sigstore/timestamp-authority/pkg/generated/models"
 )
 
+// GetTimestampResponseOKCode is the HTTP code returned for type GetTimestampResponseOK
+const GetTimestampResponseOKCode int = 200
+
+/*
+GetTimestampResponseOK Returns a timestamp response and the location of the log entry in the transprency log
+
+swagger:response getTimestampResponseOK
+*/
+type GetTimestampResponseOK struct {
+
+	/*
+	  In: Body
+	*/
+	Payload io.ReadCloser `json:"body,omitempty"`
+}
+
+// NewGetTimestampResponseOK creates GetTimestampResponseOK with default headers values
+func NewGetTimestampResponseOK() *GetTimestampResponseOK {
+
+	return &GetTimestampResponseOK{}
+}
+
+// WithPayload adds the payload to the get timestamp response o k response
+func (o *GetTimestampResponseOK) WithPayload(payload io.ReadCloser) *GetTimestampResponseOK {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the get timestamp response o k response
+func (o *GetTimestampResponseOK) SetPayload(payload io.ReadCloser) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *GetTimestampResponseOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(200)
+	payload := o.Payload
+	if err := producer.Produce(rw, payload); err != nil {
+		panic(err) // let the recovery middleware deal with this
+	}
+}
+
 // GetTimestampResponseCreatedCode is the HTTP code returned for type GetTimestampResponseCreated
 const GetTimestampResponseCreatedCode int = 201
 

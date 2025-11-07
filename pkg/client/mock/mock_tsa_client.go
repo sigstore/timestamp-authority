@@ -91,19 +91,19 @@ func (c *TSAClient) GetTimestampCertChain(_ *ts.GetTimestampCertChainParams, _ .
 	return &ts.GetTimestampCertChainOK{Payload: c.CertChainPEM}, nil
 }
 
-func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, w io.Writer, _ ...ts.ClientOption) (*ts.GetTimestampResponseCreated, error) {
+func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, w io.Writer, _ ...ts.ClientOption) (*ts.GetTimestampResponseOK, *ts.GetTimestampResponseCreated, error) {
 	var hashAlg crypto.Hash
 	var hashedMessage []byte
 
 	if params.Request != nil {
 		requestBytes, err := io.ReadAll(params.Request)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		req, err := timestamp.ParseRequest(requestBytes)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		hashAlg = req.HashAlgorithm
 		hashedMessage = req.HashedMessage
@@ -116,7 +116,7 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 
 	nonce, err := cryptoutils.GenerateSerialNumber()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	duration, _ := time.ParseDuration("1s")
 
@@ -139,17 +139,17 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 
 	resp, err := tsStruct.CreateResponseWithOpts(c.CertChain[0], c.Signer, crypto.SHA256)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// write response to provided buffer and payload
 	if w != nil {
 		_, err := w.Write(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return &ts.GetTimestampResponseCreated{Payload: bytes.NewBuffer(resp)}, nil
+	return &ts.GetTimestampResponseOK{Payload: bytes.NewBuffer(resp)}, &ts.GetTimestampResponseCreated{Payload: bytes.NewBuffer(resp)}, nil
 }
 
 func (c *TSAClient) SetTransport(_ runtime.ClientTransport) {
