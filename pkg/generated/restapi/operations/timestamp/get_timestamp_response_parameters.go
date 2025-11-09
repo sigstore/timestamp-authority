@@ -42,7 +42,6 @@ func NewGetTimestampResponseParams() GetTimestampResponseParams {
 //
 // swagger:parameters getTimestampResponse
 type GetTimestampResponseParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
