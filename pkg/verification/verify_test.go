@@ -92,7 +92,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 		params.Request = io.NopCloser(bytes.NewReader(tsq))
 
 		var respBytes bytes.Buffer
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
+		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes)
 		if err != nil {
 			t.Fatalf("unexpected error getting timestamp response: %v", err)
 		}

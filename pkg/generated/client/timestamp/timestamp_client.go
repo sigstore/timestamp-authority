@@ -122,7 +122,7 @@ func WithAcceptApplicationTimestampReply(r *runtime.ClientOperation) {
 type ClientService interface {
 	GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error)
 
-	GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseCreated, error)
+	GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error)
 
 	SetTransport(transport runtime.ClientTransport)
 }
@@ -174,7 +174,7 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 /*
 GetTimestampResponse generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
 */
-func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseCreated, error) {
+func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetTimestampResponseParams()
@@ -196,21 +196,22 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer
 	}
 	result, err := a.transport.Submit(op)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// only one success response has to be checked
-	success, ok := result.(*GetTimestampResponseCreated)
-	if ok {
-		return success, nil
+	// several success responses have to be checked
+	switch value := result.(type) {
+	case *GetTimestampResponseOK:
+		return value, nil, nil
+	case *GetTimestampResponseCreated:
+		return nil, value, nil
 	}
 
 	// unexpected success response.
 	//
 	// a default response is provided: fill this and return an error
 	unexpectedSuccess := result.(*GetTimestampResponseDefault)
-
-	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+	return nil, nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
 // SetTransport changes the transport on the client

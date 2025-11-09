@@ -68,7 +68,7 @@ func TestGetTimestampClientWithOptions(t *testing.T) {
 	// reset
 	requestReceived = false
 
-	_, _ = client.Timestamp.GetTimestampResponse(nil, nil)
+	_, _, _ = client.Timestamp.GetTimestampResponse(nil, nil)
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}

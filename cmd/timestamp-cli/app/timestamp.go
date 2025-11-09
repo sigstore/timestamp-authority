@@ -137,7 +137,7 @@ func runTimestamp() (interface{}, error) {
 	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
 
 	var respBytes bytes.Buffer
-	_, err = tsClient.Timestamp.GetTimestampResponse(params, &respBytes)
+	_, _, err = tsClient.Timestamp.GetTimestampResponse(params, &respBytes)
 	if err != nil {
 		return nil, err
 	}

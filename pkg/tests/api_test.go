@@ -154,7 +154,7 @@ func TestGetTimestampResponse(t *testing.T) {
 		clientOption := func(op *runtime.ClientOperation) {
 			op.ConsumesMediaTypes = []string{tc.reqMediaType}
 		}
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 		if err != nil {
 			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
 		}
@@ -303,7 +303,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 		clientOption := func(op *runtime.ClientOperation) {
 			op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
 		}
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 		if err != nil {
 			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
 		}
@@ -365,7 +365,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 		clientOption := func(op *runtime.ClientOperation) {
 			op.ConsumesMediaTypes = []string{tc.reqMediaType}
 		}
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 		if err != nil {
 			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
 		}
@@ -427,7 +427,7 @@ func TestUnsupportedHashAlgorithm(t *testing.T) {
 		clientOption := func(op *runtime.ClientOperation) {
 			op.ConsumesMediaTypes = []string{tc.reqMediaType}
 		}
-		_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 		if err == nil {
 			t.Fatalf("test '%s': expected error to occur while parsing request", tc.name)
 		}
@@ -464,7 +464,7 @@ func TestInvalidJSONArtifactHashNotBase64Encoded(t *testing.T) {
 	clientOption := func(op *runtime.ClientOperation) {
 		op.ConsumesMediaTypes = []string{client.JSONMediaType}
 	}
-	_, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
 	if err == nil {
 		t.Fatalf("expected error to occur while parsing request")
 	}
