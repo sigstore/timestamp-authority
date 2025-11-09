@@ -40,7 +40,6 @@ func NewGetTimestampCertChainParams() GetTimestampCertChainParams {
 //
 // swagger:parameters getTimestampCertChain
 type GetTimestampCertChainParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 }
