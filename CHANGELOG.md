@@ -7,6 +7,11 @@ handle both 200 and 201 response codes, so no changes are needed to clients.
 If you need backwards compatibility, you can deploy the service with
 `--use-http-201`.
 
+This release also changes the format of the binary and container signature,
+which is now a [Sigstore bundle](https://docs.sigstore.dev/about/bundle/).
+To verify a release, use the latest Cosign 3.x, verifying with
+`cosign verify-blob --bundle <artifact>-keyless.sigstore.json <artifact>`.
+
 ## Features
 
 * changes default HTTP response code to 200 for timestamp responses (#1202)
