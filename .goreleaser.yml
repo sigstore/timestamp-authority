@@ -65,16 +65,14 @@ builds:
 signs:
   # Keyless
   - id: keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
+    signature: "${artifact}-keyless.sigstore.json"
     cmd: cosign
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
     artifacts: binary
   - id: checksum-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
+    signature: "${artifact}-keyless.sigstore.json"
     cmd: cosign
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
     artifacts: checksum
 
 archives:
