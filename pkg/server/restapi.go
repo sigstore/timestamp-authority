@@ -18,10 +18,10 @@ import (
 	"time"
 
 	"github.com/go-openapi/loads"
-	"github.com/sigstore/timestamp-authority/pkg/api"
-	"github.com/sigstore/timestamp-authority/pkg/generated/restapi"
-	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations"
-	"github.com/sigstore/timestamp-authority/pkg/internal/cmdparams"
+	"github.com/sigstore/timestamp-authority/v2/pkg/api"
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi"
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations"
+	"github.com/sigstore/timestamp-authority/v2/pkg/internal/cmdparams"
 )
 
 // NewRestAPIServer creates a server for serving the rest API TSA service

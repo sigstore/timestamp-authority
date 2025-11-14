@@ -21,7 +21,7 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -26,9 +26,9 @@ import (
 
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
-	"github.com/sigstore/timestamp-authority/pkg/log"
-	"github.com/sigstore/timestamp-authority/pkg/verification"
+	"github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli/app/format"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
+	"github.com/sigstore/timestamp-authority/v2/pkg/verification"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

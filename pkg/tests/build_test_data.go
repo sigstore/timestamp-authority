@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/digitorus/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/api"
+	"github.com/sigstore/timestamp-authority/v2/pkg/api"
 )
 
 func createBase64EncodedArtifactHash(artifact []byte, hash crypto.Hash) (string, error) {

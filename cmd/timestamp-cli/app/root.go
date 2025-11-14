@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
 )
 
 var rootCmd = &cobra.Command{

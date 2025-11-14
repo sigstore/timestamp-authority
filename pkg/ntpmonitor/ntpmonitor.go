@@ -24,8 +24,8 @@ import (
 
 	"github.com/beevik/ntp"
 
-	pkgapi "github.com/sigstore/timestamp-authority/pkg/api"
-	"github.com/sigstore/timestamp-authority/pkg/log"
+	pkgapi "github.com/sigstore/timestamp-authority/v2/pkg/api"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
 )
 
 var (

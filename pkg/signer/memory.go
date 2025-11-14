@@ -27,7 +27,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 )
 
 // NewTimestampingCertWithChain generates an in-memory certificate chain.

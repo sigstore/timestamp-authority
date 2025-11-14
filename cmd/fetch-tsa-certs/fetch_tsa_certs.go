@@ -34,8 +34,8 @@ import (
 	"cloud.google.com/go/security/privateca/apiv1/privatecapb"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
-	"github.com/sigstore/timestamp-authority/pkg/signer"
-	tsx509 "github.com/sigstore/timestamp-authority/pkg/x509"
+	"github.com/sigstore/timestamp-authority/v2/pkg/signer"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 	"github.com/tink-crypto/tink-go/v2/keyset"
 	"google.golang.org/protobuf/types/known/durationpb"
 

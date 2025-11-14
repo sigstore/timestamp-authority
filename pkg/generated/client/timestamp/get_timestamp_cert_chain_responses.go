@@ -29,7 +29,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/sigstore/timestamp-authority/pkg/generated/models"
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
 // GetTimestampCertChainReader is a Reader for the GetTimestampCertChain structure.

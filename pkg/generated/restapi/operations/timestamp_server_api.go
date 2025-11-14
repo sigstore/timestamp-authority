@@ -35,7 +35,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations/timestamp"
 )
 
 // NewTimestampServerAPI creates a new TimestampServer instance

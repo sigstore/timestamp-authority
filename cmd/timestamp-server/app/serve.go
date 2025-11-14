@@ -24,9 +24,9 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/timestamp-authority/pkg/log"
-	"github.com/sigstore/timestamp-authority/pkg/ntpmonitor"
-	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
+	"github.com/sigstore/timestamp-authority/v2/pkg/ntpmonitor"
+	"github.com/sigstore/timestamp-authority/v2/pkg/server"
 )
 
 // serveCmd represents the serve command
