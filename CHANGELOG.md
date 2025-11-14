@@ -1,3 +1,7 @@
+# v2.0.1
+
+This release is identical to v2.0.0, as it only contains a fix for the release pipeline.
+
 # v2.0.0
 
 v2.0.0 changes the default HTTP response code to 200 for timestamp responses,

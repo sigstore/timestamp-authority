@@ -99,25 +99,25 @@ ko: ## Run Ko
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-server ko build --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampServerImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-server
+		--image-refs timestampServerImagerefs github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
 
 	# timestamp-cli
 	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-cli ko build --bare \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/cmd/timestamp-cli
+		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli
 
 .PHONY: ko-local
 ko-local: ## Run Ko locally
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		github.com/sigstore/timestamp-authority/cmd/timestamp-server
+		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
 
 	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		github.com/sigstore/timestamp-authority/cmd/timestamp-cli
+		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli
 
 ## --------------------------------------
 ## Tooling Binaries
