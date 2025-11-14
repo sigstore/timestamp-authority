@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/sigstore/timestamp-authority/pkg/generated/models"
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
 // GetTimestampCertChainOKCode is the HTTP code returned for type GetTimestampCertChainOK

@@ -15,7 +15,7 @@
 
 package main
 
-import "github.com/sigstore/timestamp-authority/cmd/timestamp-server/app"
+import "github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server/app"
 
 func main() {
 	app.Execute()

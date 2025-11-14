@@ -29,10 +29,10 @@ import (
 
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/timestamp-authority/cmd/timestamp-cli/app/format"
-	"github.com/sigstore/timestamp-authority/pkg/client"
-	ts "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/log"
+	"github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli/app/format"
+	"github.com/sigstore/timestamp-authority/v2/pkg/client"
+	ts "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
+	"github.com/sigstore/timestamp-authority/v2/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

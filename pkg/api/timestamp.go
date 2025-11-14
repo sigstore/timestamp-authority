@@ -31,8 +31,8 @@ import (
 	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/pkg/errors"
-	ts "github.com/sigstore/timestamp-authority/pkg/generated/restapi/operations/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/verification"
+	ts "github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations/timestamp"
+	"github.com/sigstore/timestamp-authority/v2/pkg/verification"
 )
 
 type JSONRequest struct {

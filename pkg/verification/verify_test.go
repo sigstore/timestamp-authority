@@ -34,9 +34,9 @@ import (
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/timestamp-authority/pkg/client/mock"
-	tsatimestamp "github.com/sigstore/timestamp-authority/pkg/generated/client/timestamp"
-	"github.com/sigstore/timestamp-authority/pkg/signer"
+	"github.com/sigstore/timestamp-authority/v2/pkg/client/mock"
+	tsatimestamp "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
+	"github.com/sigstore/timestamp-authority/v2/pkg/signer"
 )
 
 func TestVerifyArtifactHashedMessages(t *testing.T) {

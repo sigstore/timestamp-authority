@@ -1,8 +1,8 @@
-module github.com/sigstore/timestamp-authority
+module github.com/sigstore/timestamp-authority/v2
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.24.10
 
 require (
 	cloud.google.com/go/security v1.19.2

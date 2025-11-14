@@ -23,7 +23,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/sigstore/timestamp-authority/pkg/server"
+	"github.com/sigstore/timestamp-authority/v2/pkg/server"
 )
 
 func createServer(t *testing.T, flagsToSet ...func()) string {
