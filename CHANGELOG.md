@@ -1,3 +1,7 @@
+# v2.0.2
+
+This release bumps the Go version to 1.25.
+
 # v2.0.1
 
 This release is identical to v2.0.0, as it only contains a fix for the release pipeline.
