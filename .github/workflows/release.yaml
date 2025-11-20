@@ -45,11 +45,13 @@ jobs:
         id: run-goreleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
+          distribution: goreleaser-pro
           version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
 
       - name: Generate subject
         id: hash
