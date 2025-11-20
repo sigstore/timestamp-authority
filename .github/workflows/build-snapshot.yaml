@@ -36,8 +36,10 @@ jobs:
         id: run-goreleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.2.1 # zizmor: ignore[cache-poisoning]
         with:
+          distribution: goreleaser-pro
           version: latest
           args: release --clean --skip=sign --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LDFLAGS: ${{ env.GO_FLAGS }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
