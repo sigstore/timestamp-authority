@@ -36,7 +36,7 @@ require (
 	github.com/urfave/negroni v1.0.0
 	go.step.sm/crypto v0.74.0
 	go.uber.org/goleak v1.3.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/net v0.47.0
 	google.golang.org/protobuf v1.36.10
 	sigs.k8s.io/release-utils v0.12.2
