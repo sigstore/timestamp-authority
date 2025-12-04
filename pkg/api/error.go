@@ -29,6 +29,7 @@ import (
 
 const (
 	failedToGenerateTimestampResponse        = "Error generating timestamp response"
+	excesssivelyLongOID                      = "OID should be comprised of at most 128 components"
 	WeakHashAlgorithmTimestampRequest        = "Weak hash algorithm in timestamp request"
 	InconsistentDigestLengthTimestampRequest = "Message digest has incorrect length for specified algorithm"
 )
