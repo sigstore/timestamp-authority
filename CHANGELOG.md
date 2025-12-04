@@ -1,3 +1,9 @@
+# v2.0.3
+
+## Vulnerability Fixes
+
+* https://github.com/sigstore/timestamp-authority/security/advisories/GHSA-4qg8-fj49-pxjh; prevents OOM condition due to malformed request (#1236)
+
 # v2.0.2
 
 This release bumps the Go version to 1.25.
