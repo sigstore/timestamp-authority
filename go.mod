@@ -31,7 +31,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
-	github.com/tink-crypto/tink-go-hcvault/v2 v2.3.0
+	github.com/tink-crypto/tink-go-hcvault/v2 v2.4.0
 	github.com/tink-crypto/tink-go/v2 v2.5.0
 	github.com/urfave/negroni v1.0.0
 	go.step.sm/crypto v0.74.0
