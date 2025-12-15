@@ -1,3 +1,7 @@
+# v2.0.4
+
+Only contains dependency updates, but fixes #1252 due to breaking API change in sigstore/sigstore
+
 # v2.0.3
 
 ## Vulnerability Fixes
