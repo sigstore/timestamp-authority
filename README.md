@@ -260,11 +260,11 @@ If using Vault, you may also set `--tink-hcvault-token`. Provide the path to the
 
 The service can be configured to monitor the time from other trusted NTP
 sources and compare with the host's time. If too few NTP servers
-respons, or the time difference is greater than the current configured
+respond, or the time difference is greater than the current configured
 threshold, the metric `timestamp_authority_ntp_errors_total` is
 incremented. Note that the service does _not stop issuing
 timestamps_. It's up to the operator to configure necessary controls to
-prevent issuing timestamps when the time drift is great than what's
+prevent issuing timestamps when the time drift is greater than what's
 stated in the timestamping policy.
 
 ## Security
