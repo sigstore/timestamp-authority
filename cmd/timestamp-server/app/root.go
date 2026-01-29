@@ -18,6 +18,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
@@ -83,6 +84,7 @@ func init() {
 
 	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 	rootCmd.PersistentFlags().Uint64("max-request-body-size", 1048576, "Maximum allowed size for request bodies in bytes (1MB by default)")
+	rootCmd.PersistentFlags().Duration("cleanup-timeout", 620*time.Second, "grace period for which to wait before killing idle connections")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

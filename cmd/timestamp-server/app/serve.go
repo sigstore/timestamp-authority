@@ -56,6 +56,7 @@ var serveCmd = &cobra.Command{
 
 		readTimeout := viper.GetDuration("read-timeout")
 		writeTimeout := viper.GetDuration("write-timeout")
+		cleanupTimeout := viper.GetDuration("cleanup-timeout")
 
 		go func() {
 			promServer := server.NewPrometheusServer(readTimeout, writeTimeout)
@@ -105,6 +106,7 @@ var serveCmd = &cobra.Command{
 		port := int(viper.GetUint("port"))
 		scheme := viper.GetStringSlice("scheme")
 		server := server.NewRestAPIServer(host, port, scheme, httpPingOnly, readTimeout, writeTimeout)
+		server.CleanupTimeout = cleanupTimeout
 		defer func() {
 			if err := server.Shutdown(); err != nil {
 				log.Logger.Error(err)
