@@ -34,7 +34,7 @@ jobs:
 
       - name: Run GoReleaser
         id: run-goreleaser
-        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.2.1 # zizmor: ignore[cache-poisoning]
+        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v6.2.1 # zizmor: ignore[cache-poisoning]
         with:
           distribution: goreleaser-pro
           version: latest
