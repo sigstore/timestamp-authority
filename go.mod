@@ -7,7 +7,7 @@ require (
 	github.com/beevik/ntp v1.5.0
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
-	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-openapi/errors v0.22.6
 	github.com/go-openapi/loads v0.23.2
 	github.com/go-openapi/runtime v0.29.2
@@ -165,5 +165,4 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

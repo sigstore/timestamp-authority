@@ -19,7 +19,7 @@ import (
 	"flag"
 	"net/http"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
