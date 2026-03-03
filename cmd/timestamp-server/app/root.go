@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/timestamp-authority/v2/pkg/log"
 	"github.com/spf13/cobra"
