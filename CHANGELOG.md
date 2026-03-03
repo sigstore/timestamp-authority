@@ -1,3 +1,20 @@
+# v2.0.5
+
+This release updates the chi middleware to resolve a panic.
+
+## Bug Fixes
+
+* Upgrade chi middleware v4 -> v5 (#1307)
+
+## Docs
+
+* Update the semantics of the NTP monitoring so its clear in the README (#1276)
+* docs: note that CRL/OCSP checks are not performed (#1277)
+
+## Misc
+
+* Increase default HTTP idle timeout (#1287)
+
 # v2.0.4
 
 Only contains dependency updates, but fixes #1252 due to breaking API change in sigstore/sigstore
