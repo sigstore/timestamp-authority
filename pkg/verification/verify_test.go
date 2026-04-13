@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -107,8 +108,9 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 		}
 
 		opts := VerifyOpts{
-			Intermediates: certs[1:2],
-			Roots:         certs[2:],
+			Intermediates:  certs[1:2],
+			Roots:          certs[2:],
+			TSACertificate: certs[0],
 		}
 
 		ts, err := VerifyTimestampResponse(respBytes.Bytes(), strings.NewReader(tc.message), opts)
@@ -192,7 +194,7 @@ func TestVerifyLeafCert(t *testing.T) {
 			useOptsCert:         false,
 			useTSCert:           false,
 			expectVerifySuccess: false,
-			expectedErrMsg:      "leaf certificate must be present the in TSR or as a verify option",
+			expectedErrMsg:      "signer certificate is required",
 		},
 		{
 			useOptsCert:         true,
@@ -213,7 +215,7 @@ func TestVerifyLeafCert(t *testing.T) {
 		{
 			onlyCACerts:         true,
 			expectVerifySuccess: false,
-			expectedErrMsg:      "no leaf certificate found in chain",
+			expectedErrMsg:      "signer certificate is required",
 		},
 	}
 
@@ -246,12 +248,17 @@ func TestVerifyLeafCert(t *testing.T) {
 			ts.Certificates = []*x509.Certificate{sampleCert}
 		}
 
+		var testSigner *x509.Certificate
+		if tc.useTSCert || tc.useOptsCert {
+			testSigner = sampleCert
+		}
+
 		if tc.onlyCACerts {
 			sampleCert.IsCA = true
 			ts.Certificates = []*x509.Certificate{sampleCert}
 		}
 
-		err := verifyLeafCert(ts, opts)
+		err := verifyLeafCert(testSigner, opts)
 
 		if err != nil && tc.expectVerifySuccess {
 			t.Fatalf("expected error to be nil, actual error: %v", err)
@@ -263,56 +270,6 @@ func TestVerifyLeafCert(t *testing.T) {
 
 		if err == nil && !tc.expectVerifySuccess {
 			t.Fatal("expected error not to be nil")
-		}
-	}
-}
-
-func TestVerifyEmbeddedLeafCert(t *testing.T) {
-	type test struct {
-		optsCert            *x509.Certificate
-		providedCert        *x509.Certificate
-		expectVerifySuccess bool
-	}
-
-	tests := []test{
-		{
-			optsCert: nil,
-			providedCert: &x509.Certificate{
-				Raw: []byte("abc123"),
-			},
-			expectVerifySuccess: true,
-		},
-		{
-			optsCert: &x509.Certificate{
-				Raw: []byte("abc123"),
-			},
-			providedCert: &x509.Certificate{
-				Raw: []byte("abc123"),
-			},
-			expectVerifySuccess: true,
-		},
-		{
-			optsCert: &x509.Certificate{
-				Raw: []byte("abc123"),
-			},
-			providedCert: &x509.Certificate{
-				Raw: []byte("def456"),
-			},
-			expectVerifySuccess: false,
-		},
-	}
-
-	for _, tc := range tests {
-		opts := VerifyOpts{
-			TSACertificate: tc.optsCert,
-		}
-
-		err := verifyEmbeddedLeafCert(tc.providedCert, opts)
-		if err == nil && !tc.expectVerifySuccess {
-			t.Errorf("expected verification to fail: provided cert unexpectedly matches opts cert")
-		}
-		if err != nil && tc.expectVerifySuccess {
-			t.Errorf("expected verification to pass: provided cert does not match opts cert")
 		}
 	}
 }
@@ -591,6 +548,11 @@ func TestVerifyTSRWithChain(t *testing.T) {
 		t.Errorf("failed to create certificate chain: %v", err)
 	}
 
+	altCertChain, _, err := createCertChainAndSigner()
+	if err != nil {
+		t.Errorf("failed to create certificate chain: %v", err)
+	}
+
 	tsWithCerts, err := createSignedTimestamp(certChain, sv, true)
 	if err != nil {
 		t.Errorf("failed to create signed certificate: %v", err)
@@ -603,6 +565,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 
 	// get certificates
 	leaf := certChain[0]
+	altLeaf := altCertChain[0]
 	intermediate := certChain[1]
 	root := certChain[2]
 
@@ -655,6 +618,26 @@ func TestVerifyTSRWithChain(t *testing.T) {
 			expectVerifySuccess: false,
 		},
 		{
+			name: "Verification succeeds with same certificate embedded and provided",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:          []*x509.Certificate{root},
+				Intermediates:  []*x509.Certificate{intermediate},
+				TSACertificate: leaf,
+			},
+			expectVerifySuccess: true,
+		},
+		{
+			name: "Verification fails with embedded and provided certificate mismatch",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:          []*x509.Certificate{root},
+				Intermediates:  []*x509.Certificate{intermediate},
+				TSACertificate: altLeaf,
+			},
+			expectVerifySuccess: false,
+		},
+		{
 			name: "Verification fails due to missing root certificate",
 			ts:   tsWithCerts,
 			opts: VerifyOpts{
@@ -691,12 +674,50 @@ func TestVerifyTSRWithChain(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err = verifyTSRWithChain(tc.ts, tc.opts)
+			_, err = verifyTSRWithChain(tc.ts, tc.opts)
 			if tc.expectVerifySuccess && err != nil {
 				t.Errorf("unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", err)
 			} else if !tc.expectVerifySuccess && err == nil {
 				t.Errorf("unexpectedly passed \nExpected verifyTSRWithChain to fail verification")
 			}
 		})
+	}
+}
+
+func TestVerifyTimestampResponseWithOutOfChainCert(t *testing.T) {
+	// Read the fixture file: it contains 3 certs
+	// * "Spoofed" TSA cert (not issued by the root cert)
+	// * TSA cert issued by root cert
+	// * root cert
+	respBytes, err := os.ReadFile("testdata/response-injected-certs.tsr")
+	if err != nil {
+		t.Fatalf("failed to read fixture file: %v", err)
+	}
+
+	// Parse fixture to find a valid root (or self-signed leaf) to bypass chain verification
+	ts, err := timestamp.ParseResponse(respBytes)
+	if err != nil {
+		t.Fatalf("failed to parse response in test: %v", err)
+	}
+
+	// Find the self-signed cert, use as the root
+	var validRoots []*x509.Certificate
+	for _, cert := range ts.Certificates {
+		if cert.Subject.CommonName != "Spoofed TSA" && cert.Issuer.String() == cert.Subject.String() {
+			validRoots = append(validRoots, cert)
+			break
+		}
+	}
+
+	opts := VerifyOpts{
+		CommonName: "Spoofed TSA", // Ask for the cert that is not part of the chain
+		Roots:      validRoots,
+	}
+
+	// verify should fail as Spoofed TSA is not signed by root cert
+	_, err = VerifyTimestampResponse(respBytes, strings.NewReader("hello"), opts)
+
+	if err == nil {
+		t.Errorf("VerifyTimestampResponse succeeded with a certificate that is not part of the cert chain.")
 	}
 }
