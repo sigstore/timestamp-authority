@@ -34,7 +34,7 @@ require (
 	github.com/tink-crypto/tink-go-hcvault/v2 v2.4.0
 	github.com/tink-crypto/tink-go/v2 v2.6.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.77.9
+	go.step.sm/crypto v0.78.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/net v0.53.0
