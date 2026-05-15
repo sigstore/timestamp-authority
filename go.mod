@@ -34,7 +34,7 @@ require (
 	github.com/tink-crypto/tink-go-hcvault/v2 v2.4.0
 	github.com/tink-crypto/tink-go/v2 v2.6.0
 	github.com/urfave/negroni v1.0.0
-	go.step.sm/crypto v0.80.0
+	go.step.sm/crypto v0.81.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.54.0
@@ -49,7 +49,7 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.7.0 // indirect
-	cloud.google.com/go/kms v1.30.0 // indirect
+	cloud.google.com/go/kms v1.31.0 // indirect
 	cloud.google.com/go/longrunning v0.9.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1 // indirect
