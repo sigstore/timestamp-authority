@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
-	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
+	"github.com/tink-crypto/tink-go-awskms/v3/integration/awskms"
 	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
 	"github.com/tink-crypto/tink-go-hcvault/v2/integration/hcvault"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
@@ -62,7 +62,7 @@ func GetPrimaryKey(ctx context.Context, kmsKey, hcVaultToken string) (tink.AEAD,
 		registry.RegisterKMSClient(gcpClient)
 		return gcpClient.GetAEAD(kmsKey)
 	case strings.HasPrefix(kmsKey, "aws-kms://"):
-		awsClient, err := awskms.NewClientWithOptions(kmsKey)
+		awsClient, err := awskms.NewClientWithOptions(ctx, kmsKey)
 		if err != nil {
 			return nil, err
 		}
