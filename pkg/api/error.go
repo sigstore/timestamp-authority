@@ -32,6 +32,8 @@ const (
 	excesssivelyLongOID                      = "OID should be comprised of at most 128 components"
 	WeakHashAlgorithmTimestampRequest        = "Weak hash algorithm in timestamp request"
 	InconsistentDigestLengthTimestampRequest = "Message digest has incorrect length for specified algorithm"
+	UnacceptedPolicyTimestampRequest         = "unaccepted policy: requested TSA policy is not supported by the TSA"
+	UnacceptedExtensionTimestampRequest      = "unaccepted extension: requested extensions are not supported by the TSA"
 )
 
 func errorMsg(message string, code int) *models.Error {

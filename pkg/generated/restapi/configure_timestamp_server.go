@@ -135,7 +135,7 @@ func limitRequestBody(next http.Handler) http.Handler {
 			if maxRequestBodySize > uint64(math.MaxInt64) {
 				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, maxInt64Limit)
 			}
-			// #nosec G115
+			// #nosec G115 - checked above to ensure no overflow
 			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
 		} else {
 			log.Logger.Debug("max-request-body-size is set to 0; no limit will be enforced on request body sizes")
