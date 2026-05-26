@@ -20,9 +20,12 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/asn1"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -34,12 +37,30 @@ import (
 )
 
 type API struct {
-	tsaSigner     crypto.Signer       // the signer to use for timestamping
-	tsaSignerHash crypto.Hash         // hash algorithm used to hash pre-signed timestamps
-	certChain     []*x509.Certificate // timestamping cert chain
-	certChainPem  string              // PEM encoded timestamping cert chain
-	includeChain  bool                // Whether to include the full issuing chain or just the leaf certificate
-	useHTTP201    bool                // Whether to use HTTP 201 Created instead of HTTP 200 OK for timestamp responses
+	tsaSigner             crypto.Signer           // the signer to use for timestamping
+	tsaSignerHash         crypto.Hash             // hash algorithm used to hash pre-signed timestamps
+	certChain             []*x509.Certificate     // timestamping cert chain
+	certChainPem          string                  // PEM encoded timestamping cert chain
+	includeChain          bool                    // Whether to include the full issuing chain or just the leaf certificate
+	useHTTP201            bool                    // Whether to use HTTP 201 Created instead of HTTP 200 OK for timestamp responses
+	defaultPolicyOID      asn1.ObjectIdentifier   // Default policy OID to use if none is specified in the request
+	acceptedPolicyOIDs    []asn1.ObjectIdentifier // List of policy OIDs accepted in timestamp requests
+	allowCustomExtensions bool                    // Whether to allow and copy custom request extensions into the signed timestamp
+}
+
+func parseOID(oidStr string) (asn1.ObjectIdentifier, error) {
+	var oid asn1.ObjectIdentifier
+	if c := strings.Count(oidStr, "."); c > 128 {
+		return nil, fmt.Errorf("oid has too many sub identifiers")
+	}
+	for _, v := range strings.SplitN(oidStr, ".", 129) {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse OID component %q: %w", v, err)
+		}
+		oid = append(oid, i)
+	}
+	return oid, nil
 }
 
 func NewAPI() (*API, error) {
@@ -88,13 +109,31 @@ func NewAPI() (*API, error) {
 		return nil, fmt.Errorf("marshal certificates to PEM: %w", err)
 	}
 
+	defaultPolicyOIDStr := viper.GetString("default-policy-oid")
+	defaultPolicyOID, err := parseOID(defaultPolicyOIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse default policy OID %q: %w", defaultPolicyOIDStr, err)
+	}
+
+	var acceptedPolicyOIDs []asn1.ObjectIdentifier
+	for _, oidStr := range viper.GetStringSlice("accepted-policy-oids") {
+		oid, err := parseOID(oidStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse accepted policy OID %q: %w", oidStr, err)
+		}
+		acceptedPolicyOIDs = append(acceptedPolicyOIDs, oid)
+	}
+
 	return &API{
-		tsaSigner:     tsaSigner,
-		tsaSignerHash: tsaSignerHash,
-		certChain:     certChain,
-		certChainPem:  string(certChainPEM),
-		includeChain:  viper.GetBool("include-chain-in-response"),
-		useHTTP201:    viper.GetBool("use-http-201"),
+		tsaSigner:             tsaSigner,
+		tsaSignerHash:         tsaSignerHash,
+		certChain:             certChain,
+		certChainPem:          string(certChainPEM),
+		includeChain:          viper.GetBool("include-chain-in-response"),
+		useHTTP201:            viper.GetBool("use-http-201"),
+		defaultPolicyOID:      defaultPolicyOID,
+		acceptedPolicyOIDs:    acceptedPolicyOIDs,
+		allowCustomExtensions: viper.GetBool("allow-custom-extensions"),
 	}, nil
 }
 

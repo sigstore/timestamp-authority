@@ -29,6 +29,9 @@ import (
 func createServer(t *testing.T, flagsToSet ...func()) string {
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
+	viper.Set("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2"})
+	viper.Set("allow-custom-extensions", false)
+	viper.Set("default-policy-oid", "1.3.6.1.4.1.57264.2")
 	for _, flag := range flagsToSet {
 		flag()
 	}

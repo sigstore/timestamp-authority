@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"math/big"
@@ -267,60 +268,124 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		url := createServer(t)
+		t.Run(tc.name+" Default Deny", func(t *testing.T) {
+			url := createServer(t)
 
-		c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
-		if err != nil {
-			t.Fatalf("test '%s': unexpected error creating client: %v", tc.name, err)
-		}
-
-		// populate additional request parameters for extensions and OID - atypical request structure
-		var req *ts.Request
-		if tc.reqMediaType == client.TimestampQueryMediaType {
-			req, err = ts.ParseRequest(tc.reqBytes)
+			c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
 			if err != nil {
-				t.Fatalf("test '%s': unexpected error parsing request: %v", tc.name, err)
+				t.Fatalf("unexpected error creating client: %v", err)
 			}
-		} else {
-			req, _, err = api.ParseJSONRequest(tc.reqBytes)
+
+			// populate additional request parameters for extensions and OID - atypical request structure
+			var req *ts.Request
+			if tc.reqMediaType == client.TimestampQueryMediaType {
+				req, err = ts.ParseRequest(tc.reqBytes)
+				if err != nil {
+					t.Fatalf("unexpected error parsing request: %v", err)
+				}
+			} else {
+				var jsonReq api.JSONRequest
+				if err := json.Unmarshal(tc.reqBytes, &jsonReq); err != nil {
+					t.Fatalf("unexpected error unmarshalling request: %v", err)
+				}
+				decoded, _ := base64.StdEncoding.DecodeString(jsonReq.ArtifactHash)
+				req = &ts.Request{
+					HashAlgorithm: crypto.SHA256,
+					HashedMessage: decoded,
+					Certificates:  jsonReq.Certificates,
+					Nonce:         jsonReq.Nonce,
+				}
+			}
+			req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
+			fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+			req.TSAPolicyOID = fakePolicyOID
+			tsq, err := req.Marshal()
 			if err != nil {
-				t.Fatalf("test '%s': unexpected error parsing request: %v", tc.name, err)
+				t.Fatalf("unexpected error creating request: %v", err)
 			}
-		}
-		req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
-		fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
-		req.TSAPolicyOID = fakePolicyOID
-		tsq, err := req.Marshal()
-		if err != nil {
-			t.Fatalf("test '%s': unexpected error creating request: %v", tc.name, err)
-		}
 
-		params := timestamp.NewGetTimestampResponseParams()
-		params.SetTimeout(10 * time.Second)
-		params.Request = io.NopCloser(bytes.NewReader(tsq))
+			params := timestamp.NewGetTimestampResponseParams()
+			params.SetTimeout(10 * time.Second)
+			params.Request = io.NopCloser(bytes.NewReader(tsq))
 
-		var respBytes bytes.Buffer
-		clientOption := func(op *runtime.ClientOperation) {
-			op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
-		}
-		_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
-		if err != nil {
-			t.Fatalf("test '%s': unexpected error getting timestamp response: %v", tc.name, err)
-		}
+			var respBytes bytes.Buffer
+			clientOption := func(op *runtime.ClientOperation) {
+				op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+			}
+			_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+			if err == nil {
+				t.Fatalf("expected error when requesting unaccepted policy/extensions")
+			}
+			if !strings.Contains(err.Error(), "unaccepted policy") {
+				t.Fatalf("expected unaccepted policy error, got: %v", err)
+			}
+		})
 
-		tsr, err := ts.ParseResponse(respBytes.Bytes())
-		if err != nil {
-			t.Fatalf("test '%s': unexpected error parsing response: %v", tc.name, err)
-		}
+		t.Run(tc.name+" Allowed via Config", func(t *testing.T) {
+			url := createServer(t, func() {
+				viper.Set("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2", "1.2.3.4.5"})
+				viper.Set("allow-custom-extensions", true)
+			})
 
-		// check policy OID
-		if !tsr.Policy.Equal(fakePolicyOID) {
-			t.Fatalf("test '%s': unexpected policy ID", tc.name)
-		}
-		// check extension is present
-		if len(tsr.Extensions) != 1 {
-			t.Fatalf("test '%s': expected 1 extension, got %d", tc.name, len(tsr.Extensions))
-		}
+			c, err := client.GetTimestampClient(url, client.WithContentType(tc.reqMediaType))
+			if err != nil {
+				t.Fatalf("unexpected error creating client: %v", err)
+			}
+
+			var req *ts.Request
+			if tc.reqMediaType == client.TimestampQueryMediaType {
+				req, err = ts.ParseRequest(tc.reqBytes)
+				if err != nil {
+					t.Fatalf("unexpected error parsing request: %v", err)
+				}
+			} else {
+				var jsonReq api.JSONRequest
+				if err := json.Unmarshal(tc.reqBytes, &jsonReq); err != nil {
+					t.Fatalf("unexpected error unmarshalling request: %v", err)
+				}
+				decoded, _ := base64.StdEncoding.DecodeString(jsonReq.ArtifactHash)
+				req = &ts.Request{
+					HashAlgorithm: crypto.SHA256,
+					HashedMessage: decoded,
+					Certificates:  jsonReq.Certificates,
+					Nonce:         jsonReq.Nonce,
+				}
+			}
+			req.ExtraExtensions = []pkix.Extension{{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}}}
+			fakePolicyOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+			req.TSAPolicyOID = fakePolicyOID
+			tsq, err := req.Marshal()
+			if err != nil {
+				t.Fatalf("unexpected error creating request: %v", err)
+			}
+
+			params := timestamp.NewGetTimestampResponseParams()
+			params.SetTimeout(10 * time.Second)
+			params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+			var respBytes bytes.Buffer
+			clientOption := func(op *runtime.ClientOperation) {
+				op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+			}
+			_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+			if err != nil {
+				t.Fatalf("unexpected error getting timestamp response: %v", err)
+			}
+
+			tsr, err := ts.ParseResponse(respBytes.Bytes())
+			if err != nil {
+				t.Fatalf("unexpected error parsing response: %v", err)
+			}
+
+			// check policy OID
+			if !tsr.Policy.Equal(fakePolicyOID) {
+				t.Fatalf("unexpected policy ID")
+			}
+			// check extension is present
+			if len(tsr.Extensions) != 1 {
+				t.Fatalf("expected 1 extension, got %d", len(tsr.Extensions))
+			}
+		})
 	}
 }
 
@@ -329,7 +394,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	includeCerts := false
 	hashFunc := crypto.SHA256
 	hashName := "sha256"
-	oidStr := "1.2.3.4"
+	oidStr := "1.3.6.1.4.1.57264.2"
 
 	opts := ts.RequestOptions{
 		Certificates: includeCerts,

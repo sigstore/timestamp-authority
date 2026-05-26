@@ -258,7 +258,7 @@ func TestVerifyLeafCert(t *testing.T) {
 			ts.Certificates = []*x509.Certificate{sampleCert}
 		}
 
-		err := verifyLeafCert(testSigner, opts)
+		err := verifyLeafCert(testSigner, nil, opts)
 
 		if err != nil && tc.expectVerifySuccess {
 			t.Fatalf("expected error to be nil, actual error: %v", err)
@@ -674,7 +674,7 @@ func TestVerifyTSRWithChain(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err = verifyTSRWithChain(tc.ts, tc.opts)
+			_, _, err = verifyTSRWithChain(tc.ts, tc.opts)
 			if tc.expectVerifySuccess && err != nil {
 				t.Errorf("unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", err)
 			} else if !tc.expectVerifySuccess && err == nil {
@@ -719,5 +719,81 @@ func TestVerifyTimestampResponseWithOutOfChainCert(t *testing.T) {
 
 	if err == nil {
 		t.Errorf("VerifyTimestampResponse succeeded with a certificate that is not part of the cert chain.")
+	}
+}
+
+func TestVerifyLeafAndIntermediatesTimestampingEKU(t *testing.T) {
+	leaf := &x509.Certificate{
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+	}
+
+	intermediateAuthorized := &x509.Certificate{
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+	}
+
+	intermediateUnrestricted := &x509.Certificate{
+		ExtKeyUsage: []x509.ExtKeyUsage{},
+	}
+
+	intermediateUnauthorized := &x509.Certificate{
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+
+	root := &x509.Certificate{}
+
+	tests := []struct {
+		name        string
+		chains      [][]*x509.Certificate
+		expectError bool
+	}{
+		{
+			name: "Single chain: Authorized Intermediate",
+			chains: [][]*x509.Certificate{
+				{leaf, intermediateAuthorized, root},
+			},
+			expectError: false,
+		},
+		{
+			name: "Single chain: Unrestricted Intermediate",
+			chains: [][]*x509.Certificate{
+				{leaf, intermediateUnrestricted, root},
+			},
+			expectError: false,
+		},
+		{
+			name: "Single chain: Unauthorized Intermediate",
+			chains: [][]*x509.Certificate{
+				{leaf, intermediateUnauthorized, root},
+			},
+			expectError: true,
+		},
+		{
+			name: "Multiple chains: One unauthorized, one authorized (Cross-signed CA scenario)",
+			chains: [][]*x509.Certificate{
+				{leaf, intermediateUnauthorized, root},
+				{leaf, intermediateAuthorized, root},
+			},
+			expectError: false,
+		},
+		{
+			name: "Multiple chains: All unauthorized",
+			chains: [][]*x509.Certificate{
+				{leaf, intermediateUnauthorized, root},
+				{leaf, intermediateUnauthorized, root},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := verifyLeafAndIntermediatesTimestampingEKU(leaf, tc.chains)
+			if tc.expectError && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+			if !tc.expectError && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
 	}
 }

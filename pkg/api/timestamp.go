@@ -17,14 +17,13 @@ package api
 import (
 	"bytes"
 	"crypto"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
-	"strconv"
+	"slices"
 	"strings"
 	"time"
 
@@ -78,14 +77,10 @@ func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 	if req.TSAPolicyOID == "" {
 		oidInts = nil
 	} else {
-		// 128 is the max number of sub-identifiers per
-		// https://datatracker.ietf.org/doc/html/rfc2578#section-3.5
-		if c := strings.Count(req.TSAPolicyOID, "."); c > 128 {
-			return nil, excesssivelyLongOID, fmt.Errorf("oid has %d sub identifiers, expected 128", c)
-		}
-		for _, v := range strings.SplitN(req.TSAPolicyOID, ".", 129) {
-			i, _ := strconv.Atoi(v)
-			oidInts = append(oidInts, i)
+		var err error
+		oidInts, err = parseOID(req.TSAPolicyOID)
+		if err != nil {
+			return nil, excesssivelyLongOID, err
 		}
 	}
 
@@ -157,7 +152,7 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 
 	policyID := req.TSAPolicyOID
 	if policyID.String() == "" {
-		policyID = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+		policyID = api.defaultPolicyOID
 	}
 
 	duration, _ := time.ParseDuration("1s")
@@ -213,6 +208,17 @@ func verifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, strin
 			return nil, InconsistentDigestLengthTimestampRequest, err
 		}
 		return nil, failedToGenerateTimestampResponse, err
+	}
+
+	if len(tsReq.TSAPolicyOID) > 0 {
+		matched := slices.ContainsFunc(api.acceptedPolicyOIDs, tsReq.TSAPolicyOID.Equal)
+		if !matched {
+			return nil, UnacceptedPolicyTimestampRequest, verification.ErrUnacceptedPolicy
+		}
+	}
+
+	if !api.allowCustomExtensions && len(tsReq.Extensions) > 0 {
+		return nil, UnacceptedExtensionTimestampRequest, verification.ErrUnacceptedExtension
 	}
 
 	return tsReq, "", nil
