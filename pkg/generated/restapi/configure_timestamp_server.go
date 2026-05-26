@@ -135,6 +135,7 @@ func limitRequestBody(next http.Handler) http.Handler {
 			if maxRequestBodySize > uint64(math.MaxInt64) {
 				log.Logger.Fatalf("max-request-body-size (%v) exceeds supported maximum (%v)", maxRequestBodySize, maxInt64Limit)
 			}
+			// #nosec G115
 			r.Body = http.MaxBytesReader(w, r.Body, int64(maxRequestBodySize))
 		} else {
 			log.Logger.Debug("max-request-body-size is set to 0; no limit will be enforced on request body sizes")
@@ -178,25 +179,41 @@ func wrapMetrics(handler http.Handler) http.Handler {
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		defer func() {
+			path := r.URL.Path
+			switch path {
+			case pingPath, "/api/v1/timestamp", "/api/v1/timestamp/certchain":
+				// Keep path as is
+			default:
+				path = "unrecognized"
+			}
+
+			method := r.Method
+			switch method {
+			case http.MethodGet, http.MethodPost, http.MethodHead, http.MethodOptions:
+				// Keep method as is
+			default:
+				method = "unrecognized"
+			}
+
 			// This logs latency broken down by URL path and response code
 			pkgapi.MetricLatency.With(map[string]string{
-				"path": r.URL.Path,
+				"path": path,
 				"code": strconv.Itoa(ww.Status()),
 			}).Observe(float64(time.Since(start)))
 
 			pkgapi.MetricLatencySummary.With(map[string]string{
-				"path": r.URL.Path,
+				"path": path,
 				"code": strconv.Itoa(ww.Status()),
 			}).Observe(float64(time.Since(start)))
 
 			pkgapi.MetricRequestLatency.With(map[string]string{
-				"path":   r.URL.Path,
-				"method": r.Method,
+				"path":   path,
+				"method": method,
 			}).Observe(float64(time.Since(start)))
 
 			pkgapi.MetricRequestCount.With(map[string]string{
-				"path":   r.URL.Path,
-				"method": r.Method,
+				"path":   path,
+				"method": method,
 				"code":   strconv.Itoa(ww.Status()),
 			}).Inc()
 		}()
