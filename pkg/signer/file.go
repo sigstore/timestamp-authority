@@ -20,9 +20,10 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
+	"os"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"go.step.sm/crypto/pemutil"
 )
 
 // File returns a file-based signer and verifier, used for local testing
@@ -31,7 +32,11 @@ type File struct {
 }
 
 func NewFileSigner(keyPath, keyPass string, hash crypto.Hash) (*File, error) {
-	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
+	pemBytes, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("file: reading key path %s: %w", keyPath, err)
+	}
+	opaqueKey, err := cryptoutils.UnmarshalPEMToPrivateKey(pemBytes, cryptoutils.StaticPasswordFunc([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
