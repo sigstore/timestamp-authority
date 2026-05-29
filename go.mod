@@ -21,11 +21,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/cors v1.11.1
-	github.com/sigstore/sigstore v1.10.6
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.6
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.6
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.6
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.6
+	github.com/sigstore/sigstore v1.10.7
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.7
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.7
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.7
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.7
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
@@ -123,7 +123,7 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.4.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/letsencrypt/boulder v0.20260223.0 // indirect
+	github.com/letsencrypt/boulder v0.20260309.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
@@ -135,7 +135,7 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
-	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
+	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
