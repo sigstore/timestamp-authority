@@ -21,12 +21,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/pem"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"go.step.sm/crypto/pemutil"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 func TestNewFileSigner(t *testing.T) {
@@ -35,23 +34,35 @@ func TestNewFileSigner(t *testing.T) {
 	password := "password1!"
 
 	_, ed25519Key, _ := ed25519.GenerateKey(rand.Reader)
-	pemED25519, _ := pemutil.Serialize(ed25519Key, pemutil.WithPassword([]byte(password)))
+	derED25519, err := cryptoutils.MarshalPrivateKeyToEncryptedDER(ed25519Key, cryptoutils.StaticPasswordFunc([]byte(password)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemED25519 := cryptoutils.PEMEncode(cryptoutils.EncryptedSigstorePrivateKeyPEMType, derED25519)
 	ed25519KeyFile := filepath.Join(td, "ed25519-key.pem")
-	if err := os.WriteFile(ed25519KeyFile, pem.EncodeToMemory(pemED25519), 0644); err != nil {
+	if err := os.WriteFile(ed25519KeyFile, pemED25519, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pemECDSA, _ := pemutil.Serialize(ecdsaKey, pemutil.WithPassword([]byte(password)))
+	derECDSA, err := cryptoutils.MarshalPrivateKeyToEncryptedDER(ecdsaKey, cryptoutils.StaticPasswordFunc([]byte(password)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemECDSA := cryptoutils.PEMEncode(cryptoutils.EncryptedSigstorePrivateKeyPEMType, derECDSA)
 	ecdsaKeyFile := filepath.Join(td, "ecdsa-key.pem")
-	if err := os.WriteFile(ecdsaKeyFile, pem.EncodeToMemory(pemECDSA), 0644); err != nil {
+	if err := os.WriteFile(ecdsaKeyFile, pemECDSA, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 4096)
-	pemRSA, _ := pemutil.Serialize(rsaKey, pemutil.WithPassword([]byte(password)))
+	derRSA, err := cryptoutils.MarshalPrivateKeyToEncryptedDER(rsaKey, cryptoutils.StaticPasswordFunc([]byte(password)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemRSA := cryptoutils.PEMEncode(cryptoutils.EncryptedSigstorePrivateKeyPEMType, derRSA)
 	rsaKeyFile := filepath.Join(td, "rsa-key.pem")
-	if err := os.WriteFile(rsaKeyFile, pem.EncodeToMemory(pemRSA), 0644); err != nil {
+	if err := os.WriteFile(rsaKeyFile, pemRSA, 0644); err != nil {
 		t.Fatal(err)
 	}
 
