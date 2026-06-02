@@ -670,6 +670,36 @@ func TestVerifyTSRWithChain(t *testing.T) {
 			},
 			expectVerifySuccess: true,
 		},
+		{
+			name: "Verification succeeds with CurrentTime within cert validity",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{intermediate},
+				CurrentTime:   time.Now(),
+			},
+			expectVerifySuccess: true,
+		},
+		{
+			name: "Verification fails when CurrentTime is after cert expiry",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{intermediate},
+				CurrentTime:   time.Now().Add(20 * 365 * 24 * time.Hour),
+			},
+			expectVerifySuccess: false,
+		},
+		{
+			name: "Verification fails when CurrentTime is before cert validity",
+			ts:   tsWithCerts,
+			opts: VerifyOpts{
+				Roots:         []*x509.Certificate{root},
+				Intermediates: []*x509.Certificate{intermediate},
+				CurrentTime:   time.Now().Add(-24 * time.Hour),
+			},
+			expectVerifySuccess: false,
+		},
 	}
 
 	for _, tc := range tests {
