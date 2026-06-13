@@ -16,6 +16,7 @@ package x509
 
 import (
 	"crypto/x509"
+	"encoding/asn1"
 	"strings"
 	"testing"
 
@@ -55,5 +56,12 @@ func TestVerifyCertChain(t *testing.T) {
 	// failure: mismatched public key
 	if err := VerifyCertChain([]*x509.Certificate{leafCert, subCert, rootCert}, leafFromRootKey, true); err == nil || !strings.Contains(err.Error(), "public keys are not equal") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
+	}
+
+	// failure: leaf carries an extra unrecognised EKU beyond timestamping, per RFC 3161 2.3
+	extraEKULeaf, extraEKUKey, _ := testutils.GenerateLeafCert(subCert, subKey)
+	extraEKULeaf.UnknownExtKeyUsage = []asn1.ObjectIdentifier{{1, 2, 3, 4, 5}}
+	if err := VerifyCertChain([]*x509.Certificate{extraEKULeaf, subCert, rootCert}, extraEKUKey, true); err == nil || !strings.Contains(err.Error(), "should only contain one EKU") {
+		t.Fatalf("expected failure verifying certificate chain with extra EKU: %v", err)
 	}
 }

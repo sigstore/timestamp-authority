@@ -137,12 +137,15 @@ func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certifi
 }
 
 func verifyLeafExtendedKeyUsage(cert *x509.Certificate) error {
-	certEKULen := len(cert.ExtKeyUsage)
+	// crypto/x509 sorts key purposes it does not recognise into
+	// UnknownExtKeyUsage, so a leaf carrying id-kp-timeStamping alongside an
+	// unknown OID would otherwise pass the single-EKU requirement of RFC 3161 2.3.
+	certEKULen := len(cert.ExtKeyUsage) + len(cert.UnknownExtKeyUsage)
 	if certEKULen != 1 {
 		return fmt.Errorf("certificate has %d extended key usages, expected only one", certEKULen)
 	}
 
-	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
+	if len(cert.ExtKeyUsage) != 1 || cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
 		return fmt.Errorf("leaf certificate EKU is not set to TimeStamping as required")
 	}
 	return nil

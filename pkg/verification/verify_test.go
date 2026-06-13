@@ -410,6 +410,7 @@ func TestVerifyESSCertID(t *testing.T) {
 func TestVerifyLeafExtendedKeyUsage(t *testing.T) {
 	type test struct {
 		eku                 []x509.ExtKeyUsage
+		unknownEKU          []asn1.ObjectIdentifier
 		expectVerifySuccess bool
 	}
 
@@ -426,11 +427,24 @@ func TestVerifyLeafExtendedKeyUsage(t *testing.T) {
 			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageIPSECTunnel},
 			expectVerifySuccess: false,
 		},
+		{
+			// timestamping plus an unrecognised key purpose OID, which
+			// crypto/x509 records under UnknownExtKeyUsage
+			eku:                 []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			unknownEKU:          []asn1.ObjectIdentifier{{1, 2, 3, 4, 5}},
+			expectVerifySuccess: false,
+		},
+		{
+			// only an unrecognised key purpose, no timestamping
+			unknownEKU:          []asn1.ObjectIdentifier{{1, 2, 3, 4, 5}},
+			expectVerifySuccess: false,
+		},
 	}
 
 	for _, tc := range tests {
 		cert := x509.Certificate{
-			ExtKeyUsage: tc.eku,
+			ExtKeyUsage:        tc.eku,
+			UnknownExtKeyUsage: tc.unknownEKU,
 		}
 
 		err := verifyLeafExtendedKeyUsage(&cert)
