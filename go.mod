@@ -32,7 +32,7 @@ require (
 	github.com/tink-crypto/tink-go-awskms/v3 v3.0.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.3.0
 	github.com/tink-crypto/tink-go-hcvault/v2 v2.5.0
-	github.com/tink-crypto/tink-go/v2 v2.6.0
+	github.com/tink-crypto/tink-go/v2 v2.7.0
 	github.com/urfave/negroni v1.0.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
