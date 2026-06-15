@@ -32,6 +32,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 	"github.com/urfave/negroni"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	pkgapi "github.com/sigstore/timestamp-authority/v2/pkg/api"
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations"
@@ -163,7 +164,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 	returnHandler = limitRequestBody(returnHandler)
 
-	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	requestIDHandler := middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
 		defer func() {
@@ -172,6 +173,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 		returnHandler.ServeHTTP(w, r)
 	}))
+	return otelhttp.NewHandler(requestIDHandler, "timestamp-authority")
 }
 
 func wrapMetrics(handler http.Handler) http.Handler {

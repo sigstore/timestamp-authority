@@ -90,6 +90,11 @@ func init() {
 	rootCmd.PersistentFlags().StringSlice("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2"}, "List of policy OIDs accepted in timestamp requests")
 	rootCmd.PersistentFlags().Bool("allow-custom-extensions", false, "Whether to allow and copy custom request extensions into the signed timestamp")
 
+	rootCmd.PersistentFlags().Bool("tracing-enabled", false, "enable OpenTelemetry tracing")
+	rootCmd.PersistentFlags().String("tracing-endpoint", "", "OTLP gRPC collector endpoint (default: localhost:4317 via OTEL_EXPORTER_OTLP_ENDPOINT)")
+	rootCmd.PersistentFlags().Bool("tracing-insecure", true, "use insecure gRPC connection to the collector")
+	rootCmd.PersistentFlags().Bool("tracing-stdout", false, "export traces to stdout instead of OTLP (for debugging)")
+
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
 	}
