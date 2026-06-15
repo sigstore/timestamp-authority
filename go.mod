@@ -11,7 +11,7 @@ require (
 	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.23.4
 	github.com/go-openapi/runtime v0.32.3
-	github.com/go-openapi/spec v0.22.5
+	github.com/go-openapi/spec v0.22.6
 	github.com/go-openapi/strfmt v0.26.3
 	github.com/go-openapi/swag v0.26.1
 	github.com/go-playground/validator/v10 v10.30.3
