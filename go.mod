@@ -9,7 +9,7 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-openapi/errors v0.22.8
-	github.com/go-openapi/loads v0.23.4
+	github.com/go-openapi/loads v0.24.0
 	github.com/go-openapi/runtime v0.32.3
 	github.com/go-openapi/spec v0.22.6
 	github.com/go-openapi/strfmt v0.26.3
