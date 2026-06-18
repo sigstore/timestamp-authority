@@ -42,6 +42,16 @@ type JSONRequest struct {
 	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
+// maxJSONRequestBytes bounds the size of a JSON timestamp request before it is
+// parsed. The artifact hash, hash algorithm and policy OID are all small fixed
+// fields, so the only field that can grow without limit is the nonce, which is
+// decoded into a big.Int. Parsing a base-10 integer is quadratic in the number
+// of digits, so an unbounded decimal nonce lets a single request burn a
+// disproportionate amount of CPU. 1KB leaves ample room for a real request
+// while rejecting the oversized case up front. The DER request path is
+// unaffected because ASN.1 INTEGERs are decoded from their binary form.
+const maxJSONRequestBytes = 1024
+
 func getHashAlg(alg string) (crypto.Hash, string, error) {
 	lowercaseAlg := strings.ToLower(alg)
 	switch lowercaseAlg {
@@ -60,6 +70,13 @@ func getHashAlg(alg string) (crypto.Hash, string, error) {
 
 // ParseJSONRequest parses a JSON request into a timestamp.Request struct
 func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
+	// Reject oversized requests before parsing. The only field that can grow
+	// unbounded is the nonce, which is decoded into a big.Int at quadratic
+	// cost, so cap the whole request rather than singling out the nonce.
+	if len(reqBytes) > maxJSONRequestBytes {
+		return nil, excessivelyLargeRequest, fmt.Errorf("request exceeds %d bytes", maxJSONRequestBytes)
+	}
+
 	// unmarshal the request bytes into a JSONRequest struct
 	var req JSONRequest
 	if err := json.Unmarshal(reqBytes, &req); err != nil {

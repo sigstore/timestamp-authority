@@ -14,7 +14,13 @@
 
 package api
 
-import "testing"
+import (
+	"encoding/base64"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+)
 
 func FuzzParseJSONRequest(f *testing.F) {
 	f.Fuzz(func(_ *testing.T, reqBytes []byte) {
@@ -26,4 +32,24 @@ func FuzzParseDERRequest(f *testing.F) {
 	f.Fuzz(func(_ *testing.T, reqBytes []byte) {
 		_, _, _ = parseDERRequest(reqBytes)
 	})
+}
+
+func TestParseJSONRequestRejectsOversizeRequest(t *testing.T) {
+	hash := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	digits := strings.Repeat("9", 200000)
+	body := []byte(fmt.Sprintf(`{"artifactHash":%q,"hashAlgorithm":"sha256","nonce":%s}`, hash, digits))
+
+	start := time.Now()
+	_, msg, err := ParseJSONRequest(body)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected oversize request to be rejected")
+	}
+	if msg != excessivelyLargeRequest {
+		t.Fatalf("expected message %q, got %q", excessivelyLargeRequest, msg)
+	}
+	if elapsed > 100*time.Millisecond {
+		t.Fatalf("rejection took too long (%v), request was parsed before the size check", elapsed)
+	}
 }
