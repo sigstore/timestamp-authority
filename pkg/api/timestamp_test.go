@@ -34,7 +34,7 @@ func FuzzParseDERRequest(f *testing.F) {
 	})
 }
 
-func TestParseJSONRequestRejectsOversizeNonce(t *testing.T) {
+func TestParseJSONRequestRejectsOversizeRequest(t *testing.T) {
 	hash := base64.StdEncoding.EncodeToString(make([]byte, 32))
 	digits := strings.Repeat("9", 200000)
 	body := []byte(fmt.Sprintf(`{"artifactHash":%q,"hashAlgorithm":"sha256","nonce":%s}`, hash, digits))
@@ -44,12 +44,12 @@ func TestParseJSONRequestRejectsOversizeNonce(t *testing.T) {
 	elapsed := time.Since(start)
 
 	if err == nil {
-		t.Fatal("expected oversize nonce to be rejected")
+		t.Fatal("expected oversize request to be rejected")
 	}
-	if msg != excessivelyLongNonce {
-		t.Fatalf("expected message %q, got %q", excessivelyLongNonce, msg)
+	if msg != excessivelyLargeRequest {
+		t.Fatalf("expected message %q, got %q", excessivelyLargeRequest, msg)
 	}
 	if elapsed > 100*time.Millisecond {
-		t.Fatalf("rejection took too long (%v), nonce was parsed before the bound check", elapsed)
+		t.Fatalf("rejection took too long (%v), request was parsed before the size check", elapsed)
 	}
 }

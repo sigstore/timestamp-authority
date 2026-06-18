@@ -42,13 +42,15 @@ type JSONRequest struct {
 	TSAPolicyOID  string   `json:"tsaPolicyOID"`
 }
 
-// maxJSONNonceBytes bounds the length of the JSON-encoded nonce before it is
-// decoded into a big.Int. RFC 3161 nonces are small random values, but parsing
-// a base-10 integer is quadratic in the number of digits, so an unbounded
-// decimal nonce lets a single request burn a disproportionate amount of CPU.
-// The DER request path is unaffected because ASN.1 INTEGERs are decoded from
-// their binary representation.
-const maxJSONNonceBytes = 1024
+// maxJSONRequestBytes bounds the size of a JSON timestamp request before it is
+// parsed. The artifact hash, hash algorithm and policy OID are all small fixed
+// fields, so the only field that can grow without limit is the nonce, which is
+// decoded into a big.Int. Parsing a base-10 integer is quadratic in the number
+// of digits, so an unbounded decimal nonce lets a single request burn a
+// disproportionate amount of CPU. 1KB leaves ample room for a real request
+// while rejecting the oversized case up front. The DER request path is
+// unaffected because ASN.1 INTEGERs are decoded from their binary form.
+const maxJSONRequestBytes = 1024
 
 func getHashAlg(alg string) (crypto.Hash, string, error) {
 	lowercaseAlg := strings.ToLower(alg)
@@ -68,18 +70,11 @@ func getHashAlg(alg string) (crypto.Hash, string, error) {
 
 // ParseJSONRequest parses a JSON request into a timestamp.Request struct
 func ParseJSONRequest(reqBytes []byte) (*timestamp.Request, string, error) {
-	// Bound the nonce length before it is decoded into a big.Int. The raw
-	// nonce is captured without parsing it (decoding a base-10 integer is
-	// quadratic in its digit count) so an oversized decimal nonce is rejected
-	// before that cost is paid.
-	var nonceProbe struct {
-		Nonce json.RawMessage `json:"nonce"`
-	}
-	if err := json.Unmarshal(reqBytes, &nonceProbe); err != nil {
-		return nil, failedToGenerateTimestampResponse, fmt.Errorf("failed to parse JSON into request: %v", err)
-	}
-	if len(nonceProbe.Nonce) > maxJSONNonceBytes {
-		return nil, excessivelyLongNonce, fmt.Errorf("nonce exceeds %d bytes", maxJSONNonceBytes)
+	// Reject oversized requests before parsing. The only field that can grow
+	// unbounded is the nonce, which is decoded into a big.Int at quadratic
+	// cost, so cap the whole request rather than singling out the nonce.
+	if len(reqBytes) > maxJSONRequestBytes {
+		return nil, excessivelyLargeRequest, fmt.Errorf("request exceeds %d bytes", maxJSONRequestBytes)
 	}
 
 	// unmarshal the request bytes into a JSONRequest struct
