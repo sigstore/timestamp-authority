@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.24.0
-	github.com/go-openapi/runtime v0.32.3
+	github.com/go-openapi/runtime v0.32.4
 	github.com/go-openapi/spec v0.22.6
 	github.com/go-openapi/strfmt v0.26.3
 	github.com/go-openapi/swag v0.26.1
@@ -97,7 +97,7 @@ require (
 	github.com/go-openapi/swag/stringutils v0.26.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.26.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.26.1 // indirect
-	github.com/go-openapi/validate v0.25.3 // indirect
+	github.com/go-openapi/validate v0.26.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
