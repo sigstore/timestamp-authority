@@ -227,6 +227,14 @@ func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 	if opts.Nonce == nil {
 		return nil
 	}
+	// A nonce was requested, so per RFC 3161 2.4.2 the response must carry the
+	// same nonce. The nonce is optional in the response structure, so a
+	// (genuinely signed) response that drops it must be rejected rather than
+	// dereferenced, otherwise a replayed timestamp lacking the nonce trips a
+	// nil pointer in the comparison below.
+	if requestNonce == nil {
+		return fmt.Errorf("expected nonce %d but response does not contain a nonce", opts.Nonce)
+	}
 	if opts.Nonce.Cmp(requestNonce) != 0 {
 		return fmt.Errorf("incoming nonce %d does not match TSR nonce %d", requestNonce, opts.Nonce)
 	}
