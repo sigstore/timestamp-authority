@@ -23,6 +23,8 @@ updates:
       gomod:
         update-types:
           - "patch"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "gomod"
     directory: "./hack/tools"
@@ -33,6 +35,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -43,6 +47,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -53,3 +59,5 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
