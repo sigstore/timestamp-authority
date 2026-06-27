@@ -141,6 +141,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 func TestVerifyNonce(t *testing.T) {
 	type test struct {
 		nonceStr            string
+		missingNonce        bool
 		expectVerifySuccess bool
 	}
 
@@ -151,6 +152,12 @@ func TestVerifyNonce(t *testing.T) {
 		},
 		{
 			nonceStr:            "9874325235234314241230",
+			expectVerifySuccess: false,
+		},
+		{
+			// A nonce was requested but the response omits it. This must be
+			// rejected rather than panicking on the nil comparison.
+			missingNonce:        true,
 			expectVerifySuccess: false,
 		},
 	}
@@ -165,9 +172,12 @@ func TestVerifyNonce(t *testing.T) {
 			Nonce: optsNonce,
 		}
 
-		providedNonce, ok := new(big.Int).SetString(tc.nonceStr, 10)
-		if !ok {
-			t.Fatalf("unexpected failure to create big int from string: %s", tc.nonceStr)
+		var providedNonce *big.Int
+		if !tc.missingNonce {
+			providedNonce, ok = new(big.Int).SetString(tc.nonceStr, 10)
+			if !ok {
+				t.Fatalf("unexpected failure to create big int from string: %s", tc.nonceStr)
+			}
 		}
 
 		err := verifyNonce(providedNonce, opts)
