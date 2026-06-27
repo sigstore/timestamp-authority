@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
@@ -82,11 +81,9 @@ func NewGetTimestampResponseOK(writer io.Writer) *GetTimestampResponseOK {
 	}
 }
 
-/*
-GetTimestampResponseOK describes a response with status code 200, with default header values.
-
-Returns a timestamp response and the location of the log entry in the transprency log
-*/
+// GetTimestampResponseOK describes a response with status code 200, with default header values.
+//
+// Returns a timestamp response and the location of the log entry in the transprency log
 type GetTimestampResponseOK struct {
 	Payload io.Writer
 }
@@ -151,11 +148,9 @@ func NewGetTimestampResponseCreated(writer io.Writer) *GetTimestampResponseCreat
 	}
 }
 
-/*
-GetTimestampResponseCreated describes a response with status code 201, with default header values.
-
-Returns a timestamp response and the location of the log entry in the transprency log
-*/
+// GetTimestampResponseCreated describes a response with status code 201, with default header values.
+//
+// Returns a timestamp response and the location of the log entry in the transprency log
 type GetTimestampResponseCreated struct {
 	Payload io.Writer
 }
@@ -217,11 +212,9 @@ func NewGetTimestampResponseBadRequest() *GetTimestampResponseBadRequest {
 	return &GetTimestampResponseBadRequest{}
 }
 
-/*
-GetTimestampResponseBadRequest describes a response with status code 400, with default header values.
-
-The content supplied to the server was invalid
-*/
+// GetTimestampResponseBadRequest describes a response with status code 400, with default header values.
+//
+// The content supplied to the server was invalid
 type GetTimestampResponseBadRequest struct {
 	Payload *models.Error
 }
@@ -287,11 +280,9 @@ func NewGetTimestampResponseNotImplemented() *GetTimestampResponseNotImplemented
 	return &GetTimestampResponseNotImplemented{}
 }
 
-/*
-GetTimestampResponseNotImplemented describes a response with status code 501, with default header values.
-
-The content requested is not implemented
-*/
+// GetTimestampResponseNotImplemented describes a response with status code 501, with default header values.
+//
+// The content requested is not implemented
 type GetTimestampResponseNotImplemented struct {
 }
 
@@ -345,11 +336,9 @@ func NewGetTimestampResponseDefault(code int) *GetTimestampResponseDefault {
 	}
 }
 
-/*
-GetTimestampResponseDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetTimestampResponseDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetTimestampResponseDefault struct {
 	_statusCode int
 

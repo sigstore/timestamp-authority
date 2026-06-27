@@ -41,11 +41,9 @@ func NewGetTimestampResponse(ctx *middleware.Context, handler GetTimestampRespon
 	return &GetTimestampResponse{Context: ctx, Handler: handler}
 }
 
-/*
-	GetTimestampResponse swagger:route POST /api/v1/timestamp timestamp getTimestampResponse
-
-Generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
-*/
+// GetTimestampResponse swagger:route POST /api/v1/timestamp timestamp getTimestampResponse
+//
+// Generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
 type GetTimestampResponse struct {
 	Context *middleware.Context
 	Handler GetTimestampResponseHandler
@@ -56,13 +54,13 @@ func (o *GetTimestampResponse) ServeHTTP(rw http.ResponseWriter, r *http.Request
 	if rCtx != nil {
 		*r = *rCtx
 	}
-	var Params = NewGetTimestampResponseParams()
-	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
+	params := NewGetTimestampResponseParams()
+	if err := o.Context.BindValidRequest(r, route, &params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(params) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

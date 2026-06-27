@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
 // GetTimestampResponseOKCode is the HTTP code returned for type GetTimestampResponseOK
 const GetTimestampResponseOKCode int = 200
 
-/*
-GetTimestampResponseOK Returns a timestamp response and the location of the log entry in the transprency log
-
-swagger:response getTimestampResponseOK
-*/
+// GetTimestampResponseOK Returns a timestamp response and the location of the log entry in the transprency log
+//
+// swagger:response getTimestampResponseOK
 type GetTimestampResponseOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload io.ReadCloser `json:"body,omitempty"`
 }
 
@@ -72,16 +67,12 @@ func (o *GetTimestampResponseOK) WriteResponse(rw http.ResponseWriter, producer 
 // GetTimestampResponseCreatedCode is the HTTP code returned for type GetTimestampResponseCreated
 const GetTimestampResponseCreatedCode int = 201
 
-/*
-GetTimestampResponseCreated Returns a timestamp response and the location of the log entry in the transprency log
-
-swagger:response getTimestampResponseCreated
-*/
+// GetTimestampResponseCreated Returns a timestamp response and the location of the log entry in the transprency log
+//
+// swagger:response getTimestampResponseCreated
 type GetTimestampResponseCreated struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload io.ReadCloser `json:"body,omitempty"`
 }
 
@@ -115,16 +106,12 @@ func (o *GetTimestampResponseCreated) WriteResponse(rw http.ResponseWriter, prod
 // GetTimestampResponseBadRequestCode is the HTTP code returned for type GetTimestampResponseBadRequest
 const GetTimestampResponseBadRequestCode int = 400
 
-/*
-GetTimestampResponseBadRequest The content supplied to the server was invalid
-
-swagger:response getTimestampResponseBadRequest
-*/
+// GetTimestampResponseBadRequest The content supplied to the server was invalid
+//
+// swagger:response getTimestampResponseBadRequest
 type GetTimestampResponseBadRequest struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -160,11 +147,9 @@ func (o *GetTimestampResponseBadRequest) WriteResponse(rw http.ResponseWriter, p
 // GetTimestampResponseNotImplementedCode is the HTTP code returned for type GetTimestampResponseNotImplemented
 const GetTimestampResponseNotImplementedCode int = 501
 
-/*
-GetTimestampResponseNotImplemented The content requested is not implemented
-
-swagger:response getTimestampResponseNotImplemented
-*/
+// GetTimestampResponseNotImplemented The content requested is not implemented
+//
+// swagger:response getTimestampResponseNotImplemented
 type GetTimestampResponseNotImplemented struct {
 }
 
@@ -182,17 +167,13 @@ func (o *GetTimestampResponseNotImplemented) WriteResponse(rw http.ResponseWrite
 	rw.WriteHeader(501)
 }
 
-/*
-GetTimestampResponseDefault There was an internal error in the server while processing the request
-
-swagger:response getTimestampResponseDefault
-*/
+// GetTimestampResponseDefault There was an internal error in the server while processing the request
+//
+// swagger:response getTimestampResponseDefault
 type GetTimestampResponseDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

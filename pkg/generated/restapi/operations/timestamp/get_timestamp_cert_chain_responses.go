@@ -21,23 +21,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
 // GetTimestampCertChainOKCode is the HTTP code returned for type GetTimestampCertChainOK
 const GetTimestampCertChainOKCode int = 200
 
-/*
-GetTimestampCertChainOK The PEM encoded cert chain
-
-swagger:response getTimestampCertChainOK
-*/
+// GetTimestampCertChainOK The PEM encoded cert chain
+//
+// swagger:response getTimestampCertChainOK
 type GetTimestampCertChainOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload string `json:"body,omitempty"`
 }
 
@@ -71,11 +66,9 @@ func (o *GetTimestampCertChainOK) WriteResponse(rw http.ResponseWriter, producer
 // GetTimestampCertChainNotFoundCode is the HTTP code returned for type GetTimestampCertChainNotFound
 const GetTimestampCertChainNotFoundCode int = 404
 
-/*
-GetTimestampCertChainNotFound The content requested could not be found
-
-swagger:response getTimestampCertChainNotFound
-*/
+// GetTimestampCertChainNotFound The content requested could not be found
+//
+// swagger:response getTimestampCertChainNotFound
 type GetTimestampCertChainNotFound struct {
 }
 
@@ -93,17 +86,13 @@ func (o *GetTimestampCertChainNotFound) WriteResponse(rw http.ResponseWriter, pr
 	rw.WriteHeader(404)
 }
 
-/*
-GetTimestampCertChainDefault There was an internal error in the server while processing the request
-
-swagger:response getTimestampCertChainDefault
-*/
+// GetTimestampCertChainDefault There was an internal error in the server while processing the request
+//
+// swagger:response getTimestampCertChainDefault
 type GetTimestampCertChainDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

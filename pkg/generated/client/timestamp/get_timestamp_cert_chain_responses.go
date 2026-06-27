@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/models"
 )
 
@@ -66,11 +65,9 @@ func NewGetTimestampCertChainOK() *GetTimestampCertChainOK {
 	return &GetTimestampCertChainOK{}
 }
 
-/*
-GetTimestampCertChainOK describes a response with status code 200, with default header values.
-
-The PEM encoded cert chain
-*/
+// GetTimestampCertChainOK describes a response with status code 200, with default header values.
+//
+// The PEM encoded cert chain
 type GetTimestampCertChainOK struct {
 	Payload string
 }
@@ -134,11 +131,9 @@ func NewGetTimestampCertChainNotFound() *GetTimestampCertChainNotFound {
 	return &GetTimestampCertChainNotFound{}
 }
 
-/*
-GetTimestampCertChainNotFound describes a response with status code 404, with default header values.
-
-The content requested could not be found
-*/
+// GetTimestampCertChainNotFound describes a response with status code 404, with default header values.
+//
+// The content requested could not be found
 type GetTimestampCertChainNotFound struct {
 }
 
@@ -192,11 +187,9 @@ func NewGetTimestampCertChainDefault(code int) *GetTimestampCertChainDefault {
 	}
 }
 
-/*
-GetTimestampCertChainDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetTimestampCertChainDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetTimestampCertChainDefault struct {
 	_statusCode int
 

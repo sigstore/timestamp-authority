@@ -334,7 +334,7 @@ func writeCertChainToPEMFiles(t *testing.T, restapiURL string) certChainPEMFiles
 		t.Fatalf("unexpected error creating client: %v", err)
 	}
 
-	chain, err := c.Timestamp.GetTimestampCertChain(nil)
+	chain, err := c.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{})
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
