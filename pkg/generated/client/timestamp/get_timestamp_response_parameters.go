@@ -36,24 +36,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetTimestampResponseParams() *GetTimestampResponseParams {
-	return &GetTimestampResponseParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetTimestampResponseParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetTimestampResponseParamsWithTimeout creates a new GetTimestampResponseParams object
 // with the ability to set a timeout on a request.
 func NewGetTimestampResponseParamsWithTimeout(timeout time.Duration) *GetTimestampResponseParams {
 	return &GetTimestampResponseParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetTimestampResponseParamsWithContext creates a new GetTimestampResponseParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampResponseParams].
 func NewGetTimestampResponseParamsWithContext(ctx context.Context) *GetTimestampResponseParams {
 	return &GetTimestampResponseParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -79,9 +83,9 @@ type GetTimestampResponseParams struct {
 	// Format: binary
 	Request io.ReadCloser
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get timestamp response params (not the query body).
@@ -99,54 +103,57 @@ func (o *GetTimestampResponseParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the get timestamp response params
+// WithTimeout adds the timeout to the get timestamp response params.
 func (o *GetTimestampResponseParams) WithTimeout(timeout time.Duration) *GetTimestampResponseParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get timestamp response params
+// SetTimeout adds the timeout to the get timestamp response params.
 func (o *GetTimestampResponseParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get timestamp response params
+// WithContext adds the context to the get timestamp response params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampResponseParams].
 func (o *GetTimestampResponseParams) WithContext(ctx context.Context) *GetTimestampResponseParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get timestamp response params
+// SetContext adds the context to the get timestamp response params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampResponseParams].
 func (o *GetTimestampResponseParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get timestamp response params
+// WithHTTPClient adds the HTTPClient to the get timestamp response params.
 func (o *GetTimestampResponseParams) WithHTTPClient(client *http.Client) *GetTimestampResponseParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get timestamp response params
+// SetHTTPClient adds the HTTPClient to the get timestamp response params.
 func (o *GetTimestampResponseParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithRequest adds the request to the get timestamp response params
+// WithRequest adds the request to the get timestamp response params.
 func (o *GetTimestampResponseParams) WithRequest(request io.ReadCloser) *GetTimestampResponseParams {
 	o.SetRequest(request)
 	return o
 }
 
-// SetRequest adds the request to the get timestamp response params
+// SetRequest adds the request to the get timestamp response params.
 func (o *GetTimestampResponseParams) SetRequest(request io.ReadCloser) {
 	o.Request = request
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetTimestampResponseParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

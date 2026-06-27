@@ -16,6 +16,7 @@ package mock
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -152,6 +153,14 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 	return &ts.GetTimestampResponseOK{Payload: bytes.NewBuffer(resp)}, &ts.GetTimestampResponseCreated{Payload: bytes.NewBuffer(resp)}, nil
 }
 
-func (c *TSAClient) SetTransport(_ runtime.ClientTransport) {
+func (c *TSAClient) SetTransport(_ runtime.ContextualTransport) {
 	// nothing to do
+}
+
+func (c *TSAClient) GetTimestampCertChainContext(_ context.Context, _ *ts.GetTimestampCertChainParams, _ ...ts.ClientOption) (*ts.GetTimestampCertChainOK, error) {
+	return nil, nil
+}
+
+func (c *TSAClient) GetTimestampResponseContext(_ context.Context, _ *ts.GetTimestampResponseParams, _ io.Writer, _ ...ts.ClientOption) (*ts.GetTimestampResponseOK, *ts.GetTimestampResponseCreated, error) {
+	return nil, nil, nil
 }

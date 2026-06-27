@@ -41,11 +41,8 @@ func NewGetTimestampResponseParams() GetTimestampResponseParams {
 type GetTimestampResponseParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
-
-	/*
-	  Required: true
-	  In: body
-	*/
+	// Required: true
+	// In: body
 	Request io.ReadCloser
 }
 

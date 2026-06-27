@@ -35,24 +35,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetTimestampCertChainParams() *GetTimestampCertChainParams {
-	return &GetTimestampCertChainParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetTimestampCertChainParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetTimestampCertChainParamsWithTimeout creates a new GetTimestampCertChainParams object
 // with the ability to set a timeout on a request.
 func NewGetTimestampCertChainParamsWithTimeout(timeout time.Duration) *GetTimestampCertChainParams {
 	return &GetTimestampCertChainParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetTimestampCertChainParamsWithContext creates a new GetTimestampCertChainParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampCertChainParams].
 func NewGetTimestampCertChainParamsWithContext(ctx context.Context) *GetTimestampCertChainParams {
 	return &GetTimestampCertChainParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -72,9 +76,9 @@ GetTimestampCertChainParams contains all the parameters to send to the API endpo
 	Typically these are written to a http.Request.
 */
 type GetTimestampCertChainParams struct {
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get timestamp cert chain params (not the query body).
@@ -92,43 +96,46 @@ func (o *GetTimestampCertChainParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the get timestamp cert chain params
+// WithTimeout adds the timeout to the get timestamp cert chain params.
 func (o *GetTimestampCertChainParams) WithTimeout(timeout time.Duration) *GetTimestampCertChainParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get timestamp cert chain params
+// SetTimeout adds the timeout to the get timestamp cert chain params.
 func (o *GetTimestampCertChainParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get timestamp cert chain params
+// WithContext adds the context to the get timestamp cert chain params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampCertChainParams].
 func (o *GetTimestampCertChainParams) WithContext(ctx context.Context) *GetTimestampCertChainParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get timestamp cert chain params
+// SetContext adds the context to the get timestamp cert chain params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetTimestampCertChainParams].
 func (o *GetTimestampCertChainParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get timestamp cert chain params
+// WithHTTPClient adds the HTTPClient to the get timestamp cert chain params.
 func (o *GetTimestampCertChainParams) WithHTTPClient(client *http.Client) *GetTimestampCertChainParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get timestamp cert chain params
+// SetHTTPClient adds the HTTPClient to the get timestamp cert chain params.
 func (o *GetTimestampCertChainParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetTimestampCertChainParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

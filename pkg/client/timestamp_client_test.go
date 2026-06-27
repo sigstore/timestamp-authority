@@ -16,9 +16,12 @@
 package client
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
 )
 
 func TestGetTimestampClientWithOptions(t *testing.T) {
@@ -61,14 +64,14 @@ func TestGetTimestampClientWithOptions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _ = client.Timestamp.GetTimestampCertChain(nil)
+	_, _ = client.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{})
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}
 	// reset
 	requestReceived = false
 
-	_, _, _ = client.Timestamp.GetTimestampResponse(nil, nil)
+	_, _, _ = client.Timestamp.GetTimestampResponse(&timestamp.GetTimestampResponseParams{}, io.Discard)
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}

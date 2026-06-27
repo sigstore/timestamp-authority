@@ -30,8 +30,7 @@ import (
 	"github.com/go-openapi/runtime/security"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
-
+	"github.com/go-openapi/swag/cmdutils"
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations/timestamp"
 )
 
@@ -88,7 +87,7 @@ func NewTimestampServerAPI(spec *loads.Document) *TimestampServerAPI {
 	}
 }
 
-/*TimestampServerAPI Timestamp Authority provides an RFC3161 timestamp authority. */
+// TimestampServerAPI Timestamp Authority provides an RFC3161 timestamp authority.
 type TimestampServerAPI struct {
 	spec            *loads.Document
 	context         *middleware.Context
@@ -145,7 +144,7 @@ type TimestampServerAPI struct {
 	ServerShutdown func()
 
 	// Custom command line argument groups with their descriptions
-	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
+	CommandLineOptionsGroups []cmdutils.CommandLineOptionsGroup
 
 	// User defined logger function.
 	Logger func(string, ...any)

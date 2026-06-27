@@ -18,7 +18,9 @@
 package timestamp
 
 import (
+	"context"
 	"io"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
@@ -26,11 +28,12 @@ import (
 )
 
 // New creates a new timestamp API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ContextualTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
 // New creates a new timestamp API client with basic auth credentials.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -44,6 +47,7 @@ func NewClientWithBasicAuth(host, basePath, scheme, user, password string) Clien
 }
 
 // New creates a new timestamp API client with a bearer token for authentication.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -55,11 +59,9 @@ func NewClientWithBearerToken(host, basePath, scheme, bearerToken string) Client
 	return &Client{transport: transport, formats: strfmt.Default}
 }
 
-/*
-Client for timestamp API
-*/
+// Client for timestamp API.
 type Client struct {
-	transport runtime.ClientTransport
+	transport runtime.ContextualTransport
 	formats   strfmt.Registry
 }
 
@@ -115,25 +117,54 @@ func WithAcceptApplicationTimestampReply(r *runtime.ClientOperation) {
 	r.ProducesMediaTypes = []string{"application/timestamp-reply"}
 }
 
-// ClientService is the interface for Client methods
+// ClientService is the interface for Client methods.
 type ClientService interface {
+
+	// GetTimestampCertChain retrieve the certificate chain for timestamping that can be used to validate trusted timestamps.
 	GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error)
 
+	// GetTimestampCertChainContext retrieve the certificate chain for timestamping that can be used to validate trusted timestamps.
+	GetTimestampCertChainContext(ctx context.Context, params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error)
+
+	// GetTimestampResponse generates a new timestamp response and creates a new log entry for the timestamp in the transparency log.
 	GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error)
 
-	SetTransport(transport runtime.ClientTransport)
+	// GetTimestampResponseContext generates a new timestamp response and creates a new log entry for the timestamp in the transparency log.
+	GetTimestampResponseContext(ctx context.Context, params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error)
+
+	SetTransport(transport runtime.ContextualTransport)
 }
 
-/*
-GetTimestampCertChain retrieves the certificate chain for timestamping that can be used to validate trusted timestamps
-
-Returns the certificate chain for timestamping that can be used to validate trusted timestamps
-*/
+// GetTimestampCertChain retrieves the certificate chain for timestamping that can be used to validate trusted timestamps.
+//
+// Returns the certificate chain for timestamping that can be used to validate trusted timestamps.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetTimestampCertChainContext] instead.
 func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error) {
+	var ctx context.Context
+	if params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetTimestampCertChainContext(ctx, params, opts...)
+}
+
+// GetTimestampCertChainContext retrieves the certificate chain for timestamping that can be used to validate trusted timestamps.
+//
+// Returns the certificate chain for timestamping that can be used to validate trusted timestamps.
+//
+// Do not use the deprecated [GetTimestampCertChainParams.Context] with this method: it would be ignored.
+func (a *Client) GetTimestampCertChainContext(ctx context.Context, params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetTimestampCertChainParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getTimestampCertChain",
 		Method:             "GET",
@@ -143,13 +174,14 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetTimestampCertChainReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -168,14 +200,32 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
-/*
-GetTimestampResponse generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
-*/
+// GetTimestampResponse generates a new timestamp response and creates a new log entry for the timestamp in the transparency log.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetTimestampResponseContext] instead.
 func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error) {
+	var ctx context.Context
+	if params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetTimestampResponseContext(ctx, params, writer, opts...)
+}
+
+// GetTimestampResponseContext generates a new timestamp response and creates a new log entry for the timestamp in the transparency log.
+//
+// Do not use the deprecated [GetTimestampResponseParams.Context] with this method: it would be ignored.
+func (a *Client) GetTimestampResponseContext(ctx context.Context, params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetTimestampResponseParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getTimestampResponse",
 		Method:             "POST",
@@ -185,13 +235,14 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetTimestampResponseReader{formats: a.formats, writer: writer},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -212,6 +263,14 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer
 }
 
 // SetTransport changes the transport on the client
-func (a *Client) SetTransport(transport runtime.ClientTransport) {
+func (a *Client) SetTransport(transport runtime.ContextualTransport) {
 	a.transport = transport
+}
+
+// innerParams captures internal fields so they don't conflict with user-supplied parameters.
+type innerParams struct {
+	timeout time.Duration
+
+	// Deprecated: use the operation call with context to pass the context instead of [TimestampParams].
+	ctx context.Context
 }
