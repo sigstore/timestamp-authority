@@ -161,6 +161,6 @@ func (c *TSAClient) GetTimestampCertChainContext(_ context.Context, _ *ts.GetTim
 	return nil, nil
 }
 
-func (c *TSAClient) GetTimestampResponseContext(_ context.Context, params *ts.GetTimestampResponseParams, w io.Writer, _ ...ts.ClientOption) (*ts.GetTimestampResponseOK, *ts.GetTimestampResponseCreated, error) {
+func (c *TSAClient) GetTimestampResponseContext(_ context.Context, _ *ts.GetTimestampResponseParams, _ io.Writer, _ ...ts.ClientOption) (*ts.GetTimestampResponseOK, *ts.GetTimestampResponseCreated, error) {
 	return nil, nil, nil
 }
