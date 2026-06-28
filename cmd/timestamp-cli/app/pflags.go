@@ -61,7 +61,7 @@ func initializePFlagMap() {
 		},
 		timeoutFlag: func() pflag.Value {
 			// this validates the timeout is >= 0
-			return valueFactory(formatFlag, validateTimeout, "")
+			return valueFactory(timeoutFlag, validateTimeout, "")
 		},
 	}
 }
