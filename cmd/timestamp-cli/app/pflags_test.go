@@ -59,3 +59,22 @@ func TestValidateTimestampServerURL(t *testing.T) {
 		}
 	}
 }
+
+func TestFlagValueType(t *testing.T) {
+	tests := []struct {
+		flagType FlagType
+		want     string
+	}{
+		{fileFlag, "file"},
+		{urlFlag, "url"},
+		{oidFlag, "oid"},
+		{formatFlag, "format"},
+		{timeoutFlag, "timeout"},
+	}
+
+	for _, tc := range tests {
+		if got := NewFlagValue(tc.flagType, "").Type(); got != tc.want {
+			t.Errorf("Type() for %q = %q, want %q", tc.flagType, got, tc.want)
+		}
+	}
+}
