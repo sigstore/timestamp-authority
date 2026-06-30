@@ -64,4 +64,11 @@ func TestVerifyCertChain(t *testing.T) {
 	if err := VerifyCertChain([]*x509.Certificate{extraEKULeaf, subCert, rootCert}, extraEKUKey, true); err == nil || !strings.Contains(err.Error(), "should only contain one EKU") {
 		t.Fatalf("expected failure verifying certificate chain with extra EKU: %v", err)
 	}
+
+	// failure: leaf asserts the CA bit, so it is not an end-entity, per RFC 3161 2.3
+	caLeaf, caLeafKey, _ := testutils.GenerateLeafCert(subCert, subKey)
+	caLeaf.IsCA = true
+	if err := VerifyCertChain([]*x509.Certificate{caLeaf, subCert, rootCert}, caLeafKey, true); err == nil || !strings.Contains(err.Error(), "end-entity") {
+		t.Fatalf("expected failure verifying certificate chain with a CA leaf: %v", err)
+	}
 }
