@@ -15,6 +15,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -35,6 +36,7 @@ const (
 	InconsistentDigestLengthTimestampRequest = "Message digest has incorrect length for specified algorithm"
 	UnacceptedPolicyTimestampRequest         = "unaccepted policy: requested TSA policy is not supported by the TSA"
 	UnacceptedExtensionTimestampRequest      = "unaccepted extension: requested extensions are not supported by the TSA"
+	clientDisconnected                       = "client disconnected during request"
 )
 
 func errorMsg(message string, code int) *models.Error {
@@ -54,6 +56,15 @@ func handleTimestampAPIError(params interface{}, code int, err error, message st
 	handler := re.FindStringSubmatch(typeStr)[1]
 
 	logMsg := func(r *http.Request) {
+		// If the client disconnected before we could respond, rewrite the
+		// status to 499 (nginx-style "client closed request") so that the
+		// response, request log, and metrics all agree that this wasn't a
+		// server-side error we could have prevented. Also replace the
+		// client-facing message so the JSON body reflects the true cause.
+		if code >= http.StatusInternalServerError && r.Context().Err() == context.Canceled {
+			code = 499
+			message = clientDisconnected
+		}
 		if code < http.StatusInternalServerError {
 			log.RequestIDLogger(r).Warnw(message, append([]interface{}{"handler", handler, "statusCode", code, "error", err}, fields...)...)
 		} else {
