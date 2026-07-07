@@ -284,6 +284,36 @@ func TestVerifyLeafCert(t *testing.T) {
 	}
 }
 
+// A certificate that asserts the CA bit but carries the timestamping EKU must
+// not be accepted as a TSA leaf, per RFC 3161 2.3.
+func TestVerifyLeafCertRejectsCACertificate(t *testing.T) {
+	criticalExtension := pkix.Extension{
+		Id:       EKUOID,
+		Critical: true,
+	}
+
+	caCert := &x509.Certificate{
+		Raw:                   []byte("abc123"),
+		RawIssuer:             []byte("abc123"),
+		SerialNumber:          big.NewInt(int64(123)),
+		Extensions:            []pkix.Extension{criticalExtension},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		Subject: pkix.Name{
+			CommonName: "TSA-Service",
+		},
+	}
+
+	err := verifyLeafCert(caCert, nil, VerifyOpts{})
+	if err == nil {
+		t.Fatal("expected verification to fail for a CA certificate used as a timestamping leaf")
+	}
+	if !strings.Contains(err.Error(), "end-entity") {
+		t.Fatalf("expected an end-entity error, got %s", err.Error())
+	}
+}
+
 func TestVerifySubjectCommonName(t *testing.T) {
 	type test struct {
 		optsCommonName      string

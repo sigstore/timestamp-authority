@@ -111,6 +111,14 @@ func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certifi
 
 	errMsg := "failed to verify TSA certificate"
 
+	// The TSA certificate must be an end-entity certificate, per RFC 3161 2.3.
+	// crypto/x509 chain verification does not reject a CA certificate used as
+	// the leaf, so a certificate that asserts the CA bit yet carries the
+	// timestamping EKU would otherwise be accepted as a signer.
+	if leafCert.IsCA {
+		return fmt.Errorf("%s: %w", errMsg, errors.New("TSA certificate must be an end-entity certificate, not a CA"))
+	}
+
 	err := verifyLeafCertCriticalEKU(leafCert)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
