@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/strfmt v0.26.3
 	github.com/go-openapi/swag/cmdutils v0.26.1
 	github.com/go-openapi/swag/jsonutils v0.27.0
-	github.com/go-openapi/swag/netutils v0.26.1
+	github.com/go-openapi/swag/netutils v0.27.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/google/go-cmp v0.7.0
 	github.com/mitchellh/go-homedir v1.1.0
