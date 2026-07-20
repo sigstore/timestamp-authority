@@ -16,6 +16,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -116,8 +117,18 @@ func initConfig() {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	// If a config file is found, read it in. A config file that exists but
+	// cannot be read or parsed must not be ignored: every setting would fall
+	// back to its flag default, and the default signer is the in-memory one,
+	// so the server would come up issuing timestamps under a self-signed key
+	// generated at startup instead of the configured KMS, Tink or file signer.
+	// Only "no config file anywhere in the search path" is benign.
+	if err := viper.ReadInConfig(); err != nil {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
+			log.Logger.Fatalf("error reading config file: %v", err)
+		}
+	} else {
 		log.Logger.Infof("Using config file: %s", viper.ConfigFileUsed())
 	}
 }
