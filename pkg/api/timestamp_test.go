@@ -37,7 +37,7 @@ func FuzzParseDERRequest(f *testing.F) {
 func TestParseJSONRequestRejectsOversizeRequest(t *testing.T) {
 	hash := base64.StdEncoding.EncodeToString(make([]byte, 32))
 	digits := strings.Repeat("9", 200000)
-	body := []byte(fmt.Sprintf(`{"artifactHash":%q,"hashAlgorithm":"sha256","nonce":%s}`, hash, digits))
+	body := fmt.Appendf(nil, `{"artifactHash":%q,"hashAlgorithm":"sha256","nonce":%s}`, hash, digits)
 
 	start := time.Now()
 	_, msg, err := ParseJSONRequest(body)

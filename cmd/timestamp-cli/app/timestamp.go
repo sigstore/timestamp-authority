@@ -66,7 +66,7 @@ var timestampCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (any, error) {
 		return runTimestamp()
 	}),
 }
@@ -105,7 +105,7 @@ func createRequestFromFlags() ([]byte, error) {
 
 	if policyStr := viper.GetString("tsa-policy"); policyStr != "" {
 		var oidInts []int
-		for _, v := range strings.Split(policyStr, ".") {
+		for v := range strings.SplitSeq(policyStr, ".") {
 			i, _ := strconv.Atoi(v)
 			oidInts = append(oidInts, i)
 		}
@@ -115,7 +115,7 @@ func createRequestFromFlags() ([]byte, error) {
 	return timestamp.CreateRequest(bytes.NewReader(artifactBytes), reqOpts)
 }
 
-func runTimestamp() (interface{}, error) {
+func runTimestamp() (any, error) {
 	fmt.Println("Generating a new signed timestamp")
 
 	// Set the Content-Type header to application/timestamp-query for the

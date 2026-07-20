@@ -101,7 +101,7 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 type logAdapter struct {
 }
 
-func (l *logAdapter) Print(v ...interface{}) {
+func (l *logAdapter) Print(v ...any) {
 	log.Logger.Info(v...)
 }
 
@@ -241,7 +241,7 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	} else {
 		log.RequestIDLogger(r).Error(err)
 	}
-	requestFields := map[string]interface{}{}
+	requestFields := map[string]any{}
 	if err := mapstructure.Decode(r, &requestFields); err == nil {
 		log.RequestIDLogger(r).Debug(requestFields)
 	}

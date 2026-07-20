@@ -19,6 +19,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
+	"slices"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/cryptoutils/goodkey"
@@ -107,11 +108,8 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 		// usage includes the extended key usage timestamping for EKU chaining
 		for _, c := range certs[1 : len(certs)-1] {
 			var hasExtKeyUsageTimeStamping bool
-			for _, extKeyUsage := range c.ExtKeyUsage {
-				if extKeyUsage == x509.ExtKeyUsageTimeStamping {
-					hasExtKeyUsageTimeStamping = true
-					break
-				}
+			if slices.Contains(c.ExtKeyUsage, x509.ExtKeyUsageTimeStamping) {
+				hasExtKeyUsageTimeStamping = true
 			}
 			if !hasExtKeyUsageTimeStamping {
 				return errors.New(`certificate must have extended key usage timestamping set to sign timestamping certificates`)

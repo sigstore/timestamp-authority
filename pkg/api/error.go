@@ -46,7 +46,7 @@ func errorMsg(message string, code int) *models.Error {
 	}
 }
 
-func handleTimestampAPIError(params interface{}, code int, err error, message string, fields ...interface{}) middleware.Responder {
+func handleTimestampAPIError(params any, code int, err error, message string, fields ...any) middleware.Responder {
 	if message == "" {
 		message = http.StatusText(code)
 	}
@@ -66,11 +66,11 @@ func handleTimestampAPIError(params interface{}, code int, err error, message st
 			message = clientDisconnected
 		}
 		if code < http.StatusInternalServerError {
-			log.RequestIDLogger(r).Warnw(message, append([]interface{}{"handler", handler, "statusCode", code, "error", err}, fields...)...)
+			log.RequestIDLogger(r).Warnw(message, append([]any{"handler", handler, "statusCode", code, "error", err}, fields...)...)
 		} else {
-			log.RequestIDLogger(r).Errorw(message, append([]interface{}{"handler", handler, "statusCode", code, "error", err}, fields...)...)
+			log.RequestIDLogger(r).Errorw(message, append([]any{"handler", handler, "statusCode", code, "error", err}, fields...)...)
 		}
-		paramsFields := map[string]interface{}{}
+		paramsFields := map[string]any{}
 		if err := mapstructure.Decode(params, &paramsFields); err == nil {
 			log.RequestIDLogger(r).Debug(paramsFields)
 		}
