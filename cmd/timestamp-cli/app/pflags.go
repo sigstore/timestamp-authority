@@ -149,7 +149,7 @@ func validateString(tag string) validationFunc {
 
 // useValidator performs struct level validation on s as defined in the struct's tags using
 // the go-playground/validator library
-func useValidator(flagType FlagType, s interface{}) error {
+func useValidator(flagType FlagType, s any) error {
 	validate := validator.New()
 	if err := validate.Struct(s); err != nil {
 		return fmt.Errorf("error parsing %v flag: %w", flagType, err)

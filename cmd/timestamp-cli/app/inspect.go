@@ -50,7 +50,7 @@ var inspectCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (any, error) {
 		tsr := viper.GetString("timestamp")
 		tsrBytes, err := os.ReadFile(filepath.Clean(tsr))
 		if err != nil {

@@ -66,12 +66,12 @@ var verifyCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (any, error) {
 		return runVerify()
 	}),
 }
 
-func runVerify() (interface{}, error) {
+func runVerify() (any, error) {
 	tsrPath := viper.GetString("timestamp")
 	tsrBytes, err := os.ReadFile(filepath.Clean(tsrPath))
 	if err != nil {
