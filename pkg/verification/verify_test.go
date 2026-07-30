@@ -57,7 +57,7 @@ func TestVerifyArtifactHashedMessages(t *testing.T) {
 			message: "valid local artifact",
 		},
 		{
-			message: "nonexistant local artifact",
+			message: "nonexistent local artifact",
 		},
 		{
 			message: "valid local artifact with hash algorithm",
@@ -439,10 +439,10 @@ func TestVerifyESSCertID(t *testing.T) {
 		}
 		err = verifyESSCertID(&cert, opts)
 		if err != nil && tc.expectVerifySuccess {
-			t.Errorf("expected verifcation to pass: %s", err.Error())
+			t.Errorf("expected verification to pass: %s", err.Error())
 		}
 		if err == nil && !tc.expectVerifySuccess {
-			t.Errorf("expected verifcation to fail")
+			t.Errorf("expected verification to fail")
 		}
 	}
 }
