@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.25.0
-	github.com/go-openapi/runtime v0.32.6
+	github.com/go-openapi/runtime v0.33.0
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/swag/cmdutils v0.27.3
