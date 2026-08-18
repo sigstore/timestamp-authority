@@ -13,7 +13,7 @@ require (
 	github.com/go-openapi/runtime v0.33.0
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/strfmt v0.27.0
-	github.com/go-openapi/swag/cmdutils v0.27.3
+	github.com/go-openapi/swag/cmdutils v0.28.0
 	github.com/go-openapi/swag/jsonutils v0.27.3
 	github.com/go-openapi/swag/netutils v0.28.0
 	github.com/go-playground/validator/v10 v10.30.3
