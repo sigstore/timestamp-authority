@@ -22,7 +22,6 @@ import (
 	"slices"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/cryptoutils/goodkey"
 )
 
 var (
@@ -118,10 +117,5 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 	}
 
 	// Verify the signer's public key matches the leaf certificate
-	if err := cryptoutils.EqualKeys(leaf.PublicKey, signer.Public()); err != nil {
-		return err
-	}
-
-	// Verify the key's strength
-	return goodkey.ValidatePubKey(signer.Public())
+	return cryptoutils.EqualKeys(leaf.PublicKey, signer.Public())
 }
