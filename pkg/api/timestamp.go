@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"mime"
 	"net/http"
 	"slices"
 	"strings"
@@ -129,15 +130,20 @@ func parseDERRequest(reqBytes []byte) (*timestamp.Request, string, error) {
 }
 
 func getContentType(r *http.Request) (string, error) {
-	contentTypeHeader := r.Header.Get("Content-Type")
-	if strings.Count(contentTypeHeader, "application/") != 1 {
-		return "", errors.New("content-type header should specify application only once")
+	// Parse the header as a media type rather than searching for the
+	// "application/" substring. The substring match both refuses valid
+	// parameterised headers such as "application/json; charset=utf-8" and
+	// accepts unrelated types like "multipart/form-data; boundary=application/json",
+	// which then get routed to a parser based on the parameter value.
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse content-type header: %w", err)
 	}
-	splitHeader := strings.SplitN(contentTypeHeader, "application/", 2)
-	if len(splitHeader) != 2 {
-		return "", errors.New("expected header value to be split into two pieces")
+	subtype, ok := strings.CutPrefix(mediaType, "application/")
+	if !ok {
+		return "", errors.New("content-type must be an application media type")
 	}
-	return splitHeader[1], nil
+	return subtype, nil
 }
 
 func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.Request, string, error) {

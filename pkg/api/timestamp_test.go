@@ -17,10 +17,51 @@ package api
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestGetContentType(t *testing.T) {
+	tests := []struct {
+		header      string
+		wantSubtype string
+		wantErr     bool
+	}{
+		{header: "application/json", wantSubtype: "json"},
+		{header: "application/timestamp-query", wantSubtype: "timestamp-query"},
+		// A media type parameter must not change the outcome.
+		{header: "application/json; charset=utf-8", wantSubtype: "json"},
+		{header: "application/timestamp-query; charset=utf-8", wantSubtype: "timestamp-query"},
+		// A parameter value that embeds "application/..." must not be
+		// mistaken for the media type.
+		{header: "multipart/form-data; boundary=application/json", wantErr: true},
+		{header: "text/plain", wantErr: true},
+		{header: "", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		r := &http.Request{Header: http.Header{}}
+		if tc.header != "" {
+			r.Header.Set("Content-Type", tc.header)
+		}
+		subtype, err := getContentType(r)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("header %q: expected an error, got subtype %q", tc.header, subtype)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("header %q: unexpected error: %v", tc.header, err)
+			continue
+		}
+		if subtype != tc.wantSubtype {
+			t.Errorf("header %q: expected subtype %q, got %q", tc.header, tc.wantSubtype, subtype)
+		}
+	}
+}
 
 func FuzzParseJSONRequest(f *testing.F) {
 	f.Fuzz(func(_ *testing.T, reqBytes []byte) {
