@@ -24,6 +24,26 @@ on:
 permissions: {}
 
 jobs:
+  container-build:
+    name: Build container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
+
+      - name: container
+        run: |
+          make ko-local
+          docker run --rm $(cat timestampImagerefs) version
+
   unit-tests:
     name: Run unit tests
     permissions:
@@ -106,10 +126,15 @@ jobs:
           check-latest: true
           cache: true
 
+      - name: "Extract golangci-lint version from Dockerfile.golangci-lint"
+        id: "golangci-lint-version"
+        run: |
+          awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint >> "$GITHUB_OUTPUT"
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.12
+          version: ${{ steps.golangci-lint-version.outputs.version }}
           args: --timeout=10m --verbose
 
   gen-check:
@@ -135,3 +160,16 @@ jobs:
         run: |
           make gen
           git diff --exit-code
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Zizmor
+        run: |
+          ZIZMOR=$(grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
+          docker run --rm -v $PWD:/source $ZIZMOR /source

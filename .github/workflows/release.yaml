@@ -1,3 +1,17 @@
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: cut-release
 
 on:
@@ -5,7 +19,9 @@ on:
     tags:
       - "v*"
 
-concurrency: cut-release
+concurrency:
+  group: "cut-release"
+  cancel-in-progress: false
 
 permissions: {}
 
@@ -14,11 +30,8 @@ jobs:
     permissions:
       contents: write # needed to write releases
       id-token: write # needed for keyless signing
-      packages: write # needed for pushing the images to ghcr.io
+      attestations: write
     runs-on: ubuntu-latest
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
-      tag_name: ${{ steps.tag.outputs.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,16 +46,14 @@ jobs:
           check-latest: true
           cache: false # avoid cache-poisoning attacks
 
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      # Syft is used by GoReleaser to generate SBOMs
       - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
-      - uses: imjasonh/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
       - name: Set LDFLAGS
         id: ldflags
         run: |
-           source ./release/ldflags.sh
-           goflags=$(ldflags)
-           echo "GO_FLAGS="${goflags}"" >> "$GITHUB_ENV"
+           LDFLAGS=$(make ldflags)
+           echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
 
       - name: Run GoReleaser
         id: run-goreleaser
@@ -53,34 +64,22 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LDFLAGS: ${{ env.GO_FLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      
+      - name: Generate artifact attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            ./dist/timestamp-server-*
+            ./dist/timestamp-cli-*
 
-      - name: Generate subject
-        id: hash
-        env:
-          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
-        run: |
-          set -euo pipefail
-          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
-          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
-
-      - name: Set tag output
-        id: tag
-        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
-
-      - name: build and sign images
-        run: make sign-container-release
-
-  provenance:
-    needs: [release]
+  build-container:
+    name: Build and push container image
+    uses: ./.github/workflows/build_container.yml # zizmor: ignore[secrets-inherit]
+    secrets: inherit
     permissions:
-      actions: read # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
-    with:
-      base64-subjects: "${{ needs.release.outputs.hashes }}"
-      upload-assets: true
-      upload-tag-name: "${{ needs.release.outputs.tag_name }}" # Upload to tag rather than generate a new release
-      draft-release: true
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write

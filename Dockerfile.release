@@ -1,0 +1,39 @@
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Debian 13 (Trixie) image to build binary for distroless/static-debian13
+FROM --platform=$BUILDPLATFORM golang:1.26.5-trixie@sha256:f1a132429b98724a904e9b3bdbaed399d8f923203c3e5170e6def66d0a7cc04c AS builder
+ARG TARGETOS
+ARG TARGETARCH
+ENV APP_ROOT=/opt/app-root
+ENV GOPATH=$APP_ROOT
+
+WORKDIR $APP_ROOT/src/
+ADD go.mod go.sum $APP_ROOT/src/
+RUN go mod download
+
+# Add source code
+ADD ./cmd/ $APP_ROOT/src/cmd/
+ADD ./pkg/ $APP_ROOT/src/pkg/
+
+ARG SERVER_LDFLAGS
+# Build server for deployment. Build without cgo since distroless doesn't include lib/cgo
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" -o timestamp-server ./cmd/timestamp-server
+
+# Multi-stage deployment build
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:f7f8f729987ad0fdf6b05eeeae94b26e6a0f613bdf46feea7fc40f7bd72953e6 AS deploy
+# Retrieve the binary from the previous stage
+COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
+# Set the binary as the entrypoint of the container
+CMD ["timestamp-server", "serve"]
