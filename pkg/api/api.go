@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/mldsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
@@ -78,6 +79,10 @@ func NewAPI() (*API, error) {
 		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
+	}
+	if _, ok := tsaSigner.Public().(*mldsa.PublicKey); ok {
+		// pkcs7 forces SHA-512 for ML-DSA SignerInfo digests.
+		tsaSignerHash = crypto.SHA512
 	}
 
 	var certChain []*x509.Certificate

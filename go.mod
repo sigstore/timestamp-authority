@@ -1,11 +1,11 @@
 module github.com/sigstore/timestamp-authority/v2
 
-go 1.25.11
+go 1.27.0
 
 require (
 	cloud.google.com/go/security v1.26.0
 	github.com/beevik/ntp v1.5.0
-	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
+	github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-openapi/errors v0.22.8
@@ -101,7 +101,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
-	github.com/google/go-containerregistry v0.21.7 // indirect
+	github.com/google/go-containerregistry v0.21.9 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.17 // indirect
@@ -160,3 +160,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720155508-bb71a54f79dc // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 )
+
+// Tracks sigstore/sigstore#2395. Update once PR merges.
+replace github.com/sigstore/sigstore => github.com/Hayden-IO/sigstore v1.1.1-0.20260820020014-19862605296a
