@@ -38,6 +38,23 @@ func TestVerifyCertChain(t *testing.T) {
 		t.Fatalf("unexpected failure verifying certificate chain: %v", err)
 	}
 
+	// success with an all-ML-DSA chain (leaf, intermediate, and root)
+	mldsaRootCert, mldsaRootKey, err := testutils.GenerateMLDSARootCa()
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA root certificate: %v", err)
+	}
+	mldsaSubCert, mldsaSubKey, err := testutils.GenerateMLDSASubordinateCa(mldsaRootCert, mldsaRootKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA intermediate certificate: %v", err)
+	}
+	mldsaChainLeafCert, mldsaChainLeafKey, err := testutils.GenerateMLDSALeafCert(mldsaSubCert, mldsaSubKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{mldsaChainLeafCert, mldsaSubCert, mldsaRootCert}, mldsaChainLeafKey, true); err != nil {
+		t.Fatalf("unexpected failure verifying all-ML-DSA certificate chain: %v", err)
+	}
+
 	// failure: not enough certificates
 	if err := VerifyCertChain([]*x509.Certificate{leafCert}, leafKey, true); err == nil || !strings.Contains(err.Error(), "must contain at least two") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)
