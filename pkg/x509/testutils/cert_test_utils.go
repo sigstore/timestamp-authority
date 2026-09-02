@@ -18,6 +18,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -60,11 +61,21 @@ func createCertificate(template *x509.Certificate, parent *x509.Certificate, pub
 	return cert, nil
 }
 
-func GenerateRootCa() (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func ecdsaKeyGen() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
+func mldsaKeyGen() (*mldsa.PrivateKey, error) {
+	return mldsa.GenerateKey(mldsa.MLDSA65())
+}
+
+func generateRootCa[K crypto.Signer](commonName string, keyGen func() (K, error)) (*x509.Certificate, K, error) {
+	var zero K
+
 	rootTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName:   "Test TSA Timestamping Root",
+			CommonName:   commonName,
 			Organization: []string{"local"},
 		},
 		NotBefore:             time.Now().Add(-10 * time.Minute),
@@ -74,24 +85,34 @@ func GenerateRootCa() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 		IsCA:                  true,
 	}
 
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := keyGen()
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
-	cert, err := createCertificate(rootTemplate, rootTemplate, &priv.PublicKey, priv)
+	cert, err := createCertificate(rootTemplate, rootTemplate, priv.Public(), priv)
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
 	return cert, priv, nil
 }
 
-func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateRootCa() (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	return generateRootCa("Test TSA Timestamping Root", ecdsaKeyGen)
+}
+
+func GenerateMLDSARootCa() (*x509.Certificate, *mldsa.PrivateKey, error) {
+	return generateRootCa("Test TSA Timestamping Root (ML-DSA)", mldsaKeyGen)
+}
+
+func generateSubordinateCa[K crypto.Signer](rootTemplate *x509.Certificate, rootPriv crypto.Signer, commonName string, keyGen func() (K, error)) (*x509.Certificate, K, error) {
+	var zero K
+
 	subTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName:   "Test TSA Timestamping Intermediate",
+			CommonName:   commonName,
 			Organization: []string{"local"},
 		},
 		NotBefore:             time.Now().Add(-9 * time.Minute),
@@ -102,29 +123,39 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 		IsCA:                  true,
 	}
 
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := keyGen()
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
-	cert, err := createCertificate(subTemplate, rootTemplate, &priv.PublicKey, rootPriv)
+	cert, err := createCertificate(subTemplate, rootTemplate, priv.Public(), rootPriv)
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
 	return cert, priv, nil
 }
 
-func GenerateLeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	return generateSubordinateCa(rootTemplate, rootPriv, "Test TSA Timestamping Intermediate", ecdsaKeyGen)
+}
+
+func GenerateMLDSASubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signer) (*x509.Certificate, *mldsa.PrivateKey, error) {
+	return generateSubordinateCa(rootTemplate, rootPriv, "Test TSA Timestamping Intermediate (ML-DSA)", mldsaKeyGen)
+}
+
+func generateLeafCert[K crypto.Signer](parentTemplate *x509.Certificate, parentPriv crypto.Signer, commonName string, keyGen func() (K, error)) (*x509.Certificate, K, error) {
+	var zero K
+
 	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName:   "Test TSA Timestamping Leaf",
+			CommonName:   commonName,
 			Organization: []string{"local"},
 		},
 		NotBefore: time.Now().Add(-1 * time.Minute),
@@ -141,15 +172,23 @@ func GenerateLeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer
 		},
 	}
 
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := keyGen()
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
-	cert, err := createCertificate(certTemplate, parentTemplate, &priv.PublicKey, parentPriv)
+	cert, err := createCertificate(certTemplate, parentTemplate, priv.Public(), parentPriv)
 	if err != nil {
-		return nil, nil, err
+		return nil, zero, err
 	}
 
 	return cert, priv, nil
+}
+
+func GenerateLeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	return generateLeafCert(parentTemplate, parentPriv, "Test TSA Timestamping Leaf", ecdsaKeyGen)
+}
+
+func GenerateMLDSALeafCert(parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *mldsa.PrivateKey, error) {
+	return generateLeafCert(parentTemplate, parentPriv, "Test TSA Timestamping Leaf (ML-DSA)", mldsaKeyGen)
 }
