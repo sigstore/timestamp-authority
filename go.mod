@@ -11,7 +11,7 @@ require (
 	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.25.2
 	github.com/go-openapi/runtime v0.33.1
-	github.com/go-openapi/spec v0.22.11
+	github.com/go-openapi/spec v1.0.0
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/swag/cmdutils v0.29.1
 	github.com/go-openapi/swag/jsonutils v0.29.1
