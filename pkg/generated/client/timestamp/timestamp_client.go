@@ -145,7 +145,7 @@ type ClientService interface {
 // If you need to pass a specific context, use [Client.GetTimestampCertChainContext] instead.
 func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts ...ClientOption) (*GetTimestampCertChainOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
@@ -208,7 +208,7 @@ func (a *Client) GetTimestampCertChainContext(ctx context.Context, params *GetTi
 // If you need to pass a specific context, use [Client.GetTimestampResponseContext] instead.
 func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, writer io.Writer, opts ...ClientOption) (*GetTimestampResponseOK, *GetTimestampResponseCreated, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
