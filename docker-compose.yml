@@ -16,7 +16,7 @@ services:
   timestamp-server:
     build:
       context: .
-      target: "deploy"
+      target: "local-deploy"
     command: [
       "timestamp-server",
       "serve",
