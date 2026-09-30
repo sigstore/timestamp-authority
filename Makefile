@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local
+.PHONY: all test clean clean-gen lint gosec ldflags ko-local
 
 all: timestamp-cli timestamp-server
 
@@ -39,19 +39,27 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-KO_PREFIX ?= ghcr.io/sigstore
-export KO_DOCKER_REPO=$(KO_PREFIX)
-
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
+ZIZMOR ?= $(shell grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
 
-LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+LDFLAGS=-buildid= \
+				-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 				-X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
 				-X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
 				-X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 CLI_LDFLAGS=$(LDFLAGS)
 SERVER_LDFLAGS=$(LDFLAGS)
+
+ldflags: ## Print ldflags
+	@echo $(SERVER_LDFLAGS)
+
+ko-local: ## Build container images locally using ko
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs timestampImagerefs \
+		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated
@@ -65,7 +73,13 @@ validate-openapi: $(SWAGGER) ## Validate OpenAPI spec
 pkg/generated/restapi/configure_timestamp_server.go: $(OPENAPIDEPS)
 
 lint: ## Go linting
-	$(GOBIN)/golangci-lint run -v ./...
+	docker run -t --rm -v $(PWD):/app -w /app \
+		--user $(shell id -u):$(shell id -g) \
+		-v $(shell go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $(shell go env GOMODCACHE):/go/pkg/mod -e GOMODCACHE=/go/pkg/mod \
+		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
+	docker run -t --rm -v $(PWD):/source $(ZIZMOR) /source
 
 gosec: ## Run gosec
 	$(GOBIN)/gosec ./...
@@ -94,30 +108,6 @@ up: ## Run the TSA with Docker Compose
 	docker compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
 	docker compose -f docker-compose.yml up
 
-ko: ## Run Ko
-	# timestamp-server
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-server ko build --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampServerImagerefs github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
-
-	# timestamp-cli
-	LDFLAGS="$(LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/timestamp-cli ko build --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs timestampCLIImagerefs github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli
-
-.PHONY: ko-local
-ko-local: ## Run Ko locally
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
-
-	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
-		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli
 
 ## --------------------------------------
 ## Tooling Binaries
@@ -135,5 +125,3 @@ help: ## Display help
 		'/^[^\t].+?:.*?##/ {\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
 		}' $(MAKEFILE_LIST) | sort
-
-include release/release.mk

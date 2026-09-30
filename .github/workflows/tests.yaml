@@ -24,6 +24,97 @@ on:
 permissions: {}
 
 jobs:
+  container-build:
+    name: Build container with ko
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
+
+      - name: container
+        run: |
+          make ko-local
+          docker run --rm $(cat timestampImagerefs) version
+
+  docker-build:
+    name: Build Docker image (${{ matrix.os }}, ${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-26.04-arm
+        platform:
+          - linux/amd64
+          - linux/arm64
+        include:
+          - os: ubuntu-latest
+            platform: linux/amd64
+            load: true
+          - os: ubuntu-26.04-arm
+            platform: linux/arm64
+            load: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        with:
+          cache-binary: false
+
+      - name: Set build arguments
+        run: |
+          LDFLAGS=$(make ldflags)
+          echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
+
+      - name: Build deploy Docker image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: deploy
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: timestamp-server:deploy
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test deploy Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm timestamp-server:deploy timestamp-server version
+
+      - name: Build debug Docker image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          target: debug
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: timestamp-server:debug
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test debug Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm timestamp-server:debug timestamp-server version
+          docker run --rm timestamp-server:debug dlv version
+
   unit-tests:
     name: Run unit tests
     permissions:
@@ -39,7 +130,7 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -72,7 +163,7 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -98,7 +189,7 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -106,10 +197,15 @@ jobs:
           check-latest: true
           cache: true
 
+      - name: "Extract golangci-lint version from Dockerfile.golangci-lint"
+        id: "golangci-lint-version"
+        run: |
+          awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint >> "$GITHUB_OUTPUT"
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: latest
+          version: ${{ steps.golangci-lint-version.outputs.version }}
           args: --timeout=10m --verbose
 
   gen-check:
@@ -123,7 +219,7 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -145,14 +241,28 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
+          cache: true
 
       - name: Check go fix
         run: |
           go fix ./...
           git diff --exit-code
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Zizmor
+        run: |
+          ZIZMOR=$(grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
+          docker run --rm -v $PWD:/source $ZIZMOR /source
