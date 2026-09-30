@@ -124,8 +124,7 @@ func initConfig() {
 	// generated at startup instead of the configured KMS, Tink or file signer.
 	// Only "no config file anywhere in the search path" is benign.
 	if err := viper.ReadInConfig(); err != nil {
-		var notFound viper.ConfigFileNotFoundError
-		if !errors.As(err, &notFound) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
 			log.Logger.Fatalf("error reading config file: %v", err)
 		}
 	} else {
