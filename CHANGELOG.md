@@ -1,3 +1,7 @@
+**NO LONGER MAINTAINED**
+
+Changelogs will be in each [release](https://github.com/sigstore/timestamp-authority/releases).
+
 # v2.0.5
 
 This release updates the chi middleware to resolve a panic.
