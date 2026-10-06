@@ -31,6 +31,10 @@ ARG SERVER_LDFLAGS
 # Build server for deployment
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" -o timestamp-server ./cmd/timestamp-server
 
+ARG CLI_LDFLAGS
+# Build CLI for deployment
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${CLI_LDFLAGS}" -o timestamp-cli ./cmd/timestamp-cli
+
 # Production deployment build
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 AS deploy
 # Retrieve the binary from the previous stage
@@ -44,6 +48,13 @@ FROM golang:1.27.1-trixie@sha256:433790e515d27dc6003e847e644cc0af956985cf315c1c5
 COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
 # Set the binary as the entrypoint of the container
 CMD ["timestamp-server", "serve"]
+
+# CLI deployment build
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 AS deploy-cli
+# Retrieve the binary from the previous stage
+COPY --from=builder /opt/app-root/src/timestamp-cli /usr/local/bin/timestamp-cli
+# Set the binary as the entrypoint of the container
+ENTRYPOINT ["timestamp-cli"]
 
 # Cross-compile dlv for the debug stage
 FROM builder AS dlvbuilder

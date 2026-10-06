@@ -58,8 +58,12 @@ ldflags: ## Print ldflags
 ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs timestampImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs timestampServerImagerefs \
 		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-server
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs timestampCLIImagerefs \
+		github.com/sigstore/timestamp-authority/v2/cmd/timestamp-cli
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated
