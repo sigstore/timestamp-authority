@@ -368,7 +368,7 @@ google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsok
 google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
 google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-sigs.k8s.io/release-utils v0.12.4 h1:kuG6WTWGCKx5uUrJwl2uFErOKOw+4Ba8WrPmOQh5J3g=
-sigs.k8s.io/release-utils v0.12.4/go.mod h1:Tc3iM9DVM3W9oJu/6rEI+LnREuhy8lZ7wInQhRBtUoo=
+sigs.k8s.io/release-utils v0.12.5 h1:/Ybntn/M7sK+6XjaH88y3pfx3tpJod3WKiItxoS4igg=
+sigs.k8s.io/release-utils v0.12.5/go.mod h1:rL6dEVB93VNU8Bd3l8tnh98hR9yoqMMn/puxlCU5buw=
 sigs.k8s.io/yaml v1.6.0 h1:G8fkbMSAFqgEFgh4b1wmtzDnioxFCUgTZhlbj5P9QYs=
 sigs.k8s.io/yaml v1.6.0/go.mod h1:796bPqUfzR/0jLAl6XjHl3Ck7MiyVv8dbTdyT3/pMf4=
