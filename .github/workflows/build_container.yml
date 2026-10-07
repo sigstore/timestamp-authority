@@ -24,7 +24,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BASE_NAME: ${{ github.repository }}
 
 permissions: {}
 
@@ -34,13 +33,25 @@ concurrency:
 
 jobs:
   build-and-push-image:
-    name: Build and push Docker image
+    name: Build and push Docker image (${{ matrix.image }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: timestamp-server
+            commit-target: local-deploy
+            tag-target: deploy
+          - image: timestamp-cli
+            commit-target: deploy-cli
+            tag-target: deploy-cli
+    env:
+      IMAGE_BASE_NAME: ${{ github.repository_owner }}/${{ matrix.image }}
 
     steps:
       - name: Checkout repository
@@ -77,13 +88,14 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          target: local-deploy
+          target: ${{ matrix.commit-target }}
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
       
       - name: Build and push per-tag Docker image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -91,13 +103,14 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          target: deploy
+          target: ${{ matrix.tag-target }}
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
       
       - name: Generate artifact attestation
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}

@@ -42,7 +42,8 @@ jobs:
       - name: container
         run: |
           make ko-local
-          docker run --rm $(cat timestampImagerefs) version
+          docker run --rm $(cat timestampServerImagerefs) version
+          docker run --rm $(cat timestampCLIImagerefs) version
 
   docker-build:
     name: Build Docker image (${{ matrix.os }}, ${{ matrix.platform }})
@@ -91,11 +92,30 @@ jobs:
           tags: timestamp-server:deploy
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
 
       - name: Test deploy Docker image
         if: ${{ matrix.load == true }}
         run: |
           docker run --rm timestamp-server:deploy timestamp-server version
+
+      - name: Build CLI Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy-cli
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: timestamp-cli:deploy
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test CLI Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm timestamp-cli:deploy version
 
       - name: Build debug Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -108,6 +128,7 @@ jobs:
           tags: timestamp-server:debug
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
 
       - name: Test debug Docker image
         if: ${{ matrix.load == true }}
