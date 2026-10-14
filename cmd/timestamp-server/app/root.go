@@ -87,9 +87,11 @@ func init() {
 	rootCmd.PersistentFlags().Uint64("max-request-body-size", 1048576, "Maximum allowed size for request bodies in bytes (1MB by default)")
 	rootCmd.PersistentFlags().Duration("cleanup-timeout", 620*time.Second, "grace period for which to wait before killing idle connections")
 
-	rootCmd.PersistentFlags().String("default-policy-oid", "1.3.6.1.4.1.57264.2", "Default policy OID to use if none is specified in the request")
-	rootCmd.PersistentFlags().StringSlice("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2"}, "List of policy OIDs accepted in timestamp requests")
+	rootCmd.PersistentFlags().String("default-policy-oid", "", "Default policy OID to use if none is specified in the request. If left unset, defaults to the PQC policy OID when --experimental-enable-pqc is set, or to the non-PQC policy OID otherwise")
+	rootCmd.PersistentFlags().StringSlice("accepted-policy-oids", nil, "List of policy OIDs accepted in timestamp requests. If left unset, defaults to a list containing only the default policy OID")
 	rootCmd.PersistentFlags().Bool("allow-custom-extensions", false, "Whether to allow and copy custom request extensions into the signed timestamp")
+
+	rootCmd.PersistentFlags().Bool("experimental-enable-pqc", false, "Enable experimental post-quantum signer support")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
