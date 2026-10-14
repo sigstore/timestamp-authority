@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/mldsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
@@ -63,10 +64,31 @@ func parseOID(oidStr string) (asn1.ObjectIdentifier, error) {
 	return oid, nil
 }
 
+func validatePolicyOID(oid asn1.ObjectIdentifier, isMLDSASigner bool) error {
+	switch {
+	case oid.Equal(tsx509.PolicyOID):
+		if isMLDSASigner {
+			return fmt.Errorf("policy OID %s does not support ML-DSA signers, use %s instead", oid, tsx509.PolicyOIDPQC)
+		}
+	case oid.Equal(tsx509.PolicyOIDPQC):
+		if !isMLDSASigner {
+			return fmt.Errorf("policy OID %s requires an ML-DSA signer", oid)
+		}
+	}
+	return nil
+}
+
 func NewAPI() (*API, error) {
 	ctx := context.Background()
 
-	tsaSignerHash, err := signer.HashToAlg(viper.GetString("timestamp-signer-hash"))
+	defaultTSASignerHash := "sha256"
+	if viper.GetBool("experimental-enable-pqc") {
+		defaultTSASignerHash = "sha512"
+	}
+	if viper.IsSet("timestamp-signer-hash") {
+		defaultTSASignerHash = viper.GetString("timestamp-signer-hash")
+	}
+	tsaSignerHash, err := signer.HashToAlg(defaultTSASignerHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting hash")
 	}
@@ -78,6 +100,13 @@ func NewAPI() (*API, error) {
 		viper.GetString("file-signer-key-path"), viper.GetString("file-signer-passwd"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new tsa signer")
+	}
+	_, isMLDSASigner := tsaSigner.Public().(*mldsa.PublicKey)
+	if isMLDSASigner && !viper.GetBool("experimental-enable-pqc") {
+		return nil, errors.New("ML-DSA signers require --experimental-enable-pqc")
+	}
+	if !isMLDSASigner && viper.GetBool("experimental-enable-pqc") {
+		return nil, errors.New("--experimental-enable-pqc requires an ML-DSA signer")
 	}
 
 	var certChain []*x509.Certificate
@@ -109,19 +138,34 @@ func NewAPI() (*API, error) {
 		return nil, fmt.Errorf("marshal certificates to PEM: %w", err)
 	}
 
-	defaultPolicyOIDStr := viper.GetString("default-policy-oid")
-	defaultPolicyOID, err := parseOID(defaultPolicyOIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse default policy OID %q: %w", defaultPolicyOIDStr, err)
+	defaultPolicyOID := tsx509.PolicyOID
+	if viper.GetBool("experimental-enable-pqc") {
+		defaultPolicyOID = tsx509.PolicyOIDPQC
+	}
+	if viper.IsSet("default-policy-oid") {
+		defaultPolicyOIDStr := viper.GetString("default-policy-oid")
+		defaultPolicyOID, err = parseOID(defaultPolicyOIDStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse default policy OID %q: %w", defaultPolicyOIDStr, err)
+		}
+	}
+	if err := validatePolicyOID(defaultPolicyOID, isMLDSASigner); err != nil {
+		return nil, fmt.Errorf("default policy OID %q: %w", defaultPolicyOID, err)
 	}
 
-	var acceptedPolicyOIDs []asn1.ObjectIdentifier
-	for _, oidStr := range viper.GetStringSlice("accepted-policy-oids") {
-		oid, err := parseOID(oidStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse accepted policy OID %q: %w", oidStr, err)
+	acceptedPolicyOIDs := []asn1.ObjectIdentifier{defaultPolicyOID}
+	if viper.IsSet("accepted-policy-oids") {
+		acceptedPolicyOIDs = nil
+		for _, oidStr := range viper.GetStringSlice("accepted-policy-oids") {
+			oid, err := parseOID(oidStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse accepted policy OID %q: %w", oidStr, err)
+			}
+			if err := validatePolicyOID(oid, isMLDSASigner); err != nil {
+				return nil, fmt.Errorf("accepted policy OID %q: %w", oidStr, err)
+			}
+			acceptedPolicyOIDs = append(acceptedPolicyOIDs, oid)
 		}
-		acceptedPolicyOIDs = append(acceptedPolicyOIDs, oid)
 	}
 
 	return &API{

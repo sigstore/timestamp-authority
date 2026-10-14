@@ -225,7 +225,7 @@ func TestGetTimestampResponse(t *testing.T) {
 			t.Fatalf("test '%s': tsr should not be ordered", tc.name)
 		}
 		// check policy OID default
-		if !tsr.Policy.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}) {
+		if !tsr.Policy.Equal(x509.PolicyOID) {
 			t.Fatalf("test '%s': unexpected policy ID", tc.name)
 		}
 		// check for no extensions
@@ -323,7 +323,7 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 
 		t.Run(tc.name+" Allowed via Config", func(t *testing.T) {
 			url := createServer(t, func() {
-				viper.Set("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2", "1.2.3.4.5"})
+				viper.Set("accepted-policy-oids", []string{x509.PolicyOID.String(), "1.2.3.4.5"})
 				viper.Set("allow-custom-extensions", true)
 			})
 
@@ -394,7 +394,7 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	includeCerts := false
 	hashFunc := crypto.SHA256
 	hashName := "sha256"
-	oidStr := "1.3.6.1.4.1.57264.2"
+	oidStr := x509.PolicyOID.String()
 
 	opts := ts.RequestOptions{
 		Certificates: includeCerts,

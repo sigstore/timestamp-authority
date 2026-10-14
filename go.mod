@@ -5,7 +5,7 @@ go 1.27
 require (
 	cloud.google.com/go/security v1.28.0
 	github.com/beevik/ntp v1.6.0
-	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352
+	github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-openapi/errors v0.22.9

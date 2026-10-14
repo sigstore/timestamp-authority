@@ -16,6 +16,7 @@ package x509
 
 import (
 	"crypto"
+	"crypto/mldsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
@@ -28,6 +29,13 @@ var (
 	// EKUOID is the Extended Key Usage OID, per RFC 5280
 	EKUOID             = asn1.ObjectIdentifier{2, 5, 29, 37}
 	EKUTimestampingOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 8}
+
+	// PolicyOID is the sigstore TSA's baseline time-stamp policy OID, used by
+	// classical signers.
+	PolicyOID = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	// PolicyOIDPQC is the sigstore TSA's post-quantum time-stamp policy OID,
+	// used by ML-DSA signers.
+	PolicyOIDPQC = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2, 1}
 )
 
 // VerifyCertChain verifies that the certificate chain is valid for issuing
@@ -117,5 +125,17 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 	}
 
 	// Verify the signer's public key matches the leaf certificate
-	return cryptoutils.EqualKeys(leaf.PublicKey, signer.Public())
+	if err := cryptoutils.EqualKeys(leaf.PublicKey, signer.Public()); err != nil {
+		return err
+	}
+
+	// Verify that the chain does not mix ML-DSA and non-ML-DSA public keys.
+	_, signerIsMLDSA := signer.Public().(*mldsa.PublicKey)
+	for _, c := range certs {
+		if _, certIsMLDSA := c.PublicKey.(*mldsa.PublicKey); certIsMLDSA != signerIsMLDSA {
+			return errors.New("certificate chain must not mix ML-DSA and non-ML-DSA public keys")
+		}
+	}
+
+	return nil
 }

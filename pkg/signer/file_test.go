@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"os"
@@ -66,6 +67,20 @@ func TestNewFileSigner(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	mldsaKey, err := mldsa.GenerateKey(mldsa.MLDSA65())
+	if err != nil {
+		t.Fatal(err)
+	}
+	derMLDSA, err := cryptoutils.MarshalPrivateKeyToEncryptedDER(mldsaKey, cryptoutils.StaticPasswordFunc([]byte(password)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemMLDSA := cryptoutils.PEMEncode(cryptoutils.EncryptedSigstorePrivateKeyPEMType, derMLDSA)
+	mldsaKeyFile := filepath.Join(td, "mldsa-key.pem")
+	if err := os.WriteFile(mldsaKeyFile, pemMLDSA, 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name    string
 		keyPath string
@@ -87,6 +102,12 @@ func TestNewFileSigner(t *testing.T) {
 		{
 			name:    "valid ed25519",
 			keyPath: ed25519KeyFile,
+			keyPass: password,
+			wantErr: false,
+		},
+		{
+			name:    "valid ML-DSA",
+			keyPath: mldsaKeyFile,
 			keyPass: password,
 			wantErr: false,
 		},

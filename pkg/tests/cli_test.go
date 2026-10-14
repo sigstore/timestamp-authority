@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/timestamp-authority/v2/pkg/client"
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 )
 
 const (
@@ -84,7 +85,7 @@ func TestVerify_CertificateChainFlag(t *testing.T) {
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
-	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	policyOID := tsx509.PolicyOID
 	tsrContainsCerts := true
 
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
@@ -107,7 +108,7 @@ func TestVerify_RootAndIntermediateCertificateFlags(t *testing.T) {
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
-	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	policyOID := tsx509.PolicyOID
 	tsrContainsCerts := true
 
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
@@ -130,7 +131,7 @@ func TestVerify_AllCertFlagsIncluded(t *testing.T) {
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
-	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	policyOID := tsx509.PolicyOID
 	tsrContainsCerts := true
 
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
@@ -153,7 +154,7 @@ func TestVerify_NoCertFlagsIncluded(t *testing.T) {
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
-	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	policyOID := tsx509.PolicyOID
 	tsrContainsCerts := true
 
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
@@ -173,7 +174,7 @@ func TestVerify_PassLeafCertificate(t *testing.T) {
 	// from pkg/signer/memory.go
 	commonName := "Test TSA Timestamping"
 	nonce := big.NewInt(456)
-	policyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	policyOID := tsx509.PolicyOID
 	tsrContainsCerts := false
 
 	tsrPath := getTimestamp(t, restapiURL, artifactContent, nonce, policyOID, tsrContainsCerts)
@@ -286,7 +287,7 @@ func getTimestamp(t *testing.T, url string, artifactContent string, nonce *big.I
 		tsNonce = nonce
 	}
 
-	tsPolicyOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2}
+	tsPolicyOID := tsx509.PolicyOID
 	if policyOID != nil {
 		tsPolicyOID = policyOID
 	}
