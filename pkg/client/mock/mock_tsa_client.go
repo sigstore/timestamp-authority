@@ -21,7 +21,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
-	"encoding/asn1"
 	"fmt"
 	"io"
 	"time"
@@ -35,6 +34,7 @@ import (
 	"github.com/sigstore/timestamp-authority/v2/pkg/generated/client"
 	ts "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/v2/pkg/signer"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 )
 
 // TSAClient creates RFC3161 timestamps and implements client.TimestampAuthority.
@@ -125,7 +125,7 @@ func (c *TSAClient) GetTimestampResponse(params *ts.GetTimestampResponseParams, 
 		HashAlgorithm:     hashAlg,
 		HashedMessage:     hashedMessage,
 		Nonce:             nonce,
-		Policy:            asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2},
+		Policy:            tsx509.PolicyOID,
 		Ordering:          false,
 		Accuracy:          duration,
 		Qualified:         false,

@@ -18,6 +18,7 @@ package verification
 import (
 	"bytes"
 	"crypto"
+	"crypto/mldsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
@@ -29,6 +30,8 @@ import (
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/pkg/errors"
+
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 )
 
 var (
@@ -213,6 +216,21 @@ func verifyLeafAndIntermediatesTimestampingEKU(leafCert *x509.Certificate, verif
 	return nil
 }
 
+func verifyPolicyOIDMatchesSignerKeyType(policyOID asn1.ObjectIdentifier, signerCert *x509.Certificate) error {
+	_, isMLDSASigner := signerCert.PublicKey.(*mldsa.PublicKey)
+	switch {
+	case policyOID.Equal(tsx509.PolicyOID):
+		if isMLDSASigner {
+			return fmt.Errorf("policy OID %s does not support ML-DSA signers, expected %s", policyOID, tsx509.PolicyOIDPQC)
+		}
+	case policyOID.Equal(tsx509.PolicyOIDPQC):
+		if !isMLDSASigner {
+			return fmt.Errorf("policy OID %s requires an ML-DSA signer", policyOID)
+		}
+	}
+	return nil
+}
+
 // Verify the OID of the TSR matches an expected OID
 func verifyOID(oid []int, opts VerifyOpts) error {
 	if opts.OID == nil {
@@ -289,6 +307,10 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	}
 
 	if err = verifyOID(ts.Policy, opts); err != nil {
+		return nil, err
+	}
+
+	if err = verifyPolicyOIDMatchesSignerKeyType(ts.Policy, signerCert); err != nil {
 		return nil, err
 	}
 

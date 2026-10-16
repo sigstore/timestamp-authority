@@ -291,6 +291,17 @@ In the TSA disclosure statement made available to subscribers and relying
 parties, a TSA shall also include the identifier for the time-stamp policy
 to indicate its conformance.
 
+A separate, experimental post-quantum variant of this policy is identified by
+the object-identifier `1.3.6.1.4.1.57264.2.1`. This policy OID is used when the
+TSA signs time-stamp tokens with an ML-DSA key instead of a classical key, and
+requires the TSA to be run with `--experimental-enable-pqc`. A TSA shall not
+issue time-stamp tokens under `1.3.6.1.4.1.57264.2` with an ML-DSA signer, nor
+under `1.3.6.1.4.1.57264.2.1` with a non-ML-DSA signer.
+
+If `--default-policy-oid` and `--accepted-policy-oids` are left unset, the TSA
+selects the appropriate policy OID automatically based on whether
+`--experimental-enable-pqc` is set.
+
 ## 5.3. User Community and Applicability
 
 This service aims to provide binary transparency. This policy may be used for
