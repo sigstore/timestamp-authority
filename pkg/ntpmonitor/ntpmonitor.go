@@ -43,6 +43,10 @@ var (
 	// ErrDeltaTooSmall is referring to when the max delta time is
 	// smaller than the request timeout which can give unstable behaviour.
 	ErrDeltaTooSmall = errors.New("delta is too small")
+
+	// ErrNoRequestAttempts is returned when no valid number of request
+	// attempts is configured.
+	ErrNoRequestAttempts = errors.New("no valid request attempts set")
 )
 
 type serverResponses struct {
@@ -99,6 +103,10 @@ func NewFromConfigWithClient(cfg *Config, client NTPClient) (*NTPMonitor, error)
 
 	if cfg.RequestTimeout < 1 || cfg.MaxTimeDelta < cfg.RequestTimeout {
 		return nil, ErrDeltaTooSmall
+	}
+
+	if cfg.RequestAttempts < 1 {
+		return nil, ErrNoRequestAttempts
 	}
 
 	return &NTPMonitor{cfg: cfg, ntpClient: client}, nil
