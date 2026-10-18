@@ -123,8 +123,29 @@ func TestNewFromConfig(t *testing.T) {
 		t.Errorf("expected error %s got %s", ErrDeltaTooSmall, err)
 	}
 
-	// Valid config
+	// Request attempts is zero, which would make queryNTPServer loop
+	// forever: it starts at one and only stops on equality.
 	cfg.MaxTimeDelta = 1
+	nm, err = NewFromConfig(&cfg)
+	if nm != nil {
+		t.Error("non expected monitor returned")
+	}
+	if err != ErrNoRequestAttempts {
+		t.Errorf("expected error %s got %s", ErrNoRequestAttempts, err)
+	}
+
+	// Request attempts is negative
+	cfg.RequestAttempts = -1
+	nm, err = NewFromConfig(&cfg)
+	if nm != nil {
+		t.Error("non expected monitor returned")
+	}
+	if err != ErrNoRequestAttempts {
+		t.Errorf("expected error %s got %s", ErrNoRequestAttempts, err)
+	}
+
+	// Valid config
+	cfg.RequestAttempts = 1
 	nm, err = NewFromConfig(&cfg)
 	if nm == nil {
 		t.Error("expected monitor returned")
