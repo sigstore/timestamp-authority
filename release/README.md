@@ -1,49 +1,46 @@
-# Release
+# Releasing timestamp authority server and client
 
-This directory contain the files and scripts to run a timestamp release.
+## Publishing updated binaries and container
 
-## Cutting a timestamp Release
+This guide assumes that `upstream` references github.com/sigstore/timestamp-authority.
 
-1. Release notes: Create a PR to update and review release notes in [CHANGELOG.md](/CHANGELOG.md).
-  
-- Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
+Create and push a new tag. Note that you can't create a tag without creating a release in the GitHub UI, so you'll need to do this locally.
 
-You can get a list of pull requests since the last release by substituting in the date of the last release and running:
-
-```shell
-git log --pretty="* %s" --after="YYYY-MM-DD"
 ```
-
-and a list of authors by running:
-
-```shell
-git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
-```
-
-1. Merge the CHANGELOG.md pull request
-
-1. Sync your repository's main branch and tag the repository
-
-```shell
-export RELEASE_TAG=<release version, eg "v1.1.0">
+git pull upstream main
+export RELEASE_TAG=v1.2.3 # Specify version
 git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
 git push upstream ${RELEASE_TAG}
 ```
 
-Note that `upstream` should be the upstream Sigstore repository. You may have to change this if you've configured remotes.
+After the tag is pushed, two workflows will kick off:
 
-Add the Sigstore repository as `upstream` with the following:
+* [cut-release](https://github.com/sigstore/timestamp-authority/actions/workflows/release.yaml)
+* [Create and publish Docker image](https://github.com/sigstore/timestamp-authority/actions/workflows/build_container.yml)
 
-```shell
-git remote add upstream git@github.com:sigstore/timestamp-authority.git
+Once "cut-release" finishes, go to [Releases](https://github.com/sigstore/timestamp-authority/releases), select
+the latest draft release, add release notes, and publish it.
+
+## Updating the infrastructure
+
+Update the [Helm chart](https://github.com/sigstore/helm-charts/tree/main/charts/tsa) to the latest version.
+Follow [this example](https://github.com/sigstore/helm-charts/pull/1148).
+
+Get the container digest:
+
+```
+crane digest ghcr.io/sigstore/timestamp-server:v1.2.3 # Specify version
 ```
 
-1. This will trigger a GitHub Workflow that will build the binaries and the images.
+Update `charts/tsa/values.yaml` with the new container version and digest.
 
-1. Go to [releases](https://github.com/sigstore/timestamp-authority/releases) and edit the draft release.
-   The tag should be selected automatically. Edit the release notes, copying in the changelog.
-   Click "Publish Release".
+Update `charts/tsa/Chart.yaml`, bumping `version`, `appVersion`, and the image reference.
 
-1. Send an announcement email to `sigstore-dev@googlegroups.com` mailing list
+Run `helm-docs -g charts/tsa` to update the README.
 
-1. Post on the `#general` Slack channel
+Create a PR and wait for an oncall engineer to approve and merge.
+
+Afterwards, update the [scaffold](https://github.com/sigstore/helm-charts/tree/main/charts/scaffold)
+chart with the bumped TSA chart version.
+
+An oncall engineer also needs to update the scaffold chart version on the PGI repo.
