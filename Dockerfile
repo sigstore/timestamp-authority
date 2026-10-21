@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Debian 13 (Trixie) image to build binary for distroless/static-debian13
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie@sha256:1896654cfc5c2b5ad74c07f29cb36f5d2d1cbed42e3054070fbfe444e521e83c AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV APP_ROOT=/opt/app-root
@@ -43,7 +43,7 @@ COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-
 CMD ["timestamp-server", "serve"]
 
 # Local deployment build (includes a shell and curl)
-FROM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS local-deploy
+FROM golang:1.27.3-trixie@sha256:1896654cfc5c2b5ad74c07f29cb36f5d2d1cbed42e3054070fbfe444e521e83c AS local-deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
 # Set the binary as the entrypoint of the container
@@ -77,7 +77,7 @@ ARG SERVER_LDFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o timestamp-server_debug ./cmd/timestamp-server
 
 # Multi-stage debugger build
-FROM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS debug
+FROM golang:1.27.3-trixie@sha256:1896654cfc5c2b5ad74c07f29cb36f5d2d1cbed42e3054070fbfe444e521e83c AS debug
 ARG TARGETOS
 ARG TARGETARCH
 # Copy dlv binary, either from bin/ when the build and target platform are the same, or
