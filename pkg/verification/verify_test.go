@@ -38,6 +38,8 @@ import (
 	"github.com/sigstore/timestamp-authority/v2/pkg/client/mock"
 	tsatimestamp "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
 	"github.com/sigstore/timestamp-authority/v2/pkg/signer"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
+	"github.com/sigstore/timestamp-authority/v2/pkg/x509/testutils"
 )
 
 func TestVerifyArtifactHashedMessages(t *testing.T) {
@@ -541,6 +543,57 @@ func TestVerifyIntermediateExtendedKeyUsage(t *testing.T) {
 	}
 }
 
+func TestVerifyPolicyOIDMatchesSignerKeyType(t *testing.T) {
+	ecdsaRootCert, ecdsaRootKey, err := testutils.GenerateRootCa()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ecdsaLeafCert, _, err := testutils.GenerateLeafCert(ecdsaRootCert, ecdsaRootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mldsaRootCert, mldsaRootKey, err := testutils.GenerateMLDSARootCa()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mldsaLeafCert, _, err := testutils.GenerateMLDSALeafCert(mldsaRootCert, mldsaRootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+
+	tests := []struct {
+		name           string
+		policyOID      asn1.ObjectIdentifier
+		signerCert     *x509.Certificate
+		verifiedChains [][]*x509.Certificate
+		expectErr      bool
+	}{
+		{"non-PQC OID with classical signer", tsx509.PolicyOID, ecdsaLeafCert, [][]*x509.Certificate{{ecdsaLeafCert, ecdsaRootCert}}, false},
+		{"non-PQC OID with ML-DSA signer", tsx509.PolicyOID, mldsaLeafCert, [][]*x509.Certificate{{mldsaLeafCert, mldsaRootCert}}, true},
+		{"PQC OID with classical signer", tsx509.PolicyOIDPQC, ecdsaLeafCert, [][]*x509.Certificate{{ecdsaLeafCert, ecdsaRootCert}}, true},
+		{"PQC OID with ML-DSA signer", tsx509.PolicyOIDPQC, mldsaLeafCert, [][]*x509.Certificate{{mldsaLeafCert, mldsaRootCert}}, false},
+		{"custom OID with classical signer", customOID, ecdsaLeafCert, [][]*x509.Certificate{{ecdsaLeafCert, ecdsaRootCert}}, false},
+		{"custom OID with ML-DSA signer", customOID, mldsaLeafCert, [][]*x509.Certificate{{mldsaLeafCert, mldsaRootCert}}, false},
+		{"non-PQC OID with classical signer and ML-DSA root", tsx509.PolicyOID, ecdsaLeafCert, [][]*x509.Certificate{{ecdsaLeafCert, mldsaRootCert}}, true},
+		{"PQC OID with with ML-DSA signer and classical root", tsx509.PolicyOIDPQC, mldsaLeafCert, [][]*x509.Certificate{{mldsaLeafCert, ecdsaRootCert}}, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := verifyPolicyOIDMatchesSignerKeyType(tc.policyOID, tc.signerCert, tc.verifiedChains)
+			if tc.expectErr && err == nil {
+				t.Errorf("expected an error, got nil")
+			}
+			if !tc.expectErr && err != nil {
+				t.Errorf("expected no error, got: %v", err)
+			}
+		})
+	}
+}
+
 func createCertChainAndSigner() ([]*x509.Certificate, *signature.ECDSASignerVerifier, error) {
 	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 	if err != nil {
@@ -576,7 +629,7 @@ func createSignedTimestamp(certChain []*x509.Certificate, sv *signature.ECDSASig
 		HashAlgorithm:     req.HashAlgorithm,
 		HashedMessage:     req.HashedMessage,
 		Time:              time.Now(),
-		Policy:            asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 2},
+		Policy:            tsx509.PolicyOID,
 		Ordering:          false,
 		Qualified:         false,
 		AddTSACertificate: req.Certificates,

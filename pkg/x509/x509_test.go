@@ -38,6 +38,67 @@ func TestVerifyCertChain(t *testing.T) {
 		t.Fatalf("unexpected failure verifying certificate chain: %v", err)
 	}
 
+	// success with an all-ML-DSA chain (leaf, intermediate, and root)
+	mldsaRootCert, mldsaRootKey, err := testutils.GenerateMLDSARootCa()
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA root certificate: %v", err)
+	}
+	mldsaSubCert, mldsaSubKey, err := testutils.GenerateMLDSASubordinateCa(mldsaRootCert, mldsaRootKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA intermediate certificate: %v", err)
+	}
+	mldsaChainLeafCert, mldsaChainLeafKey, err := testutils.GenerateMLDSALeafCert(mldsaSubCert, mldsaSubKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating ML-DSA leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{mldsaChainLeafCert, mldsaSubCert, mldsaRootCert}, mldsaChainLeafKey, true); err != nil {
+		t.Fatalf("unexpected failure verifying all-ML-DSA certificate chain: %v", err)
+	}
+
+	// failure: ML-DSA leaf under a non-ML-DSA (ECDSA) intermediate and root
+	mixedLeafCert, mixedLeafKey, err := testutils.GenerateMLDSALeafCert(subCert, subKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating mixed-chain ML-DSA leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{mixedLeafCert, subCert, rootCert}, mixedLeafKey, true); err == nil || !strings.Contains(err.Error(), "must not mix ML-DSA") {
+		t.Fatalf("expected failure verifying a chain mixing ML-DSA and non-ML-DSA public keys: %v", err)
+	}
+
+	// failure: non-ML-DSA (ECDSA) leaf under an ML-DSA intermediate and root
+	mixedMLDSALeafCert, mixedMLDSALeafKey, err := testutils.GenerateLeafCert(mldsaSubCert, mldsaSubKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating mixed-chain ECDSA leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{mixedMLDSALeafCert, mldsaSubCert, mldsaRootCert}, mixedMLDSALeafKey, true); err == nil || !strings.Contains(err.Error(), "must not mix ML-DSA") {
+		t.Fatalf("expected failure verifying a chain mixing non-ML-DSA and ML-DSA public keys: %v", err)
+	}
+
+	// failure: ECDSA leaf and root, but an ML-DSA intermediate in between
+	oddMLDSASubCert, oddMLDSASubKey, err := testutils.GenerateMLDSASubordinateCa(rootCert, rootKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating odd-intermediate ML-DSA certificate: %v", err)
+	}
+	oddLeafCert, oddLeafKey, err := testutils.GenerateLeafCert(oddMLDSASubCert, oddMLDSASubKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating odd-intermediate chain leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{oddLeafCert, oddMLDSASubCert, rootCert}, oddLeafKey, true); err == nil || !strings.Contains(err.Error(), "must not mix ML-DSA") {
+		t.Fatalf("expected failure verifying a chain with an ML-DSA intermediate between ECDSA leaf and root: %v", err)
+	}
+
+	// failure: ML-DSA leaf and root, but an ECDSA intermediate in between
+	oddECDSASubCert, oddECDSASubKey, err := testutils.GenerateSubordinateCa(mldsaRootCert, mldsaRootKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating odd-intermediate ECDSA certificate: %v", err)
+	}
+	oddMLDSALeafCert, oddMLDSALeafKey, err := testutils.GenerateMLDSALeafCert(oddECDSASubCert, oddECDSASubKey)
+	if err != nil {
+		t.Fatalf("unexpected failure generating odd-intermediate chain ML-DSA leaf certificate: %v", err)
+	}
+	if err := VerifyCertChain([]*x509.Certificate{oddMLDSALeafCert, oddECDSASubCert, mldsaRootCert}, oddMLDSALeafKey, true); err == nil || !strings.Contains(err.Error(), "must not mix ML-DSA") {
+		t.Fatalf("expected failure verifying a chain with an ECDSA intermediate between ML-DSA leaf and root: %v", err)
+	}
+
 	// failure: not enough certificates
 	if err := VerifyCertChain([]*x509.Certificate{leafCert}, leafKey, true); err == nil || !strings.Contains(err.Error(), "must contain at least two") {
 		t.Fatalf("expected failure verifying certificate chain: %v", err)

@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"fmt"
 	"strings"
@@ -38,6 +39,19 @@ const MemoryScheme = "memory"
 const FileScheme = "file"
 
 func NewCryptoSigner(ctx context.Context, hash crypto.Hash, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
+	s, err := newCryptoSigner(ctx, hash, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := s.Public().(*mldsa.PublicKey); ok && hash != crypto.SHA512 {
+		return nil, fmt.Errorf("ML-DSA signers require --timestamp-signer-hash=sha512, got %s", hash)
+	}
+
+	return s, nil
+}
+
+func newCryptoSigner(ctx context.Context, hash crypto.Hash, signer, kmsKey, tinkKmsKey, tinkKeysetPath, hcVaultToken, fileSignerPath, fileSignerPasswd string) (crypto.Signer, error) {
 	switch signer {
 	case MemoryScheme:
 		sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)

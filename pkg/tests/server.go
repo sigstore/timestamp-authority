@@ -24,14 +24,15 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/timestamp-authority/v2/pkg/server"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 )
 
 func createServer(t *testing.T, flagsToSet ...func()) string {
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
-	viper.Set("accepted-policy-oids", []string{"1.3.6.1.4.1.57264.2"})
+	viper.Set("accepted-policy-oids", []string{tsx509.PolicyOID.String()})
 	viper.Set("allow-custom-extensions", false)
-	viper.Set("default-policy-oid", "1.3.6.1.4.1.57264.2")
+	viper.Set("default-policy-oid", tsx509.PolicyOID.String())
 	for _, flag := range flagsToSet {
 		flag()
 	}
