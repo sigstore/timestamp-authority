@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/mldsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
 	"hash"
@@ -37,7 +38,37 @@ import (
 var (
 	// EKUOID is the Extended Key Usage OID, per RFC 5280
 	EKUOID = asn1.ObjectIdentifier{2, 5, 29, 37}
+	// signingCertificateOID is the id-aa-signingCertificate attribute OID, per RFC 2634 5.4
+	signingCertificateOID = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 12}
+	// signingCertificateV2OID is the id-aa-signingCertificateV2 attribute OID, per RFC 5035 3
+	signingCertificateV2OID = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 47}
 )
+
+// SigningCertificate and ESSCertID, per RFC 2634 5.4. The certificate hash is
+// always SHA-1. Only the first identifier is checked, so the remaining fields
+// are left unparsed.
+type essCertID struct {
+	CertHash     []byte
+	IssuerSerial asn1.RawValue `asn1:"optional"`
+}
+
+type signingCertificate struct {
+	Certs    []essCertID
+	Policies asn1.RawValue `asn1:"optional"`
+}
+
+// SigningCertificateV2 and ESSCertIDv2, per RFC 5035 3 and 4. The hash
+// algorithm defaults to SHA-256 when absent.
+type essCertIDv2 struct {
+	HashAlgorithm pkix.AlgorithmIdentifier `asn1:"optional"`
+	CertHash      []byte
+	IssuerSerial  asn1.RawValue `asn1:"optional"`
+}
+
+type signingCertificateV2 struct {
+	Certs    []essCertIDv2
+	Policies asn1.RawValue `asn1:"optional"`
+}
 
 // VerifyOpts contains verification options for a RFC3161 timestamp
 type VerifyOpts struct {
@@ -420,12 +451,92 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) (*x509.Certifi
 		return nil, nil, fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
 	}
 
+	if err := verifySigningCertificate(p7Message, signerCert); err != nil {
+		return nil, nil, fmt.Errorf("error while verifying signing certificate attribute: %w", err)
+	}
+
 	chains, err := signerCert.Verify(x509Opts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while verifying signer certificate chain: %w", err)
 	}
 
 	return signerCert, chains, nil
+}
+
+func essCertIDv2HashAlgorithm(alg pkix.AlgorithmIdentifier) (crypto.Hash, error) {
+	switch {
+	case len(alg.Algorithm) == 0, alg.Algorithm.Equal(pkcs7.OIDDigestAlgorithmSHA256):
+		return crypto.SHA256, nil
+	case alg.Algorithm.Equal(pkcs7.OIDDigestAlgorithmSHA384):
+		return crypto.SHA384, nil
+	case alg.Algorithm.Equal(pkcs7.OIDDigestAlgorithmSHA512):
+		return crypto.SHA512, nil
+	case alg.Algorithm.Equal(pkcs7.OIDDigestAlgorithmSHA1):
+		return crypto.SHA1, nil
+	}
+	return 0, fmt.Errorf("unsupported ESSCertIDv2 hash algorithm %s", alg.Algorithm)
+}
+
+// Verify that the signed SigningCertificate or SigningCertificateV2 attribute
+// identifies the certificate used to verify the token signature, per
+// RFC 3161 2.4.2 and RFC 5035 4. The signer certificate is picked out of the
+// unsigned certificate set by the unsigned issuer and serial number in
+// SignerInfo, so this attribute is the only signed binding between the
+// signature and the certificate that the chain, EKU and subject checks are
+// then run against.
+func verifySigningCertificate(p7 *pkcs7.PKCS7, signerCert *x509.Certificate) error {
+	if len(p7.Signers) != 1 {
+		return errors.New("expected exactly one signer")
+	}
+
+	var found bool
+	for _, attr := range p7.Signers[0].AuthenticatedAttributes {
+		var hashAlg crypto.Hash
+		var certHash []byte
+		switch {
+		case attr.Type.Equal(signingCertificateOID):
+			var sc signingCertificate
+			if _, err := asn1.Unmarshal(attr.Value.Bytes, &sc); err != nil {
+				return fmt.Errorf("failed to parse SigningCertificate attribute: %w", err)
+			}
+			if len(sc.Certs) == 0 {
+				return errors.New("SigningCertificate attribute does not identify a certificate")
+			}
+			hashAlg, certHash = crypto.SHA1, sc.Certs[0].CertHash
+		case attr.Type.Equal(signingCertificateV2OID):
+			var sc signingCertificateV2
+			if _, err := asn1.Unmarshal(attr.Value.Bytes, &sc); err != nil {
+				return fmt.Errorf("failed to parse SigningCertificateV2 attribute: %w", err)
+			}
+			if len(sc.Certs) == 0 {
+				return errors.New("SigningCertificateV2 attribute does not identify a certificate")
+			}
+			var err error
+			if hashAlg, err = essCertIDv2HashAlgorithm(sc.Certs[0].HashAlgorithm); err != nil {
+				return err
+			}
+			certHash = sc.Certs[0].CertHash
+		default:
+			continue
+		}
+
+		if !hashAlg.Available() {
+			return fmt.Errorf("hash algorithm %s is not available", hashAlg)
+		}
+		h := hashAlg.New()
+		if _, err := h.Write(signerCert.Raw); err != nil {
+			return fmt.Errorf("failed to hash signer certificate: %w", err)
+		}
+		if !bytes.Equal(h.Sum(nil), certHash) {
+			return errors.New("signing certificate attribute does not match the signer certificate")
+		}
+		found = true
+	}
+
+	if !found {
+		return errors.New("token does not contain a signing certificate attribute")
+	}
+	return nil
 }
 
 // Verify that the TSR's hashed message matches the digest of the artifact to be timestamped
