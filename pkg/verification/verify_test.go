@@ -18,8 +18,10 @@ package verification
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -32,6 +34,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -816,6 +819,175 @@ func TestVerifyTSRWithChain(t *testing.T) {
 				t.Errorf("unexpectedly failed \nExpected verifyTSRWithChain to successfully verify certificate chain, err: %v", err)
 			} else if !tc.expectVerifySuccess && err == nil {
 				t.Errorf("unexpectedly passed \nExpected verifyTSRWithChain to fail verification")
+			}
+		})
+	}
+}
+
+func createTimestampingLeaf(t *testing.T, parent *x509.Certificate, parentKey crypto.Signer, pub crypto.PublicKey, serial int64, commonName string) *x509.Certificate {
+	t.Helper()
+
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
+	if err != nil {
+		t.Fatalf("failed to marshal EKU extension: %v", err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(serial),
+		Subject: pkix.Name{
+			CommonName:   commonName,
+			Organization: []string{"local"},
+		},
+		NotBefore: time.Now().Add(-1 * time.Minute),
+		NotAfter:  time.Now().Add(time.Hour),
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+		IsCA:      false,
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       tsx509.EKUOID,
+				Critical: true,
+				Value:    timestampExt,
+			},
+		},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, parent, pub, parentKey)
+	if err != nil {
+		t.Fatalf("failed to create leaf certificate: %v", err)
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("failed to parse leaf certificate: %v", err)
+	}
+	return cert
+}
+
+// resignTimestampResponse signs the TSTInfo of an existing response again
+// with the given certificate and key, carrying only the supplied extra signed
+// attributes, and wraps the token in a new TimeStampResp.
+func resignTimestampResponse(t *testing.T, tsrBytes []byte, cert *x509.Certificate, key crypto.Signer, attrs []pkcs7.Attribute) []byte {
+	t.Helper()
+
+	ts, err := timestamp.ParseResponse(tsrBytes)
+	if err != nil {
+		t.Fatalf("failed to parse timestamp response: %v", err)
+	}
+	p7, err := pkcs7.Parse(ts.RawToken)
+	if err != nil {
+		t.Fatalf("failed to parse timestamp token: %v", err)
+	}
+	sd, err := pkcs7.NewSignedData(p7.Content)
+	if err != nil {
+		t.Fatalf("failed to create signed data: %v", err)
+	}
+	sd.SetDigestAlgorithm(pkcs7.OIDDigestAlgorithmSHA256)
+	sd.SetContentType(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 1, 4})
+	sd.GetSignedData().Version = 3
+	if err := sd.AddSigner(cert, key, pkcs7.SignerInfoConfig{ExtraSignedAttributes: attrs}); err != nil {
+		t.Fatalf("failed to sign timestamp token: %v", err)
+	}
+	token, err := sd.Finish()
+	if err != nil {
+		t.Fatalf("failed to finish timestamp token: %v", err)
+	}
+	resp, err := asn1.Marshal(struct {
+		Status         struct{ Status int }
+		TimeStampToken asn1.RawValue
+	}{TimeStampToken: asn1.RawValue{FullBytes: token}})
+	if err != nil {
+		t.Fatalf("failed to marshal timestamp response: %v", err)
+	}
+	return resp
+}
+
+// The signed SigningCertificateV2 attribute must identify the certificate the
+// token signature is verified with, per RFC 3161 2.4.2 and RFC 5035 4. The
+// signer certificate is otherwise selected only by the unsigned SignerInfo
+// issuer and serial number.
+func TestVerifyTSRWithChainSigningCertificateAttribute(t *testing.T) {
+	root, rootKey, err := testutils.GenerateRootCa()
+	if err != nil {
+		t.Fatalf("failed to generate root CA: %v", err)
+	}
+	tsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate TSA key: %v", err)
+	}
+	// two timestamping certificates for the same TSA key
+	leafA := createTimestampingLeaf(t, root, rootKey, tsaKey.Public(), 1, "TSA A")
+	leafB := createTimestampingLeaf(t, root, rootKey, tsaKey.Public(), 2, "TSA B")
+
+	artifact := "TestRequest"
+	digest := sha256.Sum256([]byte(artifact))
+	tsTemplate := timestamp.Timestamp{
+		HashAlgorithm:     crypto.SHA256,
+		HashedMessage:     digest[:],
+		Time:              time.Now(),
+		Policy:            tsx509.PolicyOID,
+		AddTSACertificate: true,
+	}
+	tsr, err := tsTemplate.CreateResponseWithOpts(leafA, tsaKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("failed to create timestamp response: %v", err)
+	}
+
+	signingCertAttr := func(cert *x509.Certificate) pkcs7.Attribute {
+		certHash := sha256.Sum256(cert.Raw)
+		value, err := asn1.Marshal(signingCertificateV2{Certs: []essCertIDv2{{CertHash: certHash[:]}}})
+		if err != nil {
+			t.Fatalf("failed to marshal SigningCertificateV2: %v", err)
+		}
+		return pkcs7.Attribute{Type: signingCertificateV2OID, Value: asn1.RawValue{FullBytes: value}}
+	}
+
+	type test struct {
+		name           string
+		tsr            []byte
+		commonName     string
+		expectedErrMsg string
+	}
+
+	tests := []test{
+		{
+			name:       "attribute matches the signer certificate",
+			tsr:        tsr,
+			commonName: "TSA A",
+		},
+		{
+			name:       "attribute matches the signer certificate after re-signing",
+			tsr:        resignTimestampResponse(t, tsr, leafB, tsaKey, []pkcs7.Attribute{signingCertAttr(leafB)}),
+			commonName: "TSA B",
+		},
+		{
+			name:           "attribute identifies another certificate for the same key",
+			tsr:            resignTimestampResponse(t, tsr, leafB, tsaKey, []pkcs7.Attribute{signingCertAttr(leafA)}),
+			commonName:     "TSA B",
+			expectedErrMsg: "does not match the signer certificate",
+		},
+		{
+			name:           "attribute is missing",
+			tsr:            resignTimestampResponse(t, tsr, leafA, tsaKey, nil),
+			commonName:     "TSA A",
+			expectedErrMsg: "does not contain a signing certificate attribute",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := VerifyOpts{
+				Roots:      []*x509.Certificate{root},
+				CommonName: tc.commonName,
+			}
+			_, err := VerifyTimestampResponse(tc.tsr, strings.NewReader(artifact), opts)
+			if tc.expectedErrMsg == "" {
+				if err != nil {
+					t.Fatalf("expected verification to pass: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("expected verification to fail")
+			}
+			if !strings.Contains(err.Error(), tc.expectedErrMsg) {
+				t.Fatalf("expected error message %s, got %s", tc.expectedErrMsg, err.Error())
 			}
 		})
 	}
