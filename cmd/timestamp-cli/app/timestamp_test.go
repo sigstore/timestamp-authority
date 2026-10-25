@@ -16,8 +16,14 @@
 package app
 
 import (
+	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 
+	"github.com/digitorus/timestamp"
+	"github.com/sigstore/timestamp-authority/v2/pkg/client/mock"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/goleak"
@@ -99,9 +105,99 @@ func TestTimestampFlags(t *testing.T) {
 		if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
 			t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
 		}
-		if _, err := createRequestFromFlags(); (err == nil) != tc.expectRequestSuccess {
+		if _, _, err := createRequestFromFlags(); (err == nil) != tc.expectRequestSuccess {
 			t.Errorf("unexpected result creating timestamp request '%v': %v", tc.caseDesc, err)
 			continue
+		}
+	}
+}
+
+func TestVerifyResponseNonce(t *testing.T) {
+	type test struct {
+		caseDesc      string
+		requestNonce  *big.Int
+		responseNonce *big.Int
+		expectSuccess bool
+	}
+
+	tests := []test{
+		{
+			caseDesc:      "no nonce requested",
+			responseNonce: big.NewInt(1),
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "response echoes the request nonce",
+			requestNonce:  big.NewInt(12345),
+			responseNonce: big.NewInt(12345),
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "response missing the request nonce",
+			requestNonce:  big.NewInt(12345),
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "response nonce does not match the request nonce",
+			requestNonce:  big.NewInt(12345),
+			responseNonce: big.NewInt(54321),
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		err := verifyResponseNonce(&timestamp.Timestamp{Nonce: tc.responseNonce}, tc.requestNonce)
+		if (err == nil) != tc.expectSuccess {
+			t.Errorf("unexpected result verifying nonce '%v': %v", tc.caseDesc, err)
+		}
+	}
+}
+
+func TestFetchTimestampRejectsUnrelatedNonce(t *testing.T) {
+	// The mock TSA client puts a nonce of its own in the response instead of
+	// echoing the one from the request, like a TSA that ignores the nonce or
+	// a replayed response for the same artifact.
+	tsClient, err := mock.NewTSAClient(mock.TSAClientOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error creating mock TSA client: %v", err)
+	}
+
+	type test struct {
+		caseDesc      string
+		nonce         bool
+		expectSuccess bool
+	}
+
+	tests := []test{
+		{
+			caseDesc:      "nonce requested but not echoed",
+			nonce:         true,
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "no nonce requested",
+			nonce:         false,
+			expectSuccess: true,
+		},
+	}
+
+	for _, tc := range tests {
+		var blankCmd = &cobra.Command{}
+		addTimestampFlags(blankCmd)
+		out := filepath.Join(t.TempDir(), "response.tsr")
+		args := []string{"--artifact", "timestamp.go", "--nonce=" + strconv.FormatBool(tc.nonce), "--out", out}
+
+		if err := blankCmd.ParseFlags(args); err != nil {
+			t.Fatalf("unexpected result parsing '%v': %v", tc.caseDesc, err)
+		}
+		if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
+			t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
+		}
+		if _, err := fetchTimestamp(tsClient.Timestamp); (err == nil) != tc.expectSuccess {
+			t.Errorf("unexpected result fetching timestamp '%v': %v", tc.caseDesc, err)
+		}
+		if _, err := os.Stat(out); (err == nil) != tc.expectSuccess {
+			t.Errorf("unexpected response file state '%v': %v", tc.caseDesc, err)
 		}
 	}
 }

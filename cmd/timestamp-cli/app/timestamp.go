@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -71,11 +72,11 @@ var timestampCmd = &cobra.Command{
 	}),
 }
 
-func createRequestFromFlags() ([]byte, error) {
+func createRequestFromFlags() ([]byte, *big.Int, error) {
 	artifactStr := viper.GetString("artifact")
 	artifactBytes, err := os.ReadFile(filepath.Clean(artifactStr))
 	if err != nil {
-		return nil, fmt.Errorf("error reading request from file: %w", err)
+		return nil, nil, fmt.Errorf("error reading request from file: %w", err)
 	}
 
 	var hash crypto.Hash
@@ -87,7 +88,7 @@ func createRequestFromFlags() ([]byte, error) {
 	case "sha512":
 		hash = crypto.SHA512
 	default:
-		return nil, errors.New("invalid hash algorithm - must be either sha256, sha384, or sha512")
+		return nil, nil, errors.New("invalid hash algorithm - must be either sha256, sha384, or sha512")
 	}
 
 	reqOpts := &timestamp.RequestOptions{
@@ -95,10 +96,11 @@ func createRequestFromFlags() ([]byte, error) {
 		Certificates: viper.GetBool("certificate"),
 	}
 
+	var nonce *big.Int
 	if viper.GetBool("nonce") {
-		nonce, err := cryptoutils.GenerateSerialNumber()
+		nonce, err = cryptoutils.GenerateSerialNumber()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		reqOpts.Nonce = nonce
 	}
@@ -112,7 +114,29 @@ func createRequestFromFlags() ([]byte, error) {
 		reqOpts.TSAPolicyOID = oidInts
 	}
 
-	return timestamp.CreateRequest(bytes.NewReader(artifactBytes), reqOpts)
+	reqBytes, err := timestamp.CreateRequest(bytes.NewReader(artifactBytes), reqOpts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return reqBytes, nonce, nil
+}
+
+// verifyResponseNonce checks that the response carries the nonce sent in the
+// request. RFC 3161 2.4.2 requires the TSA to echo the same nonce value and
+// the requester to reject the response otherwise. The nonce is generated here
+// and never shown to the user, so this is the only place it can be checked.
+func verifyResponseNonce(resp *timestamp.Timestamp, nonce *big.Int) error {
+	if nonce == nil {
+		return nil
+	}
+	if resp.Nonce == nil {
+		return fmt.Errorf("timestamp response does not contain the requested nonce %d", nonce)
+	}
+	if resp.Nonce.Cmp(nonce) != 0 {
+		return fmt.Errorf("timestamp response nonce %d does not match the request nonce %d", resp.Nonce, nonce)
+	}
+	return nil
 }
 
 func runTimestamp() (any, error) {
@@ -127,7 +151,11 @@ func runTimestamp() (any, error) {
 		return nil, err
 	}
 
-	requestBytes, err := createRequestFromFlags()
+	return fetchTimestamp(tsClient.Timestamp)
+}
+
+func fetchTimestamp(tsClient ts.ClientService) (any, error) {
+	requestBytes, nonce, err := createRequestFromFlags()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +165,7 @@ func runTimestamp() (any, error) {
 	params.Request = io.NopCloser(bytes.NewReader(requestBytes))
 
 	var respBytes bytes.Buffer
-	_, _, err = tsClient.Timestamp.GetTimestampResponse(params, &respBytes)
+	_, _, err = tsClient.GetTimestampResponse(params, &respBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +173,11 @@ func runTimestamp() (any, error) {
 	// validate that timestamp is parseable
 	ts, err := timestamp.ParseResponse(respBytes.Bytes())
 	if err != nil {
+		return nil, err
+	}
+
+	// reject a response that does not answer this request before writing it out
+	if err := verifyResponseNonce(ts, nonce); err != nil {
 		return nil, err
 	}
 
