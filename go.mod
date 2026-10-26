@@ -7,7 +7,7 @@ require (
 	github.com/beevik/ntp v1.6.0
 	github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
-	github.com/go-chi/chi/v5 v5.4.0
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-openapi/errors v0.22.9
 	github.com/go-openapi/loads v0.25.3
 	github.com/go-openapi/runtime v0.33.3
