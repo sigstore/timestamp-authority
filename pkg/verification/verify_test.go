@@ -1001,8 +1001,9 @@ func TestVerifyTimestampResponseSignerDigestAlgorithm(t *testing.T) {
 		})
 	}
 
-	// pkcs7 verifies an ecdsa-with-SHA1 signature with SHA-1 even when the
-	// digest algorithm is SHA-256, so the signature algorithm is checked too.
+	// pkcs7 verifies an ecdsa-with-SHA1 or sha1WithRSAEncryption signature
+	// with SHA-1 even when the digest algorithm is SHA-256, so the signature
+	// algorithm is checked too.
 	ts, err := timestamp.ParseResponse(createResponse(crypto.SHA256))
 	if err != nil {
 		t.Fatalf("unexpectedly failed to parse timestamp response: %v", err)
@@ -1014,8 +1015,13 @@ func TestVerifyTimestampResponseSignerDigestAlgorithm(t *testing.T) {
 	if err := verifySignerDigestAlgorithms(p7Message); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	p7Message.Signers[0].DigestEncryptionAlgorithm.Algorithm = pkcs7.OIDDigestAlgorithmECDSASHA1
-	if err := verifySignerDigestAlgorithms(p7Message); !errors.Is(err, ErrWeakHashAlg) {
-		t.Errorf("expected error %v, got %v", ErrWeakHashAlg, err)
+	for _, sigAlg := range []asn1.ObjectIdentifier{
+		pkcs7.OIDDigestAlgorithmECDSASHA1,
+		pkcs7.OIDEncryptionAlgorithmRSASHA1,
+	} {
+		p7Message.Signers[0].DigestEncryptionAlgorithm.Algorithm = sigAlg
+		if err := verifySignerDigestAlgorithms(p7Message); !errors.Is(err, ErrWeakHashAlg) {
+			t.Errorf("signature algorithm %s: expected error %v, got %v", sigAlg, ErrWeakHashAlg, err)
+		}
 	}
 }
