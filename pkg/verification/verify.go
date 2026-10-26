@@ -353,11 +353,42 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	return ts, nil
 }
 
+// Verify the TSR's signers do not use SHA-1. The message imprint hash is
+// checked separately, but the CMS signature covers the signed attributes and
+// the TSTInfo digest with the SignerInfo digest algorithm, so a SHA-1 signer
+// would reduce the token to SHA-1 strength regardless of the imprint.
+func verifySignerDigestAlgorithms(p7Message *pkcs7.PKCS7) error {
+	for _, signer := range p7Message.Signers {
+		digestAlg := signer.DigestAlgorithm.Algorithm
+		switch {
+		case digestAlg.Equal(pkcs7.OIDDigestAlgorithmSHA256),
+			digestAlg.Equal(pkcs7.OIDDigestAlgorithmSHA384),
+			digestAlg.Equal(pkcs7.OIDDigestAlgorithmSHA512):
+		case digestAlg.Equal(pkcs7.OIDDigestAlgorithmSHA1):
+			return fmt.Errorf("TSR signer digest algorithm: %w", ErrWeakHashAlg)
+		default:
+			return fmt.Errorf("TSR signer digest algorithm %s: %w", digestAlg, ErrUnsupportedHashAlg)
+		}
+
+		// pkcs7 verifies ecdsa-with-SHA1 as SHA-1 whatever the digest
+		// algorithm says, so reject the SHA-1 signature OIDs as well.
+		sigAlg := signer.DigestEncryptionAlgorithm.Algorithm
+		if sigAlg.Equal(pkcs7.OIDDigestAlgorithmECDSASHA1) || sigAlg.Equal(pkcs7.OIDEncryptionAlgorithmRSASHA1) {
+			return fmt.Errorf("TSR signature algorithm %s: %w", sigAlg, ErrWeakHashAlg)
+		}
+	}
+	return nil
+}
+
 // Returns the TSA signer certificate after verifying the certificate chain validity.
 func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) (*x509.Certificate, [][]*x509.Certificate, error) {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing hashed message: %w", err)
+	}
+
+	if err := verifySignerDigestAlgorithms(p7Message); err != nil {
+		return nil, nil, err
 	}
 
 	if len(opts.Roots) == 0 {

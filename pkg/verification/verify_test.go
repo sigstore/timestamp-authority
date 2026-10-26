@@ -18,12 +18,14 @@ package verification
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -32,6 +34,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -932,5 +935,93 @@ func TestVerifyLeafAndIntermediatesTimestampingEKU(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestVerifyTimestampResponseSignerDigestAlgorithm(t *testing.T) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	certChain, err := signer.NewTimestampingCertWithChain(priv)
+	if err != nil {
+		t.Fatalf("failed to create certificate chain: %v", err)
+	}
+	opts := VerifyOpts{
+		Roots:         []*x509.Certificate{certChain[2]},
+		Intermediates: []*x509.Certificate{certChain[1]},
+	}
+
+	createResponse := func(signerHash crypto.Hash) []byte {
+		tsq, err := timestamp.CreateRequest(strings.NewReader("TestRequest"), &timestamp.RequestOptions{
+			Hash:         crypto.SHA256,
+			Certificates: true,
+		})
+		if err != nil {
+			t.Fatalf("unexpectedly failed to create timestamp request: %v", err)
+		}
+		req, err := timestamp.ParseRequest(tsq)
+		if err != nil {
+			t.Fatalf("unexpectedly failed to parse timestamp request: %v", err)
+		}
+		tsTemplate := timestamp.Timestamp{
+			HashAlgorithm:     req.HashAlgorithm,
+			HashedMessage:     req.HashedMessage,
+			Time:              time.Now(),
+			Policy:            tsx509.PolicyOID,
+			AddTSACertificate: req.Certificates,
+		}
+		resp, err := tsTemplate.CreateResponseWithOpts(certChain[0], priv, signerHash)
+		if err != nil {
+			t.Fatalf("unexpectedly failed to create timestamp response: %v", err)
+		}
+		return resp
+	}
+
+	tests := []struct {
+		name        string
+		signerHash  crypto.Hash
+		expectedErr error
+	}{
+		{name: "SHA-256 signer", signerHash: crypto.SHA256},
+		{name: "SHA-384 signer", signerHash: crypto.SHA384},
+		{name: "SHA-512 signer", signerHash: crypto.SHA512},
+		{name: "SHA-1 signer", signerHash: crypto.SHA1, expectedErr: ErrWeakHashAlg},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := VerifyTimestampResponse(createResponse(tc.signerHash), strings.NewReader("TestRequest"), opts)
+			if tc.expectedErr == nil && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if tc.expectedErr != nil && !errors.Is(err, tc.expectedErr) {
+				t.Errorf("expected error %v, got %v", tc.expectedErr, err)
+			}
+		})
+	}
+
+	// pkcs7 verifies an ecdsa-with-SHA1 or sha1WithRSAEncryption signature
+	// with SHA-1 even when the digest algorithm is SHA-256, so the signature
+	// algorithm is checked too.
+	ts, err := timestamp.ParseResponse(createResponse(crypto.SHA256))
+	if err != nil {
+		t.Fatalf("unexpectedly failed to parse timestamp response: %v", err)
+	}
+	p7Message, err := pkcs7.Parse(ts.RawToken)
+	if err != nil {
+		t.Fatalf("unexpectedly failed to parse token: %v", err)
+	}
+	if err := verifySignerDigestAlgorithms(p7Message); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, sigAlg := range []asn1.ObjectIdentifier{
+		pkcs7.OIDDigestAlgorithmECDSASHA1,
+		pkcs7.OIDEncryptionAlgorithmRSASHA1,
+	} {
+		p7Message.Signers[0].DigestEncryptionAlgorithm.Algorithm = sigAlg
+		if err := verifySignerDigestAlgorithms(p7Message); !errors.Is(err, ErrWeakHashAlg) {
+			t.Errorf("signature algorithm %s: expected error %v, got %v", sigAlg, ErrWeakHashAlg, err)
+		}
 	}
 }
