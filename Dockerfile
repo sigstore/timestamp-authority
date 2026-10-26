@@ -36,7 +36,7 @@ ARG CLI_LDFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${CLI_LDFLAGS}" -o timestamp-cli ./cmd/timestamp-cli
 
 # Production deployment build
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88 AS deploy
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-server
 # Set the binary as the entrypoint of the container
@@ -50,7 +50,7 @@ COPY --from=builder /opt/app-root/src/timestamp-server /usr/local/bin/timestamp-
 CMD ["timestamp-server", "serve"]
 
 # CLI deployment build
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88 AS deploy-cli
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99 AS deploy-cli
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/timestamp-cli /usr/local/bin/timestamp-cli
 # Set the binary as the entrypoint of the container
