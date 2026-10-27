@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -316,6 +317,91 @@ func TestVerifyLeafCertRejectsCACertificate(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "end-entity") {
 		t.Fatalf("expected an end-entity error, got %s", err.Error())
+	}
+}
+
+// A leaf whose key usage does not permit signing must not be accepted as a
+// TSA signer, even when it chains to a trusted root with the timestamping EKU.
+func TestVerifyTimestampResponseLeafKeyUsage(t *testing.T) {
+	rootCert, rootKey, err := testutils.GenerateRootCa()
+	if err != nil {
+		t.Fatalf("failed to generate root: %v", err)
+	}
+	subCert, subKey, err := testutils.GenerateSubordinateCa(rootCert, rootKey)
+	if err != nil {
+		t.Fatalf("failed to generate intermediate: %v", err)
+	}
+	opts := VerifyOpts{
+		Roots:         []*x509.Certificate{rootCert},
+		Intermediates: []*x509.Certificate{subCert},
+	}
+
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
+	if err != nil {
+		t.Fatalf("failed to marshal EKU: %v", err)
+	}
+
+	createResponse := func(keyUsage x509.KeyUsage) []byte {
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatalf("failed to generate key: %v", err)
+		}
+		template := &x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject:      pkix.Name{CommonName: "Test TSA Timestamping Leaf"},
+			NotBefore:    time.Now().Add(-1 * time.Minute),
+			NotAfter:     time.Now().Add(time.Hour),
+			KeyUsage:     keyUsage,
+			ExtraExtensions: []pkix.Extension{
+				{Id: EKUOID, Critical: true, Value: timestampExt},
+			},
+		}
+		der, err := x509.CreateCertificate(rand.Reader, template, subCert, priv.Public(), subKey)
+		if err != nil {
+			t.Fatalf("failed to create leaf: %v", err)
+		}
+		leaf, err := x509.ParseCertificate(der)
+		if err != nil {
+			t.Fatalf("failed to parse leaf: %v", err)
+		}
+
+		digest := sha256.Sum256([]byte("TestRequest"))
+		tsTemplate := timestamp.Timestamp{
+			HashAlgorithm:     crypto.SHA256,
+			HashedMessage:     digest[:],
+			Time:              time.Now(),
+			Policy:            tsx509.PolicyOID,
+			AddTSACertificate: true,
+		}
+		resp, err := tsTemplate.CreateResponseWithOpts(leaf, priv, crypto.SHA256)
+		if err != nil {
+			t.Fatalf("failed to create timestamp response: %v", err)
+		}
+		return resp
+	}
+
+	tests := []struct {
+		name      string
+		keyUsage  x509.KeyUsage
+		expectErr bool
+	}{
+		{name: "no key usage", keyUsage: 0},
+		{name: "digitalSignature", keyUsage: x509.KeyUsageDigitalSignature},
+		{name: "contentCommitment", keyUsage: x509.KeyUsageContentCommitment},
+		{name: "keyAgreement", keyUsage: x509.KeyUsageKeyAgreement, expectErr: true},
+		{name: "keyEncipherment", keyUsage: x509.KeyUsageKeyEncipherment, expectErr: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := VerifyTimestampResponse(createResponse(tc.keyUsage), strings.NewReader("TestRequest"), opts)
+			if tc.expectErr {
+				if err == nil || !strings.Contains(err.Error(), "key usage") {
+					t.Fatalf("expected a key usage error, got %v", err)
+				}
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 

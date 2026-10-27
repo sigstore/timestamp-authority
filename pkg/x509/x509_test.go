@@ -132,4 +132,11 @@ func TestVerifyCertChain(t *testing.T) {
 	if err := VerifyCertChain([]*x509.Certificate{caLeaf, subCert, rootCert}, caLeafKey, true); err == nil || !strings.Contains(err.Error(), "end-entity") {
 		t.Fatalf("expected failure verifying certificate chain with a CA leaf: %v", err)
 	}
+
+	// failure: leaf key usage does not permit signing
+	keyAgreementLeaf, keyAgreementKey, _ := testutils.GenerateLeafCert(subCert, subKey)
+	keyAgreementLeaf.KeyUsage = x509.KeyUsageKeyAgreement
+	if err := VerifyCertChain([]*x509.Certificate{keyAgreementLeaf, subCert, rootCert}, keyAgreementKey, true); err == nil || !strings.Contains(err.Error(), "key usage") {
+		t.Fatalf("expected failure verifying certificate chain with a non-signing leaf: %v", err)
+	}
 }
