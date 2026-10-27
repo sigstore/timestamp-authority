@@ -106,6 +106,19 @@ func verifyLeafCertCriticalEKU(cert *x509.Certificate) error {
 	return nil
 }
 
+// Verify the leaf's key usage, if present, permits signing. crypto/x509 chain
+// verification does not check key usage, so a key the CA certified only for
+// encipherment or key agreement would otherwise be accepted as a TSA signer.
+func verifyLeafKeyUsage(cert *x509.Certificate) error {
+	if cert.KeyUsage == 0 {
+		return nil
+	}
+	if cert.KeyUsage&(x509.KeyUsageDigitalSignature|x509.KeyUsageContentCommitment) == 0 {
+		return errors.New("certificate key usage must include digitalSignature or contentCommitment")
+	}
+	return nil
+}
+
 func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certificate, opts VerifyOpts) error {
 	if leafCert == nil {
 		// should never happen
@@ -122,7 +135,12 @@ func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certifi
 		return fmt.Errorf("%s: %w", errMsg, errors.New("TSA certificate must be an end-entity certificate, not a CA"))
 	}
 
-	err := verifyLeafCertCriticalEKU(leafCert)
+	err := verifyLeafKeyUsage(leafCert)
+	if err != nil {
+		return fmt.Errorf("%s: %w", errMsg, err)
+	}
+
+	err = verifyLeafCertCriticalEKU(leafCert)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
 	}
