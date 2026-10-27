@@ -389,6 +389,60 @@ func TestGetTimestampResponseWithExtsAndOID(t *testing.T) {
 	}
 }
 
+// The qcStatements extension marks a token as a qualified timestamp, which
+// the server decides for itself (Qualified is false), so a requester must not
+// be able to have it signed even when custom extensions are allowed.
+func TestGetTimestampResponseRejectsQCStatementsExtension(t *testing.T) {
+	url := createServer(t, func() {
+		viper.Set("allow-custom-extensions", true)
+	})
+
+	c, err := client.GetTimestampClient(url, client.WithContentType(client.TimestampQueryMediaType))
+	if err != nil {
+		t.Fatalf("unexpected error creating client: %v", err)
+	}
+
+	req, err := ts.ParseRequest(buildTimestampQueryReq(t, []byte("blob"), ts.RequestOptions{Hash: crypto.SHA256}))
+	if err != nil {
+		t.Fatalf("unexpected error parsing request: %v", err)
+	}
+	// qcStatements carrying esi4-qtstStatement-1 (ETSI EN 319 422)
+	qcStatements, err := asn1.Marshal([]struct {
+		StatementID asn1.ObjectIdentifier
+	}{{StatementID: asn1.ObjectIdentifier{0, 4, 0, 19422, 1, 1}}})
+	if err != nil {
+		t.Fatalf("unexpected error marshalling qcStatements: %v", err)
+	}
+	req.ExtraExtensions = []pkix.Extension{
+		{Id: asn1.ObjectIdentifier{1, 2, 3, 4}, Value: []byte{1, 2, 3, 4}},
+		{Id: asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 3}, Value: qcStatements},
+	}
+	tsq, err := req.Marshal()
+	if err != nil {
+		t.Fatalf("unexpected error creating request: %v", err)
+	}
+
+	params := timestamp.NewGetTimestampResponseParams()
+	params.SetTimeout(10 * time.Second)
+	params.Request = io.NopCloser(bytes.NewReader(tsq))
+
+	var respBytes bytes.Buffer
+	clientOption := func(op *runtime.ClientOperation) {
+		op.ConsumesMediaTypes = []string{client.TimestampQueryMediaType}
+	}
+	_, _, err = c.Timestamp.GetTimestampResponse(params, &respBytes, clientOption)
+	if err == nil {
+		tsr, parseErr := ts.ParseResponse(respBytes.Bytes())
+		if parseErr != nil {
+			t.Fatalf("unexpected error parsing response: %v", parseErr)
+		}
+		t.Fatalf("expected error when requesting the qcStatements extension, got a token with Qualified=%v", tsr.Qualified)
+	}
+	if !strings.Contains(err.Error(), "unaccepted extension") {
+		t.Fatalf("expected unaccepted extension error, got: %v", err)
+	}
+}
+
 func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 	testArtifact := "blob"
 	includeCerts := false
