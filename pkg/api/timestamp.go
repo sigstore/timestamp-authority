@@ -17,6 +17,7 @@ package api
 import (
 	"bytes"
 	"crypto"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -52,6 +53,12 @@ type JSONRequest struct {
 // while rejecting the oversized case up front. The DER request path is
 // unaffected because ASN.1 INTEGERs are decoded from their binary form.
 const maxJSONRequestBytes = 1024
+
+// qcStatementsOID identifies the qcStatements extension (RFC 3739). Carried in
+// TSTInfo it marks the token as a qualified timestamp (ETSI EN 319 422), which
+// is an assertion the TSA makes about itself through Timestamp.Qualified, so it
+// is never copied from a request even when custom extensions are allowed.
+var qcStatementsOID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 3}
 
 func getHashAlg(alg string) (crypto.Hash, string, error) {
 	lowercaseAlg := strings.ToLower(alg)
@@ -240,8 +247,15 @@ func verifyTimestampRequest(tsReq *timestamp.Request) (*timestamp.Request, strin
 		}
 	}
 
-	if !api.allowCustomExtensions && len(tsReq.Extensions) > 0 {
-		return nil, UnacceptedExtensionTimestampRequest, verification.ErrUnacceptedExtension
+	if len(tsReq.Extensions) > 0 {
+		if !api.allowCustomExtensions {
+			return nil, UnacceptedExtensionTimestampRequest, verification.ErrUnacceptedExtension
+		}
+		for _, ext := range tsReq.Extensions {
+			if ext.Id.Equal(qcStatementsOID) {
+				return nil, UnacceptedExtensionTimestampRequest, verification.ErrUnacceptedExtension
+			}
+		}
 	}
 
 	return tsReq, "", nil
