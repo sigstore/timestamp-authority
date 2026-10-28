@@ -98,10 +98,15 @@ func VerifyCertChain(certs []*x509.Certificate, signer crypto.Signer, enforceInt
 	}
 
 	// Verify leaf has only a single EKU for timestamping, per RFC 3161 2.3
-	// This should be enforced by Verify already. Key purposes that crypto/x509
-	// does not recognise land in UnknownExtKeyUsage, so count those too.
+	// Key purposes that crypto/x509 does not recognise land in
+	// UnknownExtKeyUsage, so count those too.
 	if len(leaf.ExtKeyUsage)+len(leaf.UnknownExtKeyUsage) != 1 {
 		return errors.New("certificate should only contain one EKU")
+	}
+	// Verify treats anyExtendedKeyUsage as satisfying the timestamping usage,
+	// so check that the single EKU is timestamping itself.
+	if len(leaf.ExtKeyUsage) != 1 || leaf.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
+		return errors.New("certificate EKU must be set to timestamping")
 	}
 
 	// Verify leaf's EKU is set to critical, per RFC 3161 2.3
