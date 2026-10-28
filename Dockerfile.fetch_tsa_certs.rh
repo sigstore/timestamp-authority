@@ -1,0 +1,37 @@
+FROM registry.redhat.io/ubi9/go-toolset:9.8-1784190466@sha256:f99dd81b20e5971ef9f63a51ac27cf0aa591ff9921d021490548b67fd9b17144 as build-env
+USER root
+ENV APP_ROOT=/opt/app-root
+ENV GOPATH=$APP_ROOT
+ENV CGO_ENABLED=0
+ENV GOFIPS140=v1.0.0
+WORKDIR $APP_ROOT/src/
+
+ADD go.mod go.sum $APP_ROOT/src/
+RUN go mod download
+
+ADD ./cmd/ $APP_ROOT/src/cmd/
+ADD ./pkg/ $APP_ROOT/src/pkg/
+ADD ./Build.mak $APP_ROOT/src/Build.mak
+
+RUN go mod edit -godebug=fips140=auto && \
+    make -f Build.mak fetch-tsa-certs-linux
+
+FROM registry.access.redhat.com/ubi9/ubi-minimal@sha256:062c52ff973065752b0965787649db2bcf551a6c727a00e95a3eb42cebadbdab
+ENV APP_ROOT=/opt/app-root
+WORKDIR $APP_ROOT/src/
+
+LABEL description="The fetch_tsa_certs binary is a cli used to configure the kms and tink signer types for Timestamp Authority."
+LABEL io.k8s.description="The fetch_tsa_certs binary is a cli used to configure the kms and tink signer types for Timestamp Authority."
+LABEL io.k8s.display-name="Fetch TSA certs container image for Red Hat Trusted Signer."
+LABEL io.openshift.tags="fetch_tsa_certs"
+LABEL summary="Provides fetch_tsa_certs images."
+LABEL com.redhat.component="fetch_tsa_certs"
+LABEL name="rhtas/fetch-tsa-certs-rhel9"
+
+COPY LICENSE /licenses/license.txt
+
+COPY --from=build-env $APP_ROOT/src/fetch_tsa_certs /usr/local/bin/fetch_tsa_certs
+
+USER 65532:65532
+
+ENTRYPOINT ["fetch_tsa_certs"]

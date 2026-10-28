@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"crypto"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -134,10 +135,18 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 			return nil, fmt.Errorf("generating serial number: %w", err)
 		}
 
-		parentSkid, err := cryptoutils.SKID(parentPubKey)
+		// RHTAS FIPS - DO NOT REMOVE
+		// ========================================
+		var parentSkid []byte
+		if fips140.Enabled() {
+			parentSkid, err = tsx509.ComputeSKID(parentPubKey)
+		} else {
+			parentSkid, err = cryptoutils.SKID(parentPubKey)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("generating SKID hash: %w", err)
 		}
+		// ========================================
 		now := time.Now()
 		cert := &x509.Certificate{
 			SerialNumber: parentSn,
@@ -268,10 +277,18 @@ func fetchCertificateChain(ctx context.Context, root, parentKMSKey, leafKMSKey, 
 		return nil, fmt.Errorf("generating serial number: %w", err)
 	}
 
-	skid, err := cryptoutils.SKID(leafPubKey)
+	// RHTAS FIPS - DO NOT REMOVE
+	// ========================================
+	var skid []byte
+	if fips140.Enabled() {
+		skid, err = tsx509.ComputeSKID(leafPubKey)
+	} else {
+		skid, err = cryptoutils.SKID(leafPubKey)
+	}
 	if err != nil {
 		return nil, err
 	}
+	// ========================================
 
 	cert := &x509.Certificate{
 		SerialNumber: sn,

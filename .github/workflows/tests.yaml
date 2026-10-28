@@ -157,8 +157,6 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
-          cache: true
-
       - name: Build timestamp CLI
         run: make timestamp-cli
 

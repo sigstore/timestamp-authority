@@ -15,6 +15,7 @@
 package signer
 
 import (
+	"crypto/fips140"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,10 @@ import (
 )
 
 func TestNewTinkSigner(t *testing.T) {
+	// RHTAS test will not pass under FIPS, tinks-go uses the wrong constructor so FIPS blocks it
+	if fips140.Enabled() {
+		t.Skip("tinks-go library failure under FIPS for AEAD")
+	}
 	aeskh, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
 	if err != nil {
 		t.Fatalf("error creating AEAD key handle: %v", err)

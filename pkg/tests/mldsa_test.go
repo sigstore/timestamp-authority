@@ -18,6 +18,7 @@ package tests
 import (
 	"bytes"
 	"crypto"
+	"crypto/fips140"
 	"crypto/x509"
 	"encoding/asn1"
 	"io"
@@ -166,6 +167,10 @@ func timestampSignerDigest(t *testing.T, url string) asn1.ObjectIdentifier {
 // file signer and a --timestamp-signer-hash other than sha512.
 // timestamp-authority must reject the mismatch at startup.
 func TestNewAPI_MLDSASignerRequiresSHA512Hash(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	tests := []string{"sha256", "sha384"}
 	for _, hash := range tests {
 		t.Run(hash, func(t *testing.T) {
@@ -183,6 +188,10 @@ func TestNewAPI_MLDSASignerRequiresSHA512Hash(t *testing.T) {
 // ML-DSA or classical file signer and --experimental-enable-pqc set or
 // unset. The flag and signer key type must agree, otherwise Startup must fail.
 func TestNewAPI_ExperimentalPQCFlagMatchesSignerKeyType(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	tests := []struct {
 		name        string
 		mldsaSigner bool
@@ -240,6 +249,10 @@ func TestNewAPI_ExperimentalPQCFlagMatchesSignerKeyType(t *testing.T) {
 // match. Both must be rejected at startup. A custom OID bypasses the check
 // regardless of the signer key type.
 func TestNewAPI_PolicyOIDMustMatchSignerKeyType(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	t.Run("non-PQC OID with ML-DSA signer", func(t *testing.T) {
 		setMLDSAFileSignerViper(t, "sha512")
 		viper.Set("accepted-policy-oids", []string{tsx509.PolicyOID.String()})
@@ -276,6 +289,10 @@ func TestNewAPI_PolicyOIDMustMatchSignerKeyType(t *testing.T) {
 // file signer whose certificate chain mixes ML-DSA and non-ML-DSA (ECDSA)
 // public keys. The chain must be rejected at startup.
 func TestNewAPI_MLDSAChainMustBeAllMLDSA(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	rootCert, rootKey, err := testutils.GenerateRootCa()
 	if err != nil {
 		t.Fatal(err)
@@ -304,6 +321,10 @@ func TestNewAPI_MLDSAChainMustBeAllMLDSA(t *testing.T) {
 // timestamp can be requested, the returned	SignerInfo digest is SHA-512,
 // and that the response verifies successfully.
 func TestGetTimestampResponse_MLDSASignerRoundTrip(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	var rootCert, subCert *x509.Certificate
 	url := createServer(t, func() {
 		rootCert, subCert = setMLDSAFileSignerViper(t, "sha512")
@@ -358,6 +379,10 @@ func TestGetTimestampResponse_MLDSASignerRoundTrip(t *testing.T) {
 // policy OIDs. A request using a classical policy OID must be rejected,
 // and a request using a PQC policy OID must succeed.
 func TestGetTimestampResponse_MLDSAExplicitPolicyOID(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	url := createServer(t, func() {
 		setMLDSAFileSignerViper(t, "sha512")
 	})

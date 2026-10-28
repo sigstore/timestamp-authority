@@ -1,0 +1,28 @@
+name: Sync Upstream
+on:
+  schedule:
+    - cron: '17 8 * * 1'  # Weekly Monday 8:17 UTC
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: 'Upstream ref to merge (leave empty for latest release)'
+        required: false
+        default: ''
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - uses: securesign/actions/sync-upstream@main
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          upstream_repo: https://github.com/sigstore/timestamp-authority
+          upstream_ref: ${{ inputs.upstream_ref || '' }}
+          target_branch: main

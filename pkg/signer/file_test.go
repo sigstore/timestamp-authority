@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/fips140"
 	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -30,6 +31,10 @@ import (
 )
 
 func TestNewFileSigner(t *testing.T) {
+	// RHTAS test will not pass under FIPS, sigstore encrypted keys are not supported
+	if fips140.Enabled() {
+		t.Skip("sigstore encrypted keys not supported under FIPS")
+	}
 	td := t.TempDir()
 
 	password := "password1!"

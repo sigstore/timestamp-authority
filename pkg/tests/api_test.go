@@ -17,6 +17,7 @@ package tests
 import (
 	"bytes"
 	"crypto"
+	"crypto/fips140"
 	"crypto/sha256"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -455,6 +456,10 @@ func TestGetTimestampResponseWithNoCertificateOrNonce(t *testing.T) {
 }
 
 func TestUnsupportedHashAlgorithm(t *testing.T) {
+	// RHTAS cannot construct SHA1 under FIPS, so skip the test
+	if fips140.Enabled() {
+		t.Skip("SHA1 cannot be created under FIPS")
+	}
 	testArtifact := "blob"
 	hashFunc := crypto.SHA1
 	hashName := "sha1"

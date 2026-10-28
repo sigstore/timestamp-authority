@@ -79,7 +79,7 @@ require (
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
@@ -124,11 +124,12 @@ require (
 	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
+	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1 // indirect
@@ -139,7 +140,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
 	go.opentelemetry.io/otel v1.46.0 // indirect
 	go.opentelemetry.io/otel/metric v1.46.0 // indirect

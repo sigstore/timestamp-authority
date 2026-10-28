@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/elliptic"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -544,6 +545,10 @@ func TestVerifyIntermediateExtendedKeyUsage(t *testing.T) {
 }
 
 func TestVerifyPolicyOIDMatchesSignerKeyType(t *testing.T) {
+	// RHTAS mldsa supported in latest FIPS but not v1.0.0 (certified) module
+	if fips140.Enabled() {
+		t.Skip("MLDSA not supported in v1.0.0 module")
+	}
 	ecdsaRootCert, ecdsaRootKey, err := testutils.GenerateRootCa()
 	if err != nil {
 		t.Fatal(err)

@@ -1,0 +1,22 @@
+
+name: GH Actions Cron Schedule
+on:
+  workflow_dispatch:
+  schedule:
+    # Every M-F at 12:00am run this job
+    - cron:  "0 0 * * 1-5"
+    
+jobs:
+  check-image-version:
+    uses: securesign/actions/.github/workflows/check-image-version.yaml@main
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        branch: [main]
+    with:
+      branch: ${{ matrix.branch }}
+      images: '["registry.access.redhat.com/ubi9/go-toolset", "registry.access.redhat.com/ubi9-minimal"]'
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

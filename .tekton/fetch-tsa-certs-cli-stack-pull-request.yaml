@@ -1,0 +1,58 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/securesign/timestamp-authority?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
+      == "main"
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: cli-stacks
+    appstudio.openshift.io/component: fetch-tsa-certs-cli-stack
+    pipelines.appstudio.openshift.io/type: build
+  name: fetch-tsa-certs-cli-stack-on-pull-request
+  namespace: rhtas-tenant
+spec:
+  params:
+  - name: release-version
+    value: 1.5.0
+  - name: dockerfile
+    value: Dockerfile.cli-stack.rh
+  - name: git-url
+    value: '{{source_url}}'
+  - name: image-expires-after
+    value: 5d
+  - name: output-image
+    value: quay.io/securesign/fetch-tsa-certs-cli-stack:on-pr-{{revision}}
+  - name: path-context
+    value: .
+  - name: revision
+    value: '{{revision}}'
+  - name: prefetch-input
+    value: '{"type": "gomod", "path": "."}'
+  - name: hermetic
+    value: "true"
+  - name: build-source-image
+    value: "true"
+  - name: ALLOW_CROSS_PLATFORM_IMAGES
+    value: "true"
+  pipelineRef:
+    params:
+    - name: url
+      value: https://github.com/securesign/pipelines.git
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: pipelines/docker-build-oci-ta.yaml
+    resolver: git
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-fetch-tsa-certs-cli-stack
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}

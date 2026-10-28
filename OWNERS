@@ -1,0 +1,11 @@
+# The OWNERS file is used by prow to automatically merge approved PRs.
+
+approvers:
+- lance
+- cooktheryan
+- lkatalin
+- sallom
+
+reviewers:
+- JasonPowr
+- tommyd450
