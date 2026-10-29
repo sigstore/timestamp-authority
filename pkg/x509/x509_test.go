@@ -126,6 +126,13 @@ func TestVerifyCertChain(t *testing.T) {
 		t.Fatalf("expected failure verifying certificate chain with extra EKU: %v", err)
 	}
 
+	// failure: leaf's only EKU is anyExtendedKeyUsage rather than timestamping, per RFC 3161 2.3
+	anyEKULeaf, anyEKUKey, _ := testutils.GenerateLeafCert(subCert, subKey)
+	anyEKULeaf.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
+	if err := VerifyCertChain([]*x509.Certificate{anyEKULeaf, subCert, rootCert}, anyEKUKey, true); err == nil || !strings.Contains(err.Error(), "must be set to timestamping") {
+		t.Fatalf("expected failure verifying certificate chain with anyExtendedKeyUsage leaf: %v", err)
+	}
+
 	// failure: leaf asserts the CA bit, so it is not an end-entity, per RFC 3161 2.3
 	caLeaf, caLeafKey, _ := testutils.GenerateLeafCert(subCert, subKey)
 	caLeaf.IsCA = true
