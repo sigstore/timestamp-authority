@@ -17,6 +17,7 @@ package api
 import (
 	"bytes"
 	"crypto"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
@@ -164,6 +165,21 @@ func requestBodyToTimestampReq(reqBytes []byte, contentType string) (*timestamp.
 	}
 }
 
+// verifyCertChainValidity checks that every certificate in the signing chain is
+// within its validity period at genTime. VerifyCertChain only runs at startup,
+// so a long-running server would otherwise keep signing after the chain expires,
+// which section 7.2.5 of the TSA policy forbids. Verification checks the chain
+// at the token's genTime, so a token issued that way could never be verified.
+func verifyCertChainValidity(chain []*x509.Certificate, genTime time.Time) error {
+	for _, cert := range chain {
+		if genTime.Before(cert.NotBefore) || genTime.After(cert.NotAfter) {
+			return fmt.Errorf("certificate %q is not valid at %s: valid from %s to %s", cert.Subject,
+				genTime.Format(time.RFC3339), cert.NotBefore.Format(time.RFC3339), cert.NotAfter.Format(time.RFC3339))
+		}
+	}
+	return nil
+}
+
 func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.Responder {
 	requestBytes, err := io.ReadAll(params.Request)
 	if err != nil {
@@ -206,6 +222,10 @@ func TimestampResponseHandler(params ts.GetTimestampResponseParams) middleware.R
 	}
 	if api.includeChain {
 		tsStruct.Certificates = api.certChain[1:] // Issuing CA certificate down to root
+	}
+
+	if err := verifyCertChainValidity(api.certChain, tsStruct.Time); err != nil {
+		return handleTimestampAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
 	resp, err := tsStruct.CreateResponseWithOpts(api.certChain[0], api.tsaSigner, api.tsaSignerHash)
