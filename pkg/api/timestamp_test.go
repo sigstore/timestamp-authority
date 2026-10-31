@@ -15,12 +15,21 @@
 package api
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/digitorus/timestamp"
+	ts "github.com/sigstore/timestamp-authority/v2/pkg/generated/restapi/operations/timestamp"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
+	"github.com/sigstore/timestamp-authority/v2/pkg/x509/testutils"
 )
 
 func TestGetContentType(t *testing.T) {
@@ -92,5 +101,85 @@ func TestParseJSONRequestRejectsOversizeRequest(t *testing.T) {
 	}
 	if elapsed > 100*time.Millisecond {
 		t.Fatalf("rejection took too long (%v), request was parsed before the size check", elapsed)
+	}
+}
+
+func TestTimestampResponseHandlerRejectsCertChainOutsideValidity(t *testing.T) {
+	rootCert, rootKey, err := testutils.GenerateRootCa()
+	if err != nil {
+		t.Fatal(err)
+	}
+	subCert, subKey, err := testutils.GenerateSubordinateCa(rootCert, rootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leafCert, leafKey, err := testutils.GenerateLeafCert(subCert, subKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A chain that expires while the server runs cannot be loaded through
+	// NewAPI, which rejects it at startup, so move the dates on a copy instead.
+	expired := func(cert *x509.Certificate) *x509.Certificate {
+		c := *cert
+		c.NotAfter = time.Now().Add(-time.Minute)
+		return &c
+	}
+	notYetValid := func(cert *x509.Certificate) *x509.Certificate {
+		c := *cert
+		c.NotBefore = time.Now().Add(time.Minute)
+		return &c
+	}
+
+	tests := []struct {
+		name       string
+		chain      []*x509.Certificate
+		wantIssued bool
+	}{
+		{name: "valid chain", chain: []*x509.Certificate{leafCert, subCert, rootCert}, wantIssued: true},
+		{name: "expired leaf", chain: []*x509.Certificate{expired(leafCert), subCert, rootCert}},
+		{name: "expired intermediate", chain: []*x509.Certificate{leafCert, expired(subCert), rootCert}},
+		{name: "expired root", chain: []*x509.Certificate{leafCert, subCert, expired(rootCert)}},
+		{name: "leaf not yet valid", chain: []*x509.Certificate{notYetValid(leafCert), subCert, rootCert}},
+	}
+
+	prevAPI := api
+	t.Cleanup(func() { api = prevAPI })
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			api = &API{
+				tsaSigner:        leafKey,
+				tsaSignerHash:    crypto.SHA256,
+				certChain:        tc.chain,
+				defaultPolicyOID: tsx509.PolicyOID,
+			}
+
+			reqBytes, err := timestamp.CreateRequest(strings.NewReader("artifact"), &timestamp.RequestOptions{Hash: crypto.SHA256})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest(http.MethodPost, "/api/v1/timestamp", bytes.NewReader(reqBytes))
+			r.Header.Set("Content-Type", "application/timestamp-query")
+
+			resp := TimestampResponseHandler(ts.GetTimestampResponseParams{HTTPRequest: r, Request: r.Body})
+
+			if tc.wantIssued {
+				if _, ok := resp.(*ts.GetTimestampResponseOK); !ok {
+					t.Fatalf("expected a timestamp to be issued, got %T", resp)
+				}
+				return
+			}
+			errResp, ok := resp.(*ts.GetTimestampResponseDefault)
+			if !ok {
+				t.Fatalf("expected an error response, got %T", resp)
+			}
+			if errResp.Payload.Code != http.StatusInternalServerError {
+				t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, errResp.Payload.Code)
+			}
+			if errResp.Payload.Message != failedToGenerateTimestampResponse {
+				t.Fatalf("expected message %q, got %q", failedToGenerateTimestampResponse, errResp.Payload.Message)
+			}
+		})
 	}
 }
