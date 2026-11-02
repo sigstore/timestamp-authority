@@ -2,7 +2,7 @@
 
 `k6_load_test.js` is a [k6](https://k6.io) script for load testing a Timestamp
 Authority service. The test sends a significant amount of requests to `/api/v1/timestamp`
-and expects to receive a 201 response with a timestamp.
+and expects to receive a 200 response with a timestamp.
 
 ## Running the test
 
