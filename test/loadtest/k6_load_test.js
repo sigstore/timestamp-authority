@@ -60,12 +60,12 @@ export default async function(data) {
     const duration = Date.now() - startTime;
     latency.add(duration);
 
-    const success = check(response, { 'status is 201': (r) => r.status === 201 });
+    const success = check(response, { 'status is 200': (r) => r.status === 200 });
     errorRate.add(!success);
 
     if (!success) {
       console.log(`❌ Failed: ${response.status} ${response.body}`);
-    } else if (response.status === 201) {
+    } else if (response.status === 200) {
       console.log(`✅ Got timestamp in (${duration}ms)`);
     }
 
