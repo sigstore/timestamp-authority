@@ -122,8 +122,8 @@ func (n *NTPMonitor) queryServers(delta time.Duration, servers []string) serverR
 		// within this interval.
 		resp, err := n.queryNTPServer(srv)
 		if err != nil {
-			log.Logger.Errorf("ntp response timeout from %s",
-				srv)
+			log.Logger.Errorf("no usable ntp response from %s: %v",
+				srv, err)
 			noResponse++
 			continue
 		}
@@ -208,6 +208,25 @@ func (n *NTPMonitor) queryNTPServer(srv string) (*ntp.Response, error) {
 			"host": srv,
 		}).Observe(float64(time.Since(start)))
 		if err == nil {
+			// The NTP library only reports transport and framing
+			// errors. A reply that it considers unusable for time
+			// synchronization, such as a kiss-of-death (stratum 0),
+			// a server that reports its clock as unsynchronized or
+			// one with a stale or over-dispersed clock, is returned
+			// with a clock offset like any other, so check it here
+			// before it can count as an observation of the time.
+			// Not retried: a kiss-of-death asks the client to back off.
+			if verr := resp.Validate(); verr != nil {
+				pkgapi.MetricNTPSyncCount.With(map[string]string{
+					"failed": "true",
+					"host":   srv,
+				}).Inc()
+				if resp.IsKissOfDeath() {
+					return nil, fmt.Errorf("unusable ntp response from %s: %w (kiss code %q)", srv, verr, resp.KissCode)
+				}
+				return nil, fmt.Errorf("unusable ntp response from %s: %w", srv, verr)
+			}
+
 			pkgapi.MetricNTPSyncCount.With(map[string]string{
 				"failed": "false",
 				"host":   srv,
