@@ -36,10 +36,45 @@ func (c MockNTPClient) QueryWithOptions(srv string, _ ntp.QueryOptions) (*ntp.Re
 		return nil, errors.New("failed to query NTP server")
 	}
 
+	return usableResponse(1), nil
+}
+
+// usableResponse returns a reply that passes ntp.Response.Validate, as a
+// synchronized NTPv4 server would send it.
+func usableResponse(offset time.Duration) *ntp.Response {
+	now := time.Now()
 	return &ntp.Response{
-		ClockOffset: 1,
-		Time:        time.Now(),
-	}, nil
+		ClockOffset:   offset,
+		Version:       4,
+		Stratum:       2,
+		ReferenceTime: now,
+		Time:          now,
+	}
+}
+
+// unusableNTPClient answers every query with a reply that reports a
+// plausible clock offset but that the NTP library marks as unusable for
+// time synchronization.
+type unusableNTPClient struct {
+	response *ntp.Response
+}
+
+func (c unusableNTPClient) QueryWithOptions(_ string, _ ntp.QueryOptions) (*ntp.Response, error) {
+	resp := *c.response
+	return &resp, nil
+}
+
+func kissOfDeathResponse() *ntp.Response {
+	resp := usableResponse(1)
+	resp.Stratum = 0
+	resp.KissCode = "RATE"
+	return resp
+}
+
+func unsynchronizedResponse() *ntp.Response {
+	resp := usableResponse(1)
+	resp.Leap = ntp.LeapNotInSync
+	return resp
 }
 
 type driftedTimeNTPClient struct {
@@ -47,10 +82,7 @@ type driftedTimeNTPClient struct {
 }
 
 func (c driftedTimeNTPClient) QueryWithOptions(_ string, _ ntp.QueryOptions) (*ntp.Response, error) {
-	return &ntp.Response{
-		ClockOffset: c.driftedOffset,
-		Time:        time.Now(),
-	}, nil
+	return usableResponse(c.driftedOffset), nil
 }
 
 func TestNewFromConfig(t *testing.T) {
@@ -165,7 +197,7 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 
 	testCases := []struct {
 		name                          string
-		client                        MockNTPClient
+		client                        NTPClient
 		config                        Config
 		expectedSuccessfulMetricCount int
 		expectedFailedMetricCount     int
@@ -199,6 +231,38 @@ func TestNTPMonitorQueryNTPServer(t *testing.T) {
 			},
 			expectedSuccessfulMetricCount: 0,
 			expectedFailedMetricCount:     3,
+			expectTestToPass:              false,
+		},
+		{
+			// a kiss-of-death reply asks the client to back off, so it is
+			// rejected without using the remaining attempts
+			name:   "Reject kiss-of-death response",
+			client: unusableNTPClient{response: kissOfDeathResponse()},
+			config: Config{
+				Servers:         []string{"s1"},
+				NumServers:      1,
+				RequestAttempts: 3,
+				ServerThreshold: 1,
+				RequestTimeout:  1,
+				MaxTimeDelta:    1,
+			},
+			expectedSuccessfulMetricCount: 0,
+			expectedFailedMetricCount:     1,
+			expectTestToPass:              false,
+		},
+		{
+			name:   "Reject response from unsynchronized server",
+			client: unusableNTPClient{response: unsynchronizedResponse()},
+			config: Config{
+				Servers:         []string{"s1"},
+				NumServers:      1,
+				RequestAttempts: 3,
+				ServerThreshold: 1,
+				RequestTimeout:  1,
+				MaxTimeDelta:    1,
+			},
+			expectedSuccessfulMetricCount: 0,
+			expectedFailedMetricCount:     1,
 			expectTestToPass:              false,
 		},
 	}
@@ -299,6 +363,24 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 			expectEnoughServerResponse: false,
 			expectValidServerResponse:  false,
 		},
+		{
+			// the offset in a kiss-of-death reply is within the delta, but
+			// the reply must not count as a usable observation of the time
+			name:                       "Reject kiss-of-death responses",
+			client:                     unusableNTPClient{response: kissOfDeathResponse()},
+			serverThreshold:            1,
+			maxTimeDelta:               4,
+			expectEnoughServerResponse: false,
+			expectValidServerResponse:  false,
+		},
+		{
+			name:                       "Reject responses from unsynchronized servers",
+			client:                     unusableNTPClient{response: unsynchronizedResponse()},
+			serverThreshold:            1,
+			maxTimeDelta:               4,
+			expectEnoughServerResponse: false,
+			expectValidServerResponse:  false,
+		},
 	}
 	for _, tc := range testCases {
 		monitor, err := NewFromConfigWithClient(&Config{
@@ -318,11 +400,11 @@ func TestNTPMonitorQueryServers(t *testing.T) {
 		testedServers := []string{"s1", "s2", "s3"}
 
 		responses := monitor.queryServers(delta, testedServers)
-		if tc.expectEnoughServerResponse && responses.tooFewServerResponses {
-			t.Errorf("test '%s' unexpectedly failed with too few server responses", tc.name)
+		if got := !responses.tooFewServerResponses; got != tc.expectEnoughServerResponse {
+			t.Errorf("test '%s' reported enough server responses as %t, expected %t", tc.name, got, tc.expectEnoughServerResponse)
 		}
-		if tc.expectValidServerResponse && responses.tooManyInvalidResponses {
-			t.Errorf("test '%s' unexpectedly failed with too many invalid responses", tc.name)
+		if got := !responses.tooManyInvalidResponses; got != tc.expectValidServerResponse {
+			t.Errorf("test '%s' reported valid server responses as %t, expected %t", tc.name, got, tc.expectValidServerResponse)
 		}
 	}
 }
