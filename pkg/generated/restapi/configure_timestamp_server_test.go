@@ -148,7 +148,7 @@ func TestStructuredLogFormatter(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	var entry map[string]any
-	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(buf.String()), "\n") {
 		var candidate map[string]any
 		if err := json.Unmarshal([]byte(line), &candidate); err != nil {
 			t.Fatalf("failed to unmarshal log line %q: %v", line, err)
