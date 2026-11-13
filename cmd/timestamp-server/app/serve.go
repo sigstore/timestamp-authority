@@ -39,7 +39,7 @@ var serveCmd = &cobra.Command{
 			log.Logger.Fatal(err)
 		}
 		// Setup the logger to dev/prod
-		log.ConfigureLogger(viper.GetString("log-type"))
+		log.ConfigureLogger(viper.GetString("log-type"), viper.GetString("trace-string-prefix"))
 
 		// workaround for https://github.com/sigstore/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
