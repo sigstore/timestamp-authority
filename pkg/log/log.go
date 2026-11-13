@@ -17,8 +17,12 @@ package log
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
@@ -28,11 +32,13 @@ import (
 // Logger set the default logger to development mode
 var Logger *zap.SugaredLogger
 
+var traceStringPrefix string
+
 func init() {
-	ConfigureLogger("dev")
+	ConfigureLogger("dev", "")
 }
 
-func ConfigureLogger(logType string) {
+func ConfigureLogger(logType, traceStrPrefix string) {
 	var cfg zap.Config
 	if logType == "prod" {
 		cfg = zap.NewProductionConfig()
@@ -47,6 +53,10 @@ func ConfigureLogger(logType string) {
 		log.Fatalln("createLogger", err)
 	}
 	Logger = logger.Sugar()
+
+	if traceStrPrefix != "" {
+		traceStringPrefix = strings.TrimRight(traceStrPrefix, "/")
+	}
 }
 
 var CliLogger = createCliLogger()
@@ -69,12 +79,72 @@ func WithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, middleware.RequestIDKey, id)
 }
 
-func RequestIDLogger(r *http.Request) *zap.SugaredLogger {
+type operation struct {
+	id string
+}
+
+func (o operation) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("id", o.id)
+	return nil
+}
+
+// parseTraceContext extracts a validated 32-char lowercase hex trace ID and
+// 16-char lowercase hex span ID from either X-Cloud-Trace-Context
+// ("<trace_id>/<decimal_span_id>[;o=<opts>]") or W3C traceparent
+// ("00-<32-hex-trace_id>-<16-hex-span_id>-<flags>").
+func parseTraceContext(raw string) (traceID, spanID string) {
+	if parts := strings.Split(raw, "-"); len(parts) == 4 && len(parts[1]) == 32 && len(parts[2]) == 16 {
+		if _, err := hex.DecodeString(parts[1]); err == nil {
+			if _, err := hex.DecodeString(parts[2]); err == nil {
+				return strings.ToLower(parts[1]), strings.ToLower(parts[2])
+			}
+		}
+	}
+
+	traceAndSpan, _, _ := strings.Cut(raw, ";")
+	t, s, hasSpan := strings.Cut(traceAndSpan, "/")
+	if len(t) != 32 {
+		return "", ""
+	}
+	if _, err := hex.DecodeString(t); err != nil {
+		return "", ""
+	}
+	traceID = strings.ToLower(t)
+	if hasSpan && s != "" {
+		if u, err := strconv.ParseUint(s, 10, 64); err == nil {
+			spanID = fmt.Sprintf("%016x", u)
+		} else if len(s) == 16 {
+			if _, err := hex.DecodeString(s); err == nil {
+				spanID = strings.ToLower(s)
+			}
+		}
+	}
+	return traceID, spanID
+}
+
+func ContextLogger(ctx context.Context) *zap.SugaredLogger {
 	proposedLogger := Logger
-	if r != nil {
-		if ctxRequestID, ok := r.Context().Value(middleware.RequestIDKey).(string); ok {
-			proposedLogger = proposedLogger.With(zap.String("requestID", ctxRequestID))
+	if ctx != nil {
+		if ctxRequestID, ok := ctx.Value(middleware.RequestIDKey).(string); ok && ctxRequestID != "" {
+			if traceStringPrefix != "" {
+				traceID, spanID := parseTraceContext(ctxRequestID)
+				if traceID != "" {
+					proposedLogger = proposedLogger.With(zap.String("logging.googleapis.com/trace", fmt.Sprintf("%s/%s", traceStringPrefix, traceID)))
+				}
+				if spanID != "" {
+					proposedLogger = proposedLogger.With(zap.String("logging.googleapis.com/spanId", spanID))
+				}
+			} else {
+				proposedLogger = proposedLogger.With(zap.Object("operation", operation{ctxRequestID}))
+			}
 		}
 	}
 	return proposedLogger
+}
+
+func RequestIDLogger(r *http.Request) *zap.SugaredLogger {
+	if r == nil {
+		return Logger
+	}
+	return ContextLogger(r.Context())
 }

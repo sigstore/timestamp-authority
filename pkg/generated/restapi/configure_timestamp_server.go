@@ -19,6 +19,7 @@ package restapi
 
 import (
 	"crypto/tls"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -97,12 +98,70 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 	return handler
 }
 
-// We need this type to act as an adapter between zap and the middleware request logger.
-type logAdapter struct {
+type httpRequestLog struct {
+	RequestMethod string `json:"requestMethod,omitempty"`
+	RequestURL    string `json:"requestUrl,omitempty"`
+	RequestSize   string `json:"requestSize,omitempty"`
+	Status        int    `json:"status,omitempty"`
+	ResponseSize  string `json:"responseSize,omitempty"`
+	UserAgent     string `json:"userAgent,omitempty"`
+	RemoteIP      string `json:"remoteIp,omitempty"`
+	Referer       string `json:"referer,omitempty"`
+	Latency       string `json:"latency,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
 }
 
-func (l *logAdapter) Print(v ...any) {
-	log.Logger.Info(v...)
+// structuredLogFormatter implements middleware.LogFormatter to emit structured
+// request logs compatible with Cloud Logging's httpRequest format.
+type structuredLogFormatter struct{}
+
+func (f *structuredLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	requestURL := r.RequestURI
+	if !strings.HasPrefix(requestURL, "http://") && !strings.HasPrefix(requestURL, "https://") {
+		if requestURL == "" {
+			requestURL = r.URL.RequestURI()
+		}
+		requestURL = fmt.Sprintf("%s://%s%s", scheme, r.Host, requestURL)
+	}
+
+	var reqSize string
+	if r.ContentLength >= 0 {
+		reqSize = strconv.FormatInt(r.ContentLength, 10)
+	}
+
+	return &structuredLogEntry{
+		r: r,
+		httpReq: httpRequestLog{
+			RequestMethod: r.Method,
+			RequestURL:    requestURL,
+			RequestSize:   reqSize,
+			UserAgent:     r.UserAgent(),
+			RemoteIP:      r.RemoteAddr,
+			Referer:       r.Referer(),
+			Protocol:      r.Proto,
+		},
+	}
+}
+
+type structuredLogEntry struct {
+	r       *http.Request
+	httpReq httpRequestLog
+}
+
+func (l *structuredLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, _ any) {
+	l.httpReq.Status = status
+	l.httpReq.ResponseSize = strconv.Itoa(bytes)
+	l.httpReq.Latency = fmt.Sprintf("%d.%09ds", int64(elapsed/time.Second), int64(elapsed%time.Second))
+
+	log.RequestIDLogger(l.r).Debugw("completed request", "httpRequest", l.httpReq)
+}
+
+func (l *structuredLogEntry) Panic(v any, stack []byte) {
+	log.RequestIDLogger(l.r).Errorw("panic", "panic", v, "stack", string(stack))
 }
 
 const pingPath = "/ping"
@@ -147,8 +206,7 @@ func limitRequestBody(next http.Handler) http.Handler {
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics.
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
-	middleware.DefaultLogger = middleware.RequestLogger(
-		&middleware.DefaultLogFormatter{Logger: &logAdapter{}})
+	middleware.DefaultLogger = middleware.RequestLogger(&structuredLogFormatter{})
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat(pingPath)(returnHandler)
