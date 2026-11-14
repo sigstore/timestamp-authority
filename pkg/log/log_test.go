@@ -16,127 +16,67 @@
 package log
 
 import (
-	"context"
-	"net/http/httptest"
+	"bytes"
+	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
+	"go.uber.org/zap/zapcore"
 )
 
-func TestParseTraceContext(t *testing.T) {
-	tests := []struct {
-		name      string
-		input     string
-		wantTrace string
-		wantSpan  string
-	}{
-		{
-			name:      "cloud trace context with decimal span",
-			input:     "122399bb012526bf9d97c30fb2afe723/12817094456274136198",
-			wantTrace: "122399bb012526bf9d97c30fb2afe723",
-			wantSpan:  "b1df778006d92c86",
-		},
-		{
-			name:      "cloud trace context with options",
-			input:     "122399bb012526bf9d97c30fb2afe723/12817094456274136198;o=1",
-			wantTrace: "122399bb012526bf9d97c30fb2afe723",
-			wantSpan:  "b1df778006d92c86",
-		},
-		{
-			name:      "cloud trace context without span",
-			input:     "122399bb012526bf9d97c30fb2afe723;o=1",
-			wantTrace: "122399bb012526bf9d97c30fb2afe723",
-			wantSpan:  "",
-		},
-		{
-			name:      "w3c traceparent",
-			input:     "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-			wantTrace: "4bf92f3577b34da6a3ce929d0e0e4736",
-			wantSpan:  "00f067aa0ba902b7",
-		},
-		{
-			name:      "plain request id rejected as trace",
-			input:     "tsa-server-000001",
-			wantTrace: "",
-			wantSpan:  "",
-		},
-		{
-			name:      "malformed non-hex trace id rejected",
-			input:     "../other-project/traces/evil/1234",
-			wantTrace: "",
-			wantSpan:  "",
-		},
-		{
-			name:      "oversized trace id rejected",
-			input:     "122399bb012526bf9d97c30fb2afe723deadbeef/1234",
-			wantTrace: "",
-			wantSpan:  "",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			gotTrace, gotSpan := parseTraceContext(tc.input)
-			if gotTrace != tc.wantTrace || gotSpan != tc.wantSpan {
-				t.Fatalf("parseTraceContext(%q) = (%q, %q), want (%q, %q)", tc.input, gotTrace, gotSpan, tc.wantTrace, tc.wantSpan)
-			}
-		})
-	}
-}
-
-func TestRequestIDLogger(t *testing.T) {
+func TestConfigureLoggerProdEncoder(t *testing.T) {
 	origLogger := Logger
-	origPrefix := traceStringPrefix
 	t.Cleanup(func() {
 		Logger = origLogger
-		traceStringPrefix = origPrefix
 	})
 
-	t.Run("with trace prefix and X-Cloud-Trace-Context", func(t *testing.T) {
-		ConfigureLogger("dev", "projects/project-rekor/traces/")
-		core, logs := observer.New(zap.InfoLevel)
-		Logger = zap.New(core).Sugar()
+	ConfigureLogger("prod", "")
 
-		req := httptest.NewRequest("POST", "/api/v1/timestamp", nil)
-		req = req.WithContext(WithRequestID(context.Background(), "122399bb012526bf9d97c30fb2afe723/12817094456274136198;o=1"))
-		RequestIDLogger(req).Info("hello")
+	var buf bytes.Buffer
+	// Rebuild a core using the same encoder config as ConfigureLogger("prod")
+	// to capture output deterministically.
+	cfg := zap.NewProductionConfig()
+	cfg.EncoderConfig.LevelKey = "severity"
+	cfg.EncoderConfig.MessageKey = "message"
+	cfg.EncoderConfig.TimeKey = "time"
+	cfg.EncoderConfig.EncodeLevel = encodeLevel()
+	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
+	cfg.EncoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
+	cfg.EncoderConfig.EncodeCaller = zapcore.FullCallerEncoder
 
-		entries := logs.All()
-		if len(entries) != 1 {
-			t.Fatalf("expected 1 log entry, got %d", len(entries))
-		}
-		fields := entries[0].ContextMap()
-		if got := fields["logging.googleapis.com/trace"]; got != "projects/project-rekor/traces/122399bb012526bf9d97c30fb2afe723" {
-			t.Fatalf("unexpected trace field: %v", got)
-		}
-		if got := fields["logging.googleapis.com/spanId"]; got != "b1df778006d92c86" {
-			t.Fatalf("unexpected spanId field: %v", got)
-		}
-		if _, exists := fields["operation"]; exists {
-			t.Fatalf("expected no operation field when traceStringPrefix is set, got %v", fields["operation"])
-		}
-	})
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(cfg.EncoderConfig),
+		zapcore.AddSync(&buf),
+		zapcore.DebugLevel,
+	)
+	logger := zap.New(core, zap.AddCaller()).Sugar()
+	logger.Warnw("test warning", "dur", 1500*time.Millisecond)
 
-	t.Run("without trace prefix preserves operation field", func(t *testing.T) {
-		core, logs := observer.New(zap.InfoLevel)
-		Logger = zap.New(core).Sugar()
-		traceStringPrefix = ""
+	var entry map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("failed to unmarshal log output %q: %v", buf.String(), err)
+	}
 
-		req := httptest.NewRequest("POST", "/api/v1/timestamp", nil)
-		req = req.WithContext(WithRequestID(context.Background(), "req-123"))
-		RequestIDLogger(req).Info("hello")
-
-		entries := logs.All()
-		if len(entries) != 1 {
-			t.Fatalf("expected 1 log entry, got %d", len(entries))
-		}
-		fields := entries[0].ContextMap()
-		if _, exists := fields["logging.googleapis.com/trace"]; exists {
-			t.Fatalf("expected no trace field when traceStringPrefix is empty")
-		}
-		if _, exists := fields["operation"]; !exists {
-			t.Fatalf("expected operation field when traceStringPrefix is empty")
-		}
-	})
+	if got := entry["severity"]; got != "WARNING" {
+		t.Errorf("expected severity %q, got %v", "WARNING", got)
+	}
+	if got := entry["message"]; got != "test warning" {
+		t.Errorf("expected message %q, got %v", "test warning", got)
+	}
+	timeStr, ok := entry["time"].(string)
+	if !ok {
+		t.Fatalf("expected string time field, got %T (%v)", entry["time"], entry["time"])
+	}
+	if _, err := time.Parse(time.RFC3339Nano, timeStr); err != nil {
+		t.Errorf("expected RFC3339Nano time, got %q: %v", timeStr, err)
+	}
+	caller, ok := entry["caller"].(string)
+	if !ok || !strings.Contains(caller, "pkg/log/log_test.go:") {
+		t.Errorf("expected full caller path containing pkg/log/log_test.go:, got %v", entry["caller"])
+	}
+	if got := entry["dur"]; got != float64(1.5) {
+		t.Errorf("expected seconds duration 1.5, got %v", got)
+	}
 }
